@@ -11,6 +11,8 @@ import (
 	"image/png"
 	"strings"
 	"testing"
+
+	xwebp "golang.org/x/image/webp"
 )
 
 // photo makes a JPEG w×h whose left half is red and right half blue, so its
@@ -81,6 +83,37 @@ func withEXIF(jpg []byte, orientation uint16, gps bool) []byte {
 
 func none(string) bool { return false }
 
+// sizes are the JPEG or PNG files, without their WebP copies.
+func sizes(img *Image) []File {
+	var out []File
+	for _, f := range img.Files {
+		if !f.WebP {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+func decodeAny(t *testing.T, f File) image.Image {
+	t.Helper()
+	var (
+		got image.Image
+		err error
+	)
+	switch {
+	case f.WebP:
+		got, err = xwebp.Decode(bytes.NewReader(f.Data))
+	case strings.HasSuffix(f.Path, ".png"):
+		got, err = png.Decode(bytes.NewReader(f.Data))
+	default:
+		got, err = jpeg.Decode(bytes.NewReader(f.Data))
+	}
+	if err != nil {
+		t.Fatalf("%s: %v", f.Path, err)
+	}
+	return got
+}
+
 func TestReadJPEGMeta(t *testing.T) {
 	m := ReadJPEGMeta(withEXIF(photo(t, 40, 20), 6, true))
 	if m.Orientation != 6 || !m.GPS || !m.EXIF {
@@ -106,21 +139,24 @@ func TestStripsAndOrients(t *testing.T) {
 	}
 	// Shown the right way up it's 1200 wide and 2400 tall: 1200 is under the
 	// largest width, so that's the main size, with 960 and 480 beside it.
-	if img.Width != 1200 || img.Height != 2400 || len(img.Files) != 3 {
-		t.Fatalf("main %dx%d, %d files", img.Width, img.Height, len(img.Files))
+	if img.Width != 1200 || img.Height != 2400 || len(sizes(img)) != 3 {
+		t.Fatalf("main %dx%d, %d sizes", img.Width, img.Height, len(sizes(img)))
 	}
-	if img.Files[1].Path != "media/2026/10/dock-at-dawn-480w.jpg" && img.Files[1].Path != "media/2026/10/dock-at-dawn-960w.jpg" {
-		t.Fatalf("variant path %s", img.Files[1].Path)
+	paths := map[string]bool{}
+	for _, f := range img.Files {
+		paths[f.Path] = true
+	}
+	for _, want := range []string{"dock-at-dawn.jpg", "dock-at-dawn-480w.jpg", "dock-at-dawn-960w.jpg", "dock-at-dawn.webp", "dock-at-dawn-480w.webp"} {
+		if !paths["media/2026/10/"+want] {
+			t.Fatalf("no %s in %v", want, paths)
+		}
 	}
 	for _, f := range img.Files {
 		m := ReadJPEGMeta(f.Data)
-		if m.EXIF || m.GPS || bytes.Contains(f.Data, []byte("secret comment")) {
+		if m.EXIF || m.GPS || bytes.Contains(f.Data, []byte("secret comment")) || bytes.Contains(f.Data, []byte("EXIF")) {
 			t.Fatalf("%s still carries metadata", f.Path)
 		}
-		got, err := jpeg.Decode(bytes.NewReader(f.Data))
-		if err != nil {
-			t.Fatal(err)
-		}
+		got := decodeAny(t, f)
 		if got.Bounds().Dx() != f.Width || got.Bounds().Dy() != f.Height {
 			t.Fatalf("%s is %v, says %dx%d", f.Path, got.Bounds(), f.Width, f.Height)
 		}
@@ -145,7 +181,7 @@ func TestResizesLargePhoto(t *testing.T) {
 		t.Fatal(err)
 	}
 	var widths []int
-	for _, f := range img.Files {
+	for _, f := range sizes(img) {
 		widths = append(widths, f.Width)
 	}
 	if len(widths) != 3 || widths[0] != 1600 || img.Height != 1200 {
@@ -159,7 +195,7 @@ func TestNeverOverwrites(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if img.URL != "/media/2026/10/a-3.jpg" || len(img.Files) != 1 {
+	if img.URL != "/media/2026/10/a-3.jpg" || len(sizes(img)) != 1 {
 		t.Fatalf("got %s with %d files", img.URL, len(img.Files))
 	}
 }
@@ -180,9 +216,10 @@ func TestPNGStaysPNGWithTransparency(t *testing.T) {
 	if bytes.Contains(img.Files[0].Data, []byte("trailing payload")) {
 		t.Fatal("data after the image survived")
 	}
-	got, _ := png.Decode(bytes.NewReader(img.Files[0].Data))
-	if _, _, _, a := got.At(10, 10).RGBA(); a != 0 {
-		t.Fatal("transparency lost")
+	for _, f := range img.Files {
+		if _, _, _, a := decodeAny(t, f).At(10, 10).RGBA(); a != 0 {
+			t.Fatalf("%s: transparency lost", f.Path)
+		}
 	}
 }
 
@@ -224,5 +261,34 @@ func TestRefuses(t *testing.T) {
 	binary.BigEndian.PutUint32(h[29:], crc32.ChecksumIEEE(h[12:29]))
 	if _, err := Process(h, "bomb.png", "2026/10", none); err == nil || !strings.Contains(err.Error(), "megapixels") {
 		t.Fatalf("bomb: %v", err)
+	}
+}
+
+func TestWebPSmallerAndRight(t *testing.T) {
+	img, err := Process(photo(t, 1600, 1000), "p.jpg", "2026/10", none)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var jpg, webp *File
+	for i := range img.Files {
+		switch img.Files[i].Path {
+		case "media/2026/10/p.jpg":
+			jpg = &img.Files[i]
+		case "media/2026/10/p.webp":
+			webp = &img.Files[i]
+		}
+	}
+	if jpg == nil || webp == nil {
+		t.Fatal("missing the main JPEG or its WebP")
+	}
+	if len(webp.Data) >= len(jpg.Data) {
+		t.Fatalf("WebP %d bytes, JPEG %d", len(webp.Data), len(jpg.Data))
+	}
+	got := decodeAny(t, *webp)
+	if got.Bounds().Dx() != 1600 || got.Bounds().Dy() != 1000 {
+		t.Fatalf("WebP is %v", got.Bounds())
+	}
+	if r, _, b, _ := got.At(100, 500).RGBA(); r < b {
+		t.Fatal("WebP colors are wrong")
 	}
 }

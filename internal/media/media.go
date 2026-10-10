@@ -24,6 +24,8 @@ import (
 
 	"golang.org/x/image/draw"
 	xwebp "golang.org/x/image/webp"
+
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/media/webpenc"
 )
 
 const (
@@ -36,6 +38,10 @@ const (
 	JPEGQuality = 82
 )
 
+// WebPQuality is the lossy WebP quality for photographs. Pictures kept as
+// PNG get lossless WebP instead.
+const WebPQuality = 80
+
 // Widths are the sizes a picture is published at. The largest is the main
 // file; the smaller ones are offered to browsers through srcset. A picture
 // narrower than one of these isn't enlarged to it.
@@ -47,6 +53,7 @@ type File struct {
 	Width  int
 	Height int
 	Data   []byte
+	WebP   bool // the WebP copy of the size before it
 }
 
 // Image is a picture ready to commit: its files, main file first.
@@ -55,7 +62,7 @@ type Image struct {
 	Width  int
 	Height int
 	Type   string // image/jpeg or image/png
-	Files  []File
+	Files  []File   // each size, followed by its WebP copy where that's smaller
 	Notes  []string // what was done to it, in words, for the person who uploaded it
 }
 
@@ -177,6 +184,14 @@ func Process(data []byte, name, dir string, taken func(string) bool) (*Image, er
 			p = fmt.Sprintf("%s-%dw%s", stem, w, ext)
 		}
 		img.Files = append(img.Files, File{Path: p, Width: w, Height: h, Data: buf.Bytes()})
+		// A WebP beside it, for browsers that take one, when it's smaller.
+		var wb bytes.Buffer
+		if err := webpenc.Encode(&wb, px, webpenc.Options{Quality: WebPQuality, Lossless: typ == "image/png"}); err != nil {
+			return nil, err
+		}
+		if wb.Len() < buf.Len() {
+			img.Files = append(img.Files, File{Path: strings.TrimSuffix(p, ext) + ".webp", Width: w, Height: h, Data: wb.Bytes(), WebP: true})
+		}
 	}
 	img.Width, img.Height, img.Type = img.Files[0].Width, img.Files[0].Height, typ
 	if mainW < ow {
@@ -188,7 +203,7 @@ func Process(data []byte, name, dir string, taken func(string) bool) (*Image, er
 
 // VariantRe matches the smaller sizes Process writes beside a main file:
 // name-480w.jpg next to name.jpg.
-var VariantRe = regexp.MustCompile(`^(.+)-(\d+)w\.(jpg|png)$`)
+var VariantRe = regexp.MustCompile(`^(.+)-(\d+)w\.(jpg|png|webp)$`)
 
 // scale resizes to w×h. A large reduction is done in halving steps, each an
 // exact two-by-two average, and the last step with a careful filter: quick,

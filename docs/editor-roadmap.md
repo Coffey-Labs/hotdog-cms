@@ -129,6 +129,15 @@ still previewable, with no faster path to the live site.
 
 ### E2 · Media
 
+*In progress, 2026-10-10:* re-encoding is built (`internal/media`). Uploads
+are decoded by Go's own decoders, turned upright, stripped of EXIF, location,
+comments and anything after the image data, and published at 480, 960 and
+1600 px wide. Each size gets a WebP copy when that's smaller (38 to 60%
+smaller on real photos). The WebP encoder is libwebp translated to pure Go and
+vendored in `internal/media/webpenc`: no system library, no cgo. SVG is
+refused. Next: responsive markup in the build, then upload, library and alt
+text in the editor.
+
 - Upload by drag and drop. Every image is re-encoded on the way in:
   - EXIF stripped (location included);
   - resized to sensible widths, with WebP and a fallback;
