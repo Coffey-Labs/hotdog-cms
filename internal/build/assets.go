@@ -149,7 +149,7 @@ func copyTree(src, dst string, skip func(rel string, d fs.DirEntry) bool) error 
 	return err
 }
 
-// add publishes a file cl-cms supplies itself (such as the forms script) as
+// add publishes a file hotdog-cms supplies itself (such as the forms script) as
 // an asset, fingerprinted like the site's own. A site file of the same name
 // wins, so a site can replace it.
 func (a *Assets) add(out, rel string, data []byte) error {

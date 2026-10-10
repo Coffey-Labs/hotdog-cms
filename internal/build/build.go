@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forms"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/site"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forms"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
 
 // marker is written into every output folder. A build only ever replaces a
 // folder that has one, so pointing --out at the wrong place cannot wipe it.
-const marker = ".cl-cms-build"
+const marker = ".hotdog-cms-build"
 
 // Options for one build.
 type Options struct {
@@ -208,10 +208,10 @@ func prepare(siteDir string, s *site.Site, out string) (*Templates, error) {
 		return nil, err
 	}
 	if len(siteForms) > 0 {
-		if err := assets.add(out, "cl-forms.js", forms.Script); err != nil {
+		if err := assets.add(out, "hotdog-forms.js", forms.Script); err != nil {
 			return nil, err
 		}
-		if err := assets.add(out, "cl-forms.css", forms.Style); err != nil {
+		if err := assets.add(out, "hotdog-forms.css", forms.Style); err != nil {
 			return nil, err
 		}
 	}
@@ -222,8 +222,8 @@ func prepare(siteDir string, s *site.Site, out string) (*Templates, error) {
 		if !ok {
 			return "", fmt.Errorf("no forms/%s.yaml", name)
 		}
-		js, _ := assets.URL("cl-forms.js")
-		css, _ := assets.URL("cl-forms.css")
+		js, _ := assets.URL("hotdog-forms.js")
+		css, _ := assets.URL("hotdog-forms.css")
 		return f.Render(js, css)
 	}
 	return loadTemplates(siteDir, fm)
@@ -313,7 +313,7 @@ func swap(work, out string) error {
 		return err
 	}
 	if !ok {
-		return fmt.Errorf("%s has files that cl-cms did not write; refusing to replace it", out)
+		return fmt.Errorf("%s has files that hotdog-cms did not write; refusing to replace it", out)
 	}
 	old := fmt.Sprintf("%s.old-%d", out, os.Getpid())
 	if _, err := os.Stat(out); err == nil {
@@ -330,10 +330,10 @@ func swap(work, out string) error {
 
 // Install copies a finished build into dst the same way Run writes its own
 // output: beside it first, then swapped in whole. dst must be empty, missing,
-// or an earlier cl-cms build.
+// or an earlier hotdog-cms build.
 func Install(src, dst string) error {
 	if _, err := os.Stat(filepath.Join(src, marker)); err != nil {
-		return fmt.Errorf("%s is not a cl-cms build", src)
+		return fmt.Errorf("%s is not a hotdog-cms build", src)
 	}
 	work := fmt.Sprintf("%s.new-%d", dst, os.Getpid())
 	_ = os.RemoveAll(work)

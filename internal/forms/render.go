@@ -9,20 +9,20 @@ import (
 // The script and styles every form uses. The build publishes them with
 // fingerprinted names when a site has forms.
 var (
-	//go:embed static/cl-forms.js
+	//go:embed static/hotdog-forms.js
 	Script []byte
-	//go:embed static/cl-forms.css
+	//go:embed static/hotdog-forms.css
 	Style []byte
 )
 
 var formTpl = template.Must(template.New("form").Parse(`<link rel="stylesheet" href="{{ .CSS }}">
-<form class="cl-form" method="post" action="/_cl/forms/{{ .F.Name }}" data-cl-form="{{ .F.Name }}"{{ with .F.Success }} data-success="{{ . }}"{{ end }}>
+<form class="hotdog-form" method="post" action="/_hotdog/forms/{{ .F.Name }}" data-hotdog-form="{{ .F.Name }}"{{ with .F.Success }} data-success="{{ . }}"{{ end }}>
 {{- range .F.Fields }}{{ $id := printf "cl-%s-%s" $.F.Name .Name }}
-  <div class="cl-field cl-{{ .Type }}">
+  <div class="hotdog-field cl-{{ .Type }}">
     {{- if eq .Type "checkbox" }}
-    <label for="{{ $id }}"><input id="{{ $id }}" name="{{ .Name }}" type="checkbox"{{ if .Required }} required{{ end }} aria-describedby="{{ $id }}-error{{ if .Help }} {{ $id }}-help{{ end }}"> {{ .Label }}{{ if .Required }}<span class="cl-req" aria-hidden="true"> *</span>{{ end }}</label>
+    <label for="{{ $id }}"><input id="{{ $id }}" name="{{ .Name }}" type="checkbox"{{ if .Required }} required{{ end }} aria-describedby="{{ $id }}-error{{ if .Help }} {{ $id }}-help{{ end }}"> {{ .Label }}{{ if .Required }}<span class="hotdog-req" aria-hidden="true"> *</span>{{ end }}</label>
     {{- else }}
-    <label for="{{ $id }}">{{ .Label }}{{ if .Required }}<span class="cl-req" aria-hidden="true"> *</span>{{ end }}</label>
+    <label for="{{ $id }}">{{ .Label }}{{ if .Required }}<span class="hotdog-req" aria-hidden="true"> *</span>{{ end }}</label>
     {{- if eq .Type "textarea" }}
     <textarea id="{{ $id }}" name="{{ .Name }}" rows="6" maxlength="{{ .MaxLen }}"{{ if .Required }} required{{ end }}{{ with .Placeholder }} placeholder="{{ . }}"{{ end }} aria-describedby="{{ $id }}-error{{ if .Help }} {{ $id }}-help{{ end }}"></textarea>
     {{- else if eq .Type "select" }}
@@ -37,20 +37,20 @@ var formTpl = template.Must(template.New("form").Parse(`<link rel="stylesheet" h
     {{- end }}
     {{- end }}
     {{- with .Help }}
-    <p class="cl-help" id="{{ $id }}-help">{{ . }}</p>
+    <p class="hotdog-help" id="{{ $id }}-help">{{ . }}</p>
     {{- end }}
-    <p class="cl-error" id="{{ $id }}-error"></p>
+    <p class="hotdog-error" id="{{ $id }}-error"></p>
   </div>
 {{- end }}
-  <div class="cl-hp" aria-hidden="true"><label>Leave this empty <input name="_website" tabindex="-1" autocomplete="off"></label></div>
+  <div class="hotdog-hp" aria-hidden="true"><label>Leave this empty <input name="_website" tabindex="-1" autocomplete="off"></label></div>
   <input type="hidden" name="_t" value="">
   {{- with .F.Turnstile }}
   <div class="cf-turnstile" data-sitekey="{{ . }}"></div>
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   {{- end }}
-  <p class="cl-status" role="status" aria-live="polite"></p>
+  <p class="hotdog-status" role="status" aria-live="polite"></p>
   <button type="submit">{{ .F.Submit }}</button>
-  <noscript><p class="cl-noscript">This form uses JavaScript to keep spam out.{{ with .F.Mailto }} You can also email <a href="mailto:{{ . }}">{{ . }}</a>.{{ end }}</p></noscript>
+  <noscript><p class="hotdog-noscript">This form uses JavaScript to keep spam out.{{ with .F.Mailto }} You can also email <a href="mailto:{{ . }}">{{ . }}</a>.{{ end }}</p></noscript>
 </form>
 <script src="{{ .JS }}" defer></script>
 `))

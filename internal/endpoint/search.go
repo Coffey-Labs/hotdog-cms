@@ -13,7 +13,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/site"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
 
 // Search answered here instead of in the browser: the visitor downloads ten
@@ -172,7 +172,7 @@ func snippet(md string, terms []string) string {
 	return out
 }
 
-// handleSearch answers GET /_cl/search/<collection>?q=...&page=N as JSON.
+// handleSearch answers GET /_hotdog/search/<collection>?q=...&page=N as JSON.
 func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request, rt *siteRuntime, collection string) {
 	if rt.cfg.Public == "" || !collectionRe.MatchString(collection) {
 		http.NotFound(w, r)

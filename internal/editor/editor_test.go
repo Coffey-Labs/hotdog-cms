@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/starter"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/starter"
 )
 
 // fakeForge plays a Gitea: OAuth authorize/token endpoints and the API.
@@ -119,7 +119,7 @@ sites:
 `
 	os.WriteFile(filepath.Join(dir, "editor.yaml"), []byte(cfg), 0o644)
 	t.Setenv("TEST_SECRET", "shh")
-	t.Setenv("CLCMS_EDITOR_SECRET", strings.Repeat("e", 40))
+	t.Setenv("HOTDOG_EDITOR_SECRET", strings.Repeat("e", 40))
 	s, err := New(filepath.Join(dir, "editor.yaml"), os.Stderr)
 	if err != nil {
 		t.Fatal(err)
@@ -249,10 +249,10 @@ func TestSessionAndCSRF(t *testing.T) {
 	if rec := do(s, "POST", "/auth/logout", []*http.Cookie{sess}, nil); rec.Code != 403 {
 		t.Errorf("logout without CSRF header: %d", rec.Code)
 	}
-	if rec := do(s, "POST", "/auth/logout", []*http.Cookie{sess}, map[string]string{"Origin": "https://evil.example", "X-CLCMS": "1"}); rec.Code != 403 {
+	if rec := do(s, "POST", "/auth/logout", []*http.Cookie{sess}, map[string]string{"Origin": "https://evil.example", "X-HotDog": "1"}); rec.Code != 403 {
 		t.Errorf("cross-site logout: %d", rec.Code)
 	}
-	if rec := do(s, "POST", "/auth/logout", []*http.Cookie{sess}, map[string]string{"Origin": "http://editor.test", "X-CLCMS": "1"}); rec.Code != 204 {
+	if rec := do(s, "POST", "/auth/logout", []*http.Cookie{sess}, map[string]string{"Origin": "http://editor.test", "X-HotDog": "1"}); rec.Code != 204 {
 		t.Errorf("logout: %d", rec.Code)
 	}
 	if rec := do(s, "GET", "/auth/login?forge=forge.test&return=//evil.example/", nil, nil); rec.Code != 302 {
@@ -274,7 +274,7 @@ func post(s *Server, path string, cookies []*http.Cookie, body any) *httptest.Re
 		req.AddCookie(c)
 	}
 	req.Header.Set("Origin", "http://editor.test")
-	req.Header.Set("X-CLCMS", "1")
+	req.Header.Set("X-HotDog", "1")
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
 	s.ServeHTTP(rec, req)

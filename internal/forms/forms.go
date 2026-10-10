@@ -33,7 +33,7 @@ type Form struct {
 	Submit  string  `yaml:"submit"`  // the button's text
 	Success string  `yaml:"success"` // where to send the visitor after a good submission
 	// Turnstile adds Cloudflare Turnstile with this site key; the endpoint
-	// checks it with CLCMS_TURNSTILE_SECRET.
+	// checks it with HOTDOG_TURNSTILE_SECRET.
 	Turnstile string `yaml:"turnstile_sitekey"`
 	// Store appends each submission to a JSON-lines file as well as emailing it.
 	Store bool `yaml:"store"`

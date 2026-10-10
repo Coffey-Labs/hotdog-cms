@@ -1,7 +1,7 @@
 # Publishing
 
-cl-cms builds a site into plain files. Where those files go, and how they get
-there, is the operator's choice: cl-cms doesn't require a particular host,
+HotDog CMS builds a site into plain files. Where those files go, and how they get
+there, is the operator's choice: HotDog CMS doesn't require a particular host,
 container platform or pipeline.
 
 Every content change arrives through git, whether someone edited Markdown or
@@ -9,15 +9,15 @@ used the editor. Publishing is the step after that, and there are two ways to
 run it:
 
 - **Push**: something with the repository (CI, a deploy script, or a person)
-  runs `cl-cms publish`, which builds and sends the site to one or more targets.
-- **Pull**: the web server runs `cl-cms pull`, which fetches the repository and
+  runs `hotdog-cms publish`, which builds and sends the site to one or more targets.
+- **Pull**: the web server runs `hotdog-cms pull`, which fetches the repository and
   rebuilds when the branch moves. Nothing connects in to the server, so it needs
   no deploy access; the repository can be read with a read-only key.
 
 ## Every route is checked
 
-Before anything is published, `cl-cms check` runs on the build
-([checks.md](checks.md)). `cl-cms publish` stops on an error, and the pull
+Before anything is published, `hotdog-cms check` runs on the build
+([checks.md](checks.md)). `hotdog-cms publish` stops on an error, and the pull
 agent leaves the live site as it was. There is no flag to skip this; a rule a
 site means to break is switched off in `site.yaml`, where it is reviewed with
 everything else.
@@ -34,16 +34,16 @@ keep outside the repository and pass with `-targets`.
 | `container` | Docker, Podman, Kubernetes, any container platform | An image with the site and nginx or Caddy on port 8080; optionally pushed |
 | `command` | Anything else (object storage, a CDN, your own script) | Your command runs with the build folder |
 
-    cl-cms publish server          # build, then publish to one target
-    cl-cms publish -all            # every target in the file
-    cl-cms publish -no-build image # publish the existing build
+    hotdog-cms publish server          # build, then publish to one target
+    hotdog-cms publish -all            # every target in the file
+    hotdog-cms publish -no-build image # publish the existing build
 
-`dir` and `rsync` only replace a folder that is empty or was written by cl-cms,
+`dir` and `rsync` only replace a folder that is empty or was written by HotDog CMS,
 so a wrong path can't wipe something else.
 
 ## Pull: the agent on the server
 
-    cl-cms pull -repo https://git.example.org/me/site.git -out /var/www/example.org -every 1m
+    hotdog-cms pull -repo https://git.example.org/me/site.git -out /var/www/example.org -every 1m
 
 With no `-every`, it checks once and exits, which suits a systemd timer or a
 webhook. A build that fails leaves the live site as it was.
@@ -58,12 +58,12 @@ Wants=network-online.target
 
 [Service]
 User=site-publish
-ExecStart=/usr/local/bin/cl-cms pull -repo https://git.example.org/me/site.git -out /var/www/example.org -every 1m
+ExecStart=/usr/local/bin/hotdog-cms pull -repo https://git.example.org/me/site.git -out /var/www/example.org -every 1m
 Restart=on-failure
 NoNewPrivileges=yes
 ProtectSystem=strict
-ReadWritePaths=/var/www /var/cache/cl-cms
-Environment=XDG_CACHE_HOME=/var/cache/cl-cms
+ReadWritePaths=/var/www /var/cache/hotdog-cms
+Environment=XDG_CACHE_HOME=/var/cache/hotdog-cms
 
 [Install]
 WantedBy=multi-user.target
@@ -74,7 +74,7 @@ The service user needs write access to the document root's parent folder
 
 ## Serving the files
 
-Any web server that serves files works. What cl-cms output expects:
+Any web server that serves files works. What HotDog CMS output expects:
 
 - a folder's `index.html` for its address (`/about/` serves `about/index.html`);
 - `404.html` for a missing page, with status 404;
@@ -98,7 +98,7 @@ server {
     location ~ "\.[0-9a-f]{10}\.[A-Za-z0-9]+$" {
         add_header Cache-Control "public, max-age=31536000, immutable";
     }
-    location = /.cl-cms-build { return 404; }
+    location = /.hotdog-cms-build { return 404; }
     error_page 404 /404.html;
 }
 ```

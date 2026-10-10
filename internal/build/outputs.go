@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/site"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
 
 func indexable(p *site.Page) bool {
@@ -373,7 +373,7 @@ func writeSearch(s *site.Site, name string, out string) error {
 
 // RedirectsFile lists the site's redirects inside a build, one "from to" per
 // line, for publishers that turn them into web server rules.
-const RedirectsFile = ".cl-cms-redirects"
+const RedirectsFile = ".hotdog-cms-redirects"
 
 var redirectTpl = template.Must(template.New("r").Parse(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>Moved</title>

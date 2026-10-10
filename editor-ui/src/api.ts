@@ -1,5 +1,5 @@
 // Talking to the editor server. Reads are plain GETs; anything that changes
-// state sends the X-CLCMS header, which the server requires along with a
+// state sends the X-HotDog header, which the server requires along with a
 // matching Origin, so another site can't make the browser act for you.
 
 export type Forge = { host: string; kind: string }
@@ -42,7 +42,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(path, {
     method: 'POST',
     credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CLCMS': '1' },
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-HotDog': '1' },
     body: JSON.stringify(body),
   })
   if (res.status === 401) throw new SignedOut('Your sign-in has ended. Sign in again.')
@@ -67,7 +67,7 @@ export const api = {
   site: (id: string, branch?: string) => get<SiteDetail>(`/api/sites/${encodeURIComponent(id)}${branch ? `?branch=${encodeURIComponent(branch)}` : ''}`),
   page: (id: string, source: string, branch?: string) =>
     get<PageDetail>(`/api/sites/${encodeURIComponent(id)}/page?source=${encodeURIComponent(source)}${branch ? `&branch=${encodeURIComponent(branch)}` : ''}`),
-  logout: () => fetch('/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'X-CLCMS': '1' } }),
+  logout: () => fetch('/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'X-HotDog': '1' } }),
 }
 
 export function signInURL(forge: string, returnTo: string) {

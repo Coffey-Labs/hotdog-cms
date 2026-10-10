@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
 )
 
 // Signing in is the platform's OAuth authorization-code flow with PKCE.
@@ -223,7 +223,7 @@ func (s *Server) api(ctx context.Context, f *ForgeConfig, token, u string, v any
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "cl-cms-editor")
+	req.Header.Set("User-Agent", "hotdog-cms-editor")
 	res, err := s.http.Do(req)
 	if err != nil {
 		return err

@@ -1,4 +1,4 @@
-// Package endpoint is the one part of cl-cms that runs per request: it takes
+// Package endpoint is the one part of hotdog-cms that runs per request: it takes
 // form submissions and answers searches for the sites it is configured with.
 // It holds no content of its own and needs no database. It is not the CMS:
 // it never edits a site, and the CMS never runs here.
@@ -16,8 +16,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forms"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/site"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forms"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
 
 // Config is endpoint.yaml.
@@ -37,7 +37,7 @@ type SMTPConfig struct {
 	Host        string `yaml:"host"`
 	Port        int    `yaml:"port"`
 	Username    string `yaml:"username"`
-	PasswordEnv string `yaml:"password_env"` // the variable holding the password; default CLCMS_SMTP_PASSWORD
+	PasswordEnv string `yaml:"password_env"` // the variable holding the password; default HOTDOG_SMTP_PASSWORD
 	From        string `yaml:"from"`
 	// TLS: starttls (the default), tls (port 465 style), or none, which is
 	// only allowed to a server on this machine.
@@ -87,7 +87,7 @@ func LoadConfig(file string) (*Config, map[string]*siteRuntime, error) {
 		c.RateLimit.Window = 10 * time.Minute
 	}
 	if c.SMTP.PasswordEnv == "" {
-		c.SMTP.PasswordEnv = "CLCMS_SMTP_PASSWORD"
+		c.SMTP.PasswordEnv = "HOTDOG_SMTP_PASSWORD"
 	}
 	switch c.SMTP.TLS {
 	case "":

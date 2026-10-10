@@ -17,8 +17,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/preview"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/preview"
 )
 
 //go:embed all:ui/dist
@@ -38,13 +38,13 @@ type Server struct {
 	live     *liveServer
 }
 
-// New builds the editor from editor.yaml. CLCMS_EDITOR_SECRET seals sessions.
+// New builds the editor from editor.yaml. HOTDOG_EDITOR_SECRET seals sessions.
 func New(configFile string, logw io.Writer) (*Server, error) {
 	cfg, err := LoadConfig(configFile)
 	if err != nil {
 		return nil, err
 	}
-	seal, err := newSealer(os.Getenv("CLCMS_EDITOR_SECRET"))
+	seal, err := newSealer(os.Getenv("HOTDOG_EDITOR_SECRET"))
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // sameOrigin guards anything that changes state: the request must come from
 // the editor's own pages, and carry the header only its own script sends.
 func (s *Server) sameOrigin(r *http.Request) bool {
-	return r.Header.Get("Origin") == s.cfg.PublicURL && r.Header.Get("X-CLCMS") == "1"
+	return r.Header.Get("Origin") == s.cfg.PublicURL && r.Header.Get("X-HotDog") == "1"
 }
 
 func (s *Server) serveUI(w http.ResponseWriter, r *http.Request) {

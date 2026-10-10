@@ -49,7 +49,7 @@ sites:
   - { dir: site, public: public, store: store }
 ` + extraSite
 	os.WriteFile(filepath.Join(dir, "endpoint.yaml"), []byte(cfg), 0o644)
-	t.Setenv("CLCMS_FORM_SECRET", strings.Repeat("k", 40))
+	t.Setenv("HOTDOG_FORM_SECRET", strings.Repeat("k", 40))
 	s, err := New(filepath.Join(dir, "endpoint.yaml"), os.Stderr)
 	if err != nil {
 		t.Fatal(err)
@@ -67,7 +67,7 @@ sites:
 
 func token(t *testing.T, s *Server) string {
 	t.Helper()
-	req := httptest.NewRequest("GET", "http://example.org/_cl/forms/contact/token", nil)
+	req := httptest.NewRequest("GET", "http://example.org/_hotdog/forms/contact/token", nil)
 	rec := httptest.NewRecorder()
 	s.ServeHTTP(rec, req)
 	var d map[string]string
@@ -76,7 +76,7 @@ func token(t *testing.T, s *Server) string {
 }
 
 func post(s *Server, v url.Values, origin, accept string, ip string) *httptest.ResponseRecorder {
-	req := httptest.NewRequest("POST", "http://example.org/_cl/forms/contact", strings.NewReader(v.Encode()))
+	req := httptest.NewRequest("POST", "http://example.org/_hotdog/forms/contact", strings.NewReader(v.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if origin != "" {
 		req.Header.Set("Origin", origin)
@@ -171,7 +171,7 @@ func TestRateLimitAndProxy(t *testing.T) {
 	codes := []int{}
 	for i := 0; i < 4; i++ {
 		// From the trusted proxy, for the same visitor.
-		req := httptest.NewRequest("POST", "http://example.org/_cl/forms/contact", strings.NewReader(v.Encode()))
+		req := httptest.NewRequest("POST", "http://example.org/_hotdog/forms/contact", strings.NewReader(v.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		req.Header.Set("Origin", "https://example.org")
 		req.Header.Set("X-Forwarded-For", "198.51.100.9")
@@ -194,7 +194,7 @@ func TestRateLimitAndProxy(t *testing.T) {
 
 func TestSearchAndHosts(t *testing.T) {
 	s, _, _ := setup(t, "")
-	req := httptest.NewRequest("GET", "http://example.org/_cl/search/articles?q=mail+server", nil)
+	req := httptest.NewRequest("GET", "http://example.org/_hotdog/search/articles?q=mail+server", nil)
 	rec := httptest.NewRecorder()
 	s.ServeHTTP(rec, req)
 	var d struct {
@@ -205,7 +205,7 @@ func TestSearchAndHosts(t *testing.T) {
 	if d.Total != 2 || d.Results[0].U != "/articles/a/" || !strings.Contains(d.Results[0].Snippet, "mail server") {
 		t.Fatalf("search: %d %+v", rec.Code, d)
 	}
-	for _, path := range []string{"/_cl/search/../../etc", "/_cl/search/nope"} {
+	for _, path := range []string{"/_hotdog/search/../../etc", "/_hotdog/search/nope"} {
 		rec := httptest.NewRecorder()
 		s.ServeHTTP(rec, httptest.NewRequest("GET", "http://example.org"+path+"?q=x", nil))
 		if rec.Code != 404 {
@@ -213,7 +213,7 @@ func TestSearchAndHosts(t *testing.T) {
 		}
 	}
 	rec = httptest.NewRecorder()
-	s.ServeHTTP(rec, httptest.NewRequest("GET", "http://other.example/_cl/forms/contact/token", nil))
+	s.ServeHTTP(rec, httptest.NewRequest("GET", "http://other.example/_hotdog/forms/contact/token", nil))
 	if rec.Code != 404 {
 		t.Errorf("unknown host: %d", rec.Code)
 	}
@@ -222,7 +222,7 @@ func TestSearchAndHosts(t *testing.T) {
 func TestSecretRequired(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "endpoint.yaml"), []byte("sites: []\n"), 0o644)
-	t.Setenv("CLCMS_FORM_SECRET", "short")
+	t.Setenv("HOTDOG_FORM_SECRET", "short")
 	if _, err := New(filepath.Join(dir, "endpoint.yaml"), os.Stderr); err == nil {
 		t.Fatal("started without a proper secret")
 	}

@@ -19,7 +19,7 @@ import (
 	"strings"
 	"time"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/site"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
 
 // Level is how serious a finding is.

@@ -1,16 +1,16 @@
-// cl-cms forms. Fetches each form's anti-spam token when the page loads, sends
+// hotdog-cms forms. Fetches each form's anti-spam token when the page loads, sends
 // the form without leaving the page, and shows problems next to the fields
 // they're about. Without this script the form still posts, and the endpoint
 // answers with a page that explains what went wrong.
 (function () {
   'use strict';
-  function setStatus(form, text) { form.querySelector('.cl-status').textContent = text; }
+  function setStatus(form, text) { form.querySelector('.hotdog-status').textContent = text; }
   function clearErrors(form) {
-    form.querySelectorAll('.cl-error').forEach(function (p) { p.textContent = ''; });
+    form.querySelectorAll('.hotdog-error').forEach(function (p) { p.textContent = ''; });
     form.querySelectorAll('[aria-invalid]').forEach(function (el) { el.removeAttribute('aria-invalid'); });
   }
   function token(form) {
-    return fetch('/_cl/forms/' + form.dataset.clForm + '/token', { credentials: 'omit' })
+    return fetch('/_hotdog/forms/' + form.dataset.clForm + '/token', { credentials: 'omit' })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(function (d) { form.querySelector('input[name="_t"]').value = d.token; });
   }
@@ -57,6 +57,6 @@
     });
   }
   document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('form[data-cl-form]').forEach(setup);
+    document.querySelectorAll('form[data-hotdog-form]').forEach(setup);
   });
 })();

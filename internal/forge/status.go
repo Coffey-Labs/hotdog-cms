@@ -26,7 +26,7 @@ type Status struct {
 	State       State
 	URL         string // the preview
 	Description string
-	Context     string // the check's name; "cl-cms/preview" by default
+	Context     string // the check's name; "hotdog-cms/preview" by default
 }
 
 // Client posts commit statuses with a platform token.
@@ -48,7 +48,7 @@ func (c *Client) SetStatus(ctx context.Context, commit string, s Status) error {
 		return nil
 	}
 	if s.Context == "" {
-		s.Context = "cl-cms/preview"
+		s.Context = "hotdog-cms/preview"
 	}
 	if len(s.Description) > 140 {
 		s.Description = s.Description[:137] + "..."
@@ -103,7 +103,7 @@ func (c *Client) SetStatus(ctx context.Context, commit string, s Status) error {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "cl-cms")
+	req.Header.Set("User-Agent", "hotdog-cms")
 	hc := c.HTTP
 	if hc == nil {
 		hc = &http.Client{Timeout: 15 * time.Second}

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/site"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
 
 func mkSite(t *testing.T, files map[string]string, extra string) (string, string, *site.Config) {

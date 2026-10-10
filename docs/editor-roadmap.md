@@ -1,6 +1,6 @@
 # Editor roadmap
 
-Draft, 2026-10-10; decisions taken the same day. The editor is the part of cl-cms that people who don't
+Draft, 2026-10-10; decisions taken the same day. The editor is the part of HotDog CMS that people who don't
 live in git will use. It should do what people actually use WordPress for,
 without what makes WordPress heavy and dangerous.
 
@@ -30,7 +30,7 @@ keep them.
 4. **One safety check, three ways in.** Power users get a keyboard-driven,
    CLI-like environment. Novices get WYSIWYG. Everyone else gets Markdown with
    a live preview, and forms for structured parts. All three produce the same
-   files and go through the same `cl-cms check`, preview and review. No mode
+   files and go through the same `hotdog-cms check`, preview and review. No mode
    skips a check, and no mode has a shortcut to the live site.
 5. **Security and usability are never traded.** If a feature seems to need
    that trade, the design is wrong.
@@ -45,7 +45,7 @@ interface first, because the other two are built on its plumbing.
 ### E0 · Foundations
 
 *Built 2026-10-10:*
-- **Server:** `cl-cms editor` (Go), with the React + TypeScript interface
+- **Server:** `hotdog-cms editor` (Go), with the React + TypeScript interface
   embedded.
 - **Sign-in:** OAuth with PKCE for all five platforms; branches, reviews and
   permissions read from Gitea, Forgejo and GitHub.
@@ -60,10 +60,10 @@ interface first, because the other two are built on its plumbing.
 - **Tried against the Coffey Labs Gitea** with an OAuth app, "cl-cms editor
   (local test)", whose only redirect is loopback. John authorized it, and
   every view worked against the real repository. For the page view's preview
-  pane, `cl-cms preview -frame <editor origin>` lets the editor, and only the
+  pane, `hotdog-cms preview -frame <editor origin>` lets the editor, and only the
   editor, frame previews.
 
-- `cl-cms editor`: a separate server, by default listening on loopback, with
+- `hotdog-cms editor`: a separate server, by default listening on loopback, with
   its own strict CSP.
 - **Sign-in through the git platform** (OAuth with Gitea, GitHub, GitLab,
   Forgejo or Bitbucket). Edits are made with the signed-in
@@ -72,7 +72,7 @@ interface first, because the other two are built on its plumbing.
   **No data store:** sessions are signed, short-lived cookies.
 - Open a site: browse its files, its pages by collection, and its open drafts
   and pull requests.
-- Embedded previews (`cl-cms preview`), with each branch's check results.
+- Embedded previews (`hotdog-cms preview`), with each branch's check results.
 
 ### E1 · Write (the in-between interface)
 
@@ -155,12 +155,12 @@ still previewable, with no faster path to the live site.
 
 - Keyboard-first throughout, with a command palette (`Ctrl K`): new article,
   open, preview, check, submit, publish.
-- A command line in the browser that speaks cl-cms (`new article "Title"`,
+- A command line in the browser that speaks HotDog CMS (`new article "Title"`,
   `check`, `publish`), plus git-shaped commands for branches, diffs and
   history. It doesn't run arbitrary shell commands: the editor host is not a
   shell.
 - Any file in the site is editable as raw text, with diffs before saving.
-- Everything the editor does is something `cl-cms` on a laptop can do too.
+- Everything the editor does is something `hotdog-cms` on a laptop can do too.
   The power interface is a convenience, never a requirement.
 
 ### E5 · WYSIWYG interface
@@ -233,7 +233,7 @@ still previewable, with no faster path to the live site.
 
 ### E9 · Importers
 
-- **WordPress** (`cl-cms import wordpress`):
+- **WordPress** (`hotdog-cms import wordpress`):
   - connects to a live site with an Application Password (read-only, over the
     REST API), or reads a WXR export file;
   - posts and pages become Markdown, with `format: html` kept where

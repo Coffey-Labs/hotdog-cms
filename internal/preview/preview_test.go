@@ -18,8 +18,8 @@ import (
 	"testing"
 	"time"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
-	"git.coffeylabs.org/coffey-labs/cl-cms/starter"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/starter"
 )
 
 type repo struct {
@@ -112,7 +112,7 @@ func TestPreviews(t *testing.T) {
 	if res, _ := get(t, h, branchHost, "/no-such-page/"); res.StatusCode != 404 {
 		t.Errorf("missing page: %d", res.StatusCode)
 	}
-	if res, _ := get(t, h, branchHost, "/.cl-cms-build"); res.StatusCode != 404 {
+	if res, _ := get(t, h, branchHost, "/.hotdog-cms-build"); res.StatusCode != 404 {
 		t.Errorf("build marker is served")
 	}
 	if _, body := get(t, h, branchHost, "/robots.txt"); !strings.Contains(body, "Disallow: /") {
@@ -209,7 +209,7 @@ func TestWebhookAndStatus(t *testing.T) {
 	mac := hmac.New(sha256.New, []byte("hook-secret"))
 	mac.Write(body)
 	send := func(sig string) int {
-		req := httptest.NewRequest("POST", "http://localhost:8160/_cl/hook", bytes.NewReader(body))
+		req := httptest.NewRequest("POST", "http://localhost:8160/_hotdog/hook", bytes.NewReader(body))
 		req.Header.Set("X-GitHub-Event", "push")
 		req.Header.Set("X-Hub-Signature-256", sig)
 		rec := httptest.NewRecorder()

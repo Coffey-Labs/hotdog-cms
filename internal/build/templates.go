@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/site"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
 
 // Templates holds one parsed set per layout. Each set is the shared part
@@ -61,7 +61,7 @@ func loadTemplates(dir string, funcs template.FuncMap) (*Templates, error) {
 	// a page can name its sections in front matter without anything being
 	// looked up by name at run time.
 	var dispatch strings.Builder
-	dispatch.WriteString(`{{define "cl:section"}}`)
+	dispatch.WriteString(`{{define "hotdog:section"}}`)
 	for i, name := range secs {
 		if err := parseInto(common, "section/"+name, filepath.Join(dir, "sections", name+".html"), "sections/"); err != nil {
 			return nil, err
@@ -77,7 +77,7 @@ func loadTemplates(dir string, funcs template.FuncMap) (*Templates, error) {
 		dispatch.WriteString(`{{end}}`)
 	}
 	dispatch.WriteString(`{{end}}`)
-	dispatch.WriteString(`{{define "sections"}}{{range .Sections}}{{template "cl:section" (sectionContext $ .)}}{{end}}{{end}}`)
+	dispatch.WriteString(`{{define "sections"}}{{range .Sections}}{{template "hotdog:section" (sectionContext $ .)}}{{end}}{{end}}`)
 	if _, err := common.Parse(dispatch.String()); err != nil {
 		return nil, err
 	}

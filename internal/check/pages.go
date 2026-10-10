@@ -17,7 +17,7 @@ import (
 type page struct {
 	file        string // public/...
 	url         string // its address
-	redirect    bool   // a meta-refresh page cl-cms wrote for a redirect
+	redirect    bool   // a meta-refresh page hotdog-cms wrote for a redirect
 	static      bool   // copied as-is from static/ (a verification file, say), not a page
 	noindex     bool
 	title       string

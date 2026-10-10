@@ -1,4 +1,4 @@
-// Command cl-cms builds a website from Markdown and templates.
+// Command hotdog-cms builds a website from Markdown and templates.
 package main
 
 import (
@@ -15,48 +15,48 @@ import (
 	"strings"
 	"time"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/check"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/ci"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/editor"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/endpoint"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/gitx"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/preview"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/publish"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/serve"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/site"
-	"git.coffeylabs.org/coffey-labs/cl-cms/starter"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/check"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/ci"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/editor"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/endpoint"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/gitx"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/preview"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/publish"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/serve"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/starter"
 )
 
 var version = "dev"
 
-const usage = `cl-cms builds a website from Markdown files and templates.
+const usage = `hotdog-cms builds a website from Markdown files and templates.
 
 Usage:
-  cl-cms new <folder>          start a site from the starter template
-  cl-cms serve [flags]         preview the site, rebuilding as you edit
-  cl-cms build [flags]         build the site into public/
-  cl-cms check [flags]         build, then look for broken links and forbidden strings
-  cl-cms publish [target...]   build, then publish to targets in publish.yaml
-  cl-cms pull -repo URL -out DIR   on a web server: publish from git when the branch moves
-  cl-cms preview -repo URL     build every branch as it would be published, each at its own address
-  cl-cms ci <platform>         write the CI file for github, gitea, forgejo, gitlab, bitbucket, woodpecker, or a git hook
-  cl-cms endpoint -config FILE the small server for form submissions and search, behind your web server
-  cl-cms editor -config FILE   the editor: sign in with your git platform and work on sites (never on a site's host)
+  hotdog-cms new <folder>          start a site from the starter template
+  hotdog-cms serve [flags]         preview the site, rebuilding as you edit
+  hotdog-cms build [flags]         build the site into public/
+  hotdog-cms check [flags]         build, then look for broken links and forbidden strings
+  hotdog-cms publish [target...]   build, then publish to targets in publish.yaml
+  hotdog-cms pull -repo URL -out DIR   on a web server: publish from git when the branch moves
+  hotdog-cms preview -repo URL     build every branch as it would be published, each at its own address
+  hotdog-cms ci <platform>         write the CI file for github, gitea, forgejo, gitlab, bitbucket, woodpecker, or a git hook
+  hotdog-cms endpoint -config FILE the small server for form submissions and search, behind your web server
+  hotdog-cms editor -config FILE   the editor: sign in with your git platform and work on sites (never on a site's host)
 
 Platforms: GitHub, GitLab, Gitea, Forgejo/Codeberg, Gogs, Bitbucket, or any git server.
 Secrets come from the environment, never flags:
-  CLCMS_GIT_TOKEN, CLCMS_GIT_USER   clone private repositories over HTTPS
-  CLCMS_HOOK_SECRET                 verify push webhooks (preview, pull -hook)
-  CLCMS_FORGE_TOKEN                 post preview links as commit statuses
-  CLCMS_FORM_SECRET                 sign form tokens (endpoint; same on every endpoint of a site)
-  CLCMS_SMTP_PASSWORD               the endpoint's SMTP password
-  CLCMS_TURNSTILE_SECRET            check Cloudflare Turnstile on forms that use it
-  CLCMS_EDITOR_SECRET               seal editor sessions (same on every editor serving the same people)
-  cl-cms version
+  HOTDOG_GIT_TOKEN, HOTDOG_GIT_USER   clone private repositories over HTTPS
+  HOTDOG_HOOK_SECRET                 verify push webhooks (preview, pull -hook)
+  HOTDOG_FORGE_TOKEN                 post preview links as commit statuses
+  HOTDOG_FORM_SECRET                 sign form tokens (endpoint; same on every endpoint of a site)
+  HOTDOG_SMTP_PASSWORD               the endpoint's SMTP password
+  HOTDOG_TURNSTILE_SECRET            check Cloudflare Turnstile on forms that use it
+  HOTDOG_EDITOR_SECRET               seal editor sessions (same on every editor serving the same people)
+  hotdog-cms version
 
-Run "cl-cms <command> -h" for a command's flags.
+Run "hotdog-cms <command> -h" for a command's flags.
 `
 
 func main() {
@@ -87,15 +87,15 @@ func main() {
 	case "editor":
 		err = cmdEditor(args)
 	case "version", "-v", "--version":
-		fmt.Println("cl-cms", version)
+		fmt.Println("hotdog-cms", version)
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 	default:
-		fmt.Fprintf(os.Stderr, "cl-cms: no command %q\n\n%s", cmd, usage)
+		fmt.Fprintf(os.Stderr, "hotdog-cms: no command %q\n\n%s", cmd, usage)
 		os.Exit(2)
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "cl-cms:", err)
+		fmt.Fprintln(os.Stderr, "hotdog-cms:", err)
 		os.Exit(1)
 	}
 }
@@ -105,7 +105,7 @@ func cmdNew(args []string) error {
 	name := fl.String("name", "", "the site's name (default: the folder's name)")
 	_ = fl.Parse(args)
 	if fl.NArg() != 1 {
-		return errors.New("usage: cl-cms new <folder>")
+		return errors.New("usage: hotdog-cms new <folder>")
 	}
 	dir := fl.Arg(0)
 	if entries, err := os.ReadDir(dir); err == nil && len(entries) > 0 {
@@ -136,7 +136,7 @@ func cmdNew(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Started %s in %s.\n\n  cd %s\n  cl-cms serve\n", *name, dir, dir)
+	fmt.Printf("Started %s in %s.\n\n  cd %s\n  hotdog-cms serve\n", *name, dir, dir)
 	return nil
 }
 
@@ -196,7 +196,7 @@ func cmdServe(args []string) error {
 	dir := fl.String("site", ".", "the site's folder")
 	addr := fl.String("addr", "127.0.0.1:8140", "address to listen on")
 	drafts := fl.Bool("drafts", true, "include pages marked draft: true")
-	ep := fl.String("endpoint", "", "a running cl-cms endpoint to pass /_cl/ requests to, e.g. http://127.0.0.1:8180")
+	ep := fl.String("endpoint", "", "a running hotdog-cms endpoint to pass /_hotdog/ requests to, e.g. http://127.0.0.1:8180")
 	reload := fl.Bool("reload", true, "reload the browser on changes (turn off for headless browsers and screenshots)")
 	_ = fl.Parse(args)
 	if _, err := site.LoadConfig(*dir); err != nil {
@@ -276,10 +276,10 @@ func cmdPull(args []string) error {
 	cache := fl.String("cache", "", "where to keep the clone (default under the user cache folder)")
 	every := fl.Duration("every", 0, "keep checking at this interval (e.g. 1m); 0 checks once and exits")
 	platform := fl.String("platform", "", "github, gitlab, gitea, forgejo, gogs, bitbucket or git (default: guessed from the repository URL)")
-	hook := fl.String("hook", "", "also listen here for push webhooks, e.g. 127.0.0.1:8170 behind a proxy (needs CLCMS_HOOK_SECRET)")
+	hook := fl.String("hook", "", "also listen here for push webhooks, e.g. 127.0.0.1:8170 behind a proxy (needs HOTDOG_HOOK_SECRET)")
 	_ = fl.Parse(args)
 	if *repo == "" || *out == "" {
-		return errors.New("usage: cl-cms pull -repo URL -out DIR [-branch main] [-every 1m] [-hook ADDR]")
+		return errors.New("usage: hotdog-cms pull -repo URL -out DIR [-branch main] [-every 1m] [-hook ADDR]")
 	}
 	fr, err := forge.Parse(*repo, forge.Kind(*platform))
 	if err != nil {
@@ -290,7 +290,7 @@ func cmdPull(args []string) error {
 	}
 	return publish.Pull(publish.PullOptions{Repo: *repo, Branch: *branch, Subdir: *subdir, Out: *out, Cache: *cache, Every: *every,
 		Git: gitx.FromEnv(fr.Kind.TokenUser()), Log: os.Stdout,
-		HookAddr: *hook, HookSecret: os.Getenv("CLCMS_HOOK_SECRET"), HookKind: fr.Kind})
+		HookAddr: *hook, HookSecret: os.Getenv("HOTDOG_HOOK_SECRET"), HookKind: fr.Kind})
 }
 
 func cmdPreview(args []string) error {
@@ -299,7 +299,7 @@ func cmdPreview(args []string) error {
 	subdir := fl.String("subdir", "", "the site's folder inside the repository")
 	branches := fl.String("branches", "", "comma-separated branch patterns to preview, e.g. main,feature/* (default all)")
 	root := fl.String("root", "", "where previews are built (default under the user cache folder)")
-	addr := fl.String("addr", "127.0.0.1:8160", "address to listen on; anything but loopback needs CLCMS_PREVIEW_AUTH")
+	addr := fl.String("addr", "127.0.0.1:8160", "address to listen on; anything but loopback needs HOTDOG_PREVIEW_AUTH")
 	domain := fl.String("domain", "localhost", "previews are served at <branch>.<domain>")
 	scheme := fl.String("scheme", "http", "the scheme browsers use (https behind a TLS proxy)")
 	port := fl.String("port", "", "the port browsers use, if not the listening port on localhost or 80/443 elsewhere")
@@ -309,7 +309,7 @@ func cmdPreview(args []string) error {
 	frame := fl.String("frame", "", "comma-separated origins allowed to show previews in a frame, e.g. the editor: http://127.0.0.1:8190")
 	_ = fl.Parse(args)
 	if *repo == "" {
-		return errors.New("usage: cl-cms preview -repo URL [-branches main,feature/*] [-addr 127.0.0.1:8160]")
+		return errors.New("usage: hotdog-cms preview -repo URL [-branches main,feature/*] [-addr 127.0.0.1:8160]")
 	}
 	var ancestors []string
 	for _, o := range strings.Split(*frame, ",") {
@@ -326,7 +326,7 @@ func cmdPreview(args []string) error {
 	if err != nil {
 		return err
 	}
-	fc := &forge.Client{Repo: fr, Token: os.Getenv("CLCMS_FORGE_TOKEN")}
+	fc := &forge.Client{Repo: fr, Token: os.Getenv("HOTDOG_FORGE_TOKEN")}
 	if *subdir != "" && (filepath.IsAbs(*subdir) || strings.Contains(*subdir, "..")) {
 		return errors.New("-subdir must be a relative path inside the repository")
 	}
@@ -335,7 +335,7 @@ func cmdPreview(args []string) error {
 		if err != nil {
 			return err
 		}
-		*root = filepath.Join(base, "cl-cms", "previews")
+		*root = filepath.Join(base, "hotdog-cms", "previews")
 	}
 	if *port == "" && *domain == "localhost" {
 		if _, p, err := net.SplitHostPort(*addr); err == nil {
@@ -343,10 +343,10 @@ func cmdPreview(args []string) error {
 		}
 	}
 	var auth *preview.Auth
-	if v := os.Getenv("CLCMS_PREVIEW_AUTH"); v != "" {
+	if v := os.Getenv("HOTDOG_PREVIEW_AUTH"); v != "" {
 		u, p, ok := strings.Cut(v, ":")
 		if !ok || u == "" || len(p) < 12 {
-			return errors.New("CLCMS_PREVIEW_AUTH must be user:password, with a password of at least 12 characters")
+			return errors.New("HOTDOG_PREVIEW_AUTH must be user:password, with a password of at least 12 characters")
 		}
 		auth = &preview.Auth{User: u, Pass: p}
 	}
@@ -358,7 +358,7 @@ func cmdPreview(args []string) error {
 	}
 	b, err := preview.NewBuilder(preview.Options{Repo: *repo, Subdir: *subdir, Refs: refs, Root: *root,
 		Domain: strings.ToLower(*domain), Port: *port, Scheme: *scheme, Drafts: *drafts, Log: os.Stdout,
-		Git: gitx.FromEnv(fr.Kind.TokenUser()), Forge: fc, HookSecret: os.Getenv("CLCMS_HOOK_SECRET"), FrameAncestors: ancestors})
+		Git: gitx.FromEnv(fr.Kind.TokenUser()), Forge: fc, HookSecret: os.Getenv("HOTDOG_HOOK_SECRET"), FrameAncestors: ancestors})
 	if err != nil {
 		return err
 	}
@@ -374,7 +374,7 @@ func cmdCI(args []string) error {
 	write := fl.Bool("write", false, "write the file into the repository (the current folder) instead of printing it")
 	_ = fl.Parse(args)
 	if fl.NArg() != 1 {
-		return fmt.Errorf("usage: cl-cms ci <%s> [-site .] [-branch main] [-write]", strings.Join(ci.Platforms(), "|"))
+		return fmt.Errorf("usage: hotdog-cms ci <%s> [-site .] [-branch main] [-write]", strings.Join(ci.Platforms(), "|"))
 	}
 	if !safeArgRe.MatchString(*dir) || !safeArgRe.MatchString(*branch) || strings.Contains(*dir, "..") {
 		return errors.New("-site and -branch may only use letters, digits, ., _, / and -")

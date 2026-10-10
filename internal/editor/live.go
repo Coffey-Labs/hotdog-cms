@@ -142,7 +142,7 @@ func (l *liveServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		p = filepath.Join(p, "index.html")
 	}
-	if fi, err := os.Stat(p); err != nil || fi.IsDir() || strings.HasPrefix(filepath.Base(p), ".cl-cms") {
+	if fi, err := os.Stat(p); err != nil || fi.IsDir() || strings.HasPrefix(filepath.Base(p), ".hotdog-cms") {
 		if data, err := os.ReadFile(filepath.Join(dir, "404.html")); err == nil {
 			h.Set("Content-Type", "text/html; charset=utf-8")
 			w.WriteHeader(http.StatusNotFound)

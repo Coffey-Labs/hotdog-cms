@@ -1,4 +1,4 @@
-// Package starter holds the site that `cl-cms new` writes out.
+// Package starter holds the site that `hotdog-cms new` writes out.
 package starter
 
 import "embed"

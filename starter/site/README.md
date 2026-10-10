@@ -1,8 +1,8 @@
-# Your cl-cms site
+# Your HotDog CMS site
 
-    cl-cms serve     preview at http://127.0.0.1:8140, rebuilding as you save
-    cl-cms build     write the finished site to public/
-    cl-cms check     build, then look for broken links and forbidden strings
+    hotdog-cms serve     preview at http://127.0.0.1:8140, rebuilding as you save
+    hotdog-cms build     write the finished site to public/
+    hotdog-cms check     build, then look for broken links and forbidden strings
 
 | Folder | What goes in it |
 |---|---|

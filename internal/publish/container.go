@@ -8,16 +8,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/check"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/check"
 )
 
 // The image serves files and nothing else: an unprivileged web server, the
-// site, and a config that answers the way cl-cms lays a site out. Folders get
+// site, and a config that answers the way hotdog-cms lays a site out. Folders get
 // their index.html, a missing path gets 404.html with a 404, fingerprinted
 // assets are cached for a year, and pages are revalidated every time.
 
-const nginxContainerfile = `# Written by cl-cms. The site, served by unprivileged nginx on port 8080.
+const nginxContainerfile = `# Written by hotdog-cms. The site, served by unprivileged nginx on port 8080.
 FROM docker.io/nginxinc/nginx-unprivileged:1.29-alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY site/ /usr/share/nginx/html/
@@ -47,7 +47,7 @@ const nginxConf = `server {
         add_header X-Frame-Options "SAMEORIGIN" always;
     }
 
-    # cl-cms puts a content hash in every asset's name, so a name never
+    # hotdog-cms puts a content hash in every asset's name, so a name never
     # changes content and can be cached for good.
     location ~ "\.[0-9a-f]{10}\.[A-Za-z0-9]+$" {
         add_header Cache-Control "public, max-age=31536000, immutable" always;
@@ -60,7 +60,7 @@ const nginxConf = `server {
 }
 `
 
-const caddyContainerfile = `# Written by cl-cms. The site, served by Caddy on port 8080.
+const caddyContainerfile = `# Written by hotdog-cms. The site, served by Caddy on port 8080.
 FROM docker.io/library/caddy:2-alpine
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY site/ /srv/
@@ -94,7 +94,7 @@ const caddyFile = `:8080 {
 func container(t Target, out string, log io.Writer) error {
 	ctx := t.Context
 	if ctx == "" {
-		dir, err := os.MkdirTemp("", "cl-cms-image-")
+		dir, err := os.MkdirTemp("", "hotdog-cms-image-")
 		if err != nil {
 			return err
 		}

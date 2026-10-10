@@ -33,5 +33,5 @@ export function Present({ id, url, branch }: { id: string; url: string; branch?:
 
 // Between the editor's tabs only: a BroadcastChannel never leaves this origin.
 export function liveChannel(): BroadcastChannel | undefined {
-  return typeof BroadcastChannel === 'undefined' ? undefined : new BroadcastChannel('clcms-live')
+  return typeof BroadcastChannel === 'undefined' ? undefined : new BroadcastChannel('hotdog-live')
 }

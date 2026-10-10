@@ -1,19 +1,19 @@
-# cl-cms
+# HotDog CMS
 
 Websites from Markdown files and templates, with no database.
 
-    go build -o bin/cl-cms ./cmd/cl-cms
+    go build -o bin/hotdog-cms ./cmd/hotdog-cms
 
-    cl-cms new mysite        start a site from the starter
+    hotdog-cms new mysite        start a site from the starter
     cd mysite
-    cl-cms serve             preview at http://127.0.0.1:8140, reloading as you save
-    cl-cms build             write the finished site to public/
-    cl-cms check [-csp]      build, then check it: tracking, privacy, links, SEO, security (docs/checks.md)
-    cl-cms publish <target>  build, then publish: a folder, a server over SSH, a container image, or your own command
-    cl-cms pull -repo URL -out DIR   on the web server: publish from git when the branch moves
-    cl-cms preview -repo URL     every branch built as it would be published, at <branch>.localhost:8160
-    cl-cms endpoint -config FILE forms and search, behind your web server (docs/forms.md)
-    cl-cms ci <platform>         the CI file for GitHub, GitLab, Gitea, Forgejo, Bitbucket, Woodpecker, or a git hook
+    hotdog-cms serve             preview at http://127.0.0.1:8140, reloading as you save
+    hotdog-cms build             write the finished site to public/
+    hotdog-cms check [-csp]      build, then check it: tracking, privacy, links, SEO, security (docs/checks.md)
+    hotdog-cms publish <target>  build, then publish: a folder, a server over SSH, a container image, or your own command
+    hotdog-cms pull -repo URL -out DIR   on the web server: publish from git when the branch moves
+    hotdog-cms preview -repo URL     every branch built as it would be published, at <branch>.localhost:8160
+    hotdog-cms endpoint -config FILE forms and search, behind your web server (docs/forms.md)
+    hotdog-cms ci <platform>         the CI file for GitHub, GitLab, Gitea, Forgejo, Bitbucket, Woodpecker, or a git hook
 
 A site is a folder:
 

@@ -53,7 +53,7 @@ func TestVerify(t *testing.T) {
 		Gogs:      {"X-Gogs-Signature": {sig}},
 		Bitbucket: {"X-Hub-Signature": {"sha256=" + sig}},
 		GitLab:    {"X-Gitlab-Token": {secret}},
-		Git:       {"X-Clcms-Token": {secret}},
+		Git:       {"X-Hotdog-Token": {secret}},
 	}
 	for kind, h := range good {
 		if err := Verify(kind, h, body, secret); err != nil {
@@ -129,7 +129,7 @@ func TestSetStatus(t *testing.T) {
 			return ""
 		}},
 		{Repo{Gitea, "", "me/site", srv.URL}, func() string {
-			if last.path != "/repos/me/site/statuses/abc123" || last.auth != "token tok" || last.body["context"] != "cl-cms/preview" {
+			if last.path != "/repos/me/site/statuses/abc123" || last.auth != "token tok" || last.body["context"] != "hotdog-cms/preview" {
 				return "gitea request wrong"
 			}
 			return ""

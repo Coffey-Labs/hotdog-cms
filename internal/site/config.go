@@ -107,7 +107,7 @@ type OutputsConfig struct {
 	LLMs    bool  `yaml:"llms"`    // llms.txt, default off
 }
 
-// CheckConfig tunes `cl-cms check`.
+// CheckConfig tunes `hotdog-cms check`.
 type CheckConfig struct {
 	// Forbid lists regular expressions that must not appear in the source or
 	// the built site: internal host names, personal addresses, and so on.

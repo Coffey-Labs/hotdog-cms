@@ -1,4 +1,4 @@
-// Package forge is what cl-cms knows about the places sites are hosted in
+// Package forge is what hotdog-cms knows about the places sites are hosted in
 // git: GitHub (and GitHub Enterprise), GitLab, Gitea, Forgejo (Codeberg),
 // Gogs, Bitbucket Cloud, and plain git anywhere else.
 //
@@ -50,9 +50,9 @@ func (k Kind) TokenUser() string {
 		return "x-token-auth"
 	}
 	// Gitea takes the token as the password with any user name (checked on
-	// Gitea 28.1). Forgejo is a fork of it; for Gogs, set CLCMS_GIT_USER to the
+	// Gitea 28.1). Forgejo is a fork of it; for Gogs, set HOTDOG_GIT_USER to the
 	// account's name if the default is refused.
-	return "cl-cms"
+	return "hotdog-cms"
 }
 
 var scpRe = regexp.MustCompile(`^(?:[A-Za-z0-9._-]+@)?([A-Za-z0-9.-]+):(.+)$`)

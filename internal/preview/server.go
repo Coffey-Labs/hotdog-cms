@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
 )
 
 // Auth is the one set of credentials a preview server asks for.
@@ -37,7 +37,7 @@ func (b *Builder) Handler(auth *Auth) http.Handler {
 		h.Set("Referrer-Policy", "no-referrer")
 		// The webhook proves itself with the platform's signature instead of
 		// the preview credentials, which a platform can't send.
-		if r.URL.Path == "/_cl/hook" {
+		if r.URL.Path == "/_hotdog/hook" {
 			b.hook(w, r)
 			return
 		}
@@ -45,7 +45,7 @@ func (b *Builder) Handler(auth *Auth) http.Handler {
 			u, p, ok := r.BasicAuth()
 			if !ok || subtle.ConstantTimeCompare([]byte(u), []byte(auth.User)) != 1 ||
 				subtle.ConstantTimeCompare([]byte(p), []byte(auth.Pass)) != 1 {
-				h.Set("WWW-Authenticate", `Basic realm="cl-cms previews", charset="UTF-8"`)
+				h.Set("WWW-Authenticate", `Basic realm="hotdog-cms previews", charset="UTF-8"`)
 				http.Error(w, "Sign in to see previews.", http.StatusUnauthorized)
 				return
 			}
@@ -81,7 +81,7 @@ func (b *Builder) Handler(auth *Auth) http.Handler {
 // serveFiles answers the way the production web server config does.
 func serveFiles(w http.ResponseWriter, r *http.Request, root string) {
 	clean := filepath.Clean("/" + r.URL.Path)
-	if clean == "/.cl-cms-build" {
+	if clean == "/.hotdog-cms-build" {
 		clean = "/nonexistent"
 	}
 	p := filepath.Join(root, filepath.FromSlash(clean))
@@ -147,7 +147,7 @@ func (b *Builder) Serve(addr string, auth *Auth, every time.Duration) error {
 	ip := net.ParseIP(host)
 	loopback := host == "localhost" || (ip != nil && ip.IsLoopback())
 	if !loopback && auth == nil {
-		return fmt.Errorf("previews show unpublished work: to listen on %s, set credentials (CLCMS_PREVIEW_AUTH=user:password) and put TLS in front", addr)
+		return fmt.Errorf("previews show unpublished work: to listen on %s, set credentials (HOTDOG_PREVIEW_AUTH=user:password) and put TLS in front", addr)
 	}
 	go func() {
 		t := time.NewTicker(every)

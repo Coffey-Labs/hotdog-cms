@@ -1,4 +1,4 @@
-// Package editor is the cl-cms editor: a separate server, never on the host
+// Package editor is the hotdog-cms editor: a separate server, never on the host
 // that serves the sites, where people sign in with their git platform and
 // work on sites through it. It holds no accounts and no content of its own:
 // who someone is and what they may do comes from the platform, every change
@@ -15,7 +15,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
 )
 
 // Config is editor.yaml.
@@ -48,7 +48,7 @@ type SiteConfig struct {
 	Preview PreviewConfig `yaml:"preview"`
 }
 
-// PreviewConfig says where `cl-cms preview` serves this repository's branches.
+// PreviewConfig says where `hotdog-cms preview` serves this repository's branches.
 type PreviewConfig struct {
 	Domain string `yaml:"domain"` // previews are <branch>.<domain>
 	Port   string `yaml:"port"`
@@ -97,7 +97,7 @@ func LoadConfig(file string) (*Config, error) {
 		if err != nil {
 			return nil, err
 		}
-		c.Cache = filepath.Join(base, "cl-cms", "editor")
+		c.Cache = filepath.Join(base, "hotdog-cms", "editor")
 	}
 	hosts := map[string]bool{}
 	for i, f := range c.Forges {

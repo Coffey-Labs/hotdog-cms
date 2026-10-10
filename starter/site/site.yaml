@@ -2,7 +2,7 @@
 name: {{SITE_NAME}}
 url: https://example.org
 language: en
-description: A site built with cl-cms.
+description: A site built with hotdog-cms.
 author: Your Name
 
 # Every folder in content/ is a collection. Settings here change its defaults.
@@ -27,7 +27,7 @@ menus:
 outputs:
   llms: true
 
-# Patterns `cl-cms check` refuses to publish: internal host names, private
+# Patterns `hotdog-cms check` refuses to publish: internal host names, private
 # addresses, anything that must never reach the public site.
 check:
   forbid: []

@@ -1,6 +1,6 @@
 // Package ci writes the pipeline file each platform runs: check a site on
 // every pull request, publish it when its branch moves. For plain git there is
-// no CI, so it writes a post-receive hook that tells cl-cms a branch moved.
+// no CI, so it writes a post-receive hook that tells hotdog-cms a branch moved.
 //
 // Published targets come from publish.yaml; the values it reads from the
 // environment (${DEPLOY_HOST} and the like) are the pipeline's secrets. For an
@@ -21,7 +21,7 @@ type Template struct {
 	Note string // what to set up on the platform
 }
 
-const install = `go install git.coffeylabs.org/coffey-labs/cl-cms/cmd/cl-cms@latest`
+const install = `go install git.coffeylabs.org/coffey-labs/hotdog-cms/cmd/hotdog-cms@latest`
 
 // sshSetup loads a deploy key for rsync targets; a no-op without one.
 const sshSetup = `if [ -n "${DEPLOY_KEY:-}" ]; then
@@ -39,7 +39,7 @@ func indent(s string, n int) string {
 // GitHub-syntax workflows (GitHub, Gitea and Forgejo Actions). Actions are
 // pinned to commits; tags can be moved, commits can't.
 func actions(platform, checkout, setupGo string) string {
-	return `# Written by ` + "`cl-cms ci " + platform + "`" + `. Checks the site on every pull request and
+	return `# Written by ` + "`hotdog-cms ci " + platform + "`" + `. Checks the site on every pull request and
 # publishes it to the targets in publish.yaml when {{BRANCH}} moves.
 name: site
 on:
@@ -59,10 +59,10 @@ jobs:
       - uses: ` + setupGo + `
         with:
           go-version: stable
-      - name: Install cl-cms
+      - name: Install hotdog-cms
         run: ` + install + `
       - name: Check
-        run: cl-cms check -site {{SITE}}
+        run: hotdog-cms check -site {{SITE}}
       - name: Publish
         if: (github.event_name == 'push' || github.event_name == 'schedule') && github.ref == 'refs/heads/{{BRANCH}}'
         env:
@@ -71,7 +71,7 @@ jobs:
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
 ` + indent(sshSetup, 10) + `
-          cl-cms publish -site {{SITE}} -no-build -all
+          hotdog-cms publish -site {{SITE}} -no-build -all
 `
 }
 
@@ -96,7 +96,7 @@ var templates = map[string]Template{
 	},
 	"gitlab": {
 		Path: ".gitlab-ci.yml",
-		Body: `# Written by ` + "`cl-cms ci gitlab`" + `. Checks the site on every merge request and
+		Body: `# Written by ` + "`hotdog-cms ci gitlab`" + `. Checks the site on every merge request and
 # publishes it to the targets in publish.yaml when {{BRANCH}} moves.
 default:
   image: golang:1.26-alpine
@@ -107,7 +107,7 @@ default:
 site:check:
   stage: test
   script:
-    - cl-cms check -site {{SITE}}
+    - hotdog-cms check -site {{SITE}}
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "{{BRANCH}}"
@@ -120,7 +120,7 @@ site:publish:
   script:
     - |
 ` + indent(sshSetup, 6) + `
-    - cl-cms publish -site {{SITE}} -all
+    - hotdog-cms publish -site {{SITE}} -all
   rules:
     - if: $CI_COMMIT_BRANCH == "{{BRANCH}}"
 `,
@@ -128,7 +128,7 @@ site:publish:
 	},
 	"bitbucket": {
 		Path: "bitbucket-pipelines.yml",
-		Body: `# Written by ` + "`cl-cms ci bitbucket`" + `. Checks the site on every pull request and
+		Body: `# Written by ` + "`hotdog-cms ci bitbucket`" + `. Checks the site on every pull request and
 # publishes it to the targets in publish.yaml when {{BRANCH}} moves.
 image: golang:1.26
 definitions:
@@ -138,7 +138,7 @@ definitions:
         script:
           - apt-get update -qq && apt-get install -y -qq rsync openssh-client >/dev/null
           - ` + install + `
-          - cl-cms check -site {{SITE}}
+          - hotdog-cms check -site {{SITE}}
 pipelines:
   pull-requests:
     '**':
@@ -151,14 +151,14 @@ pipelines:
           script:
             - apt-get update -qq && apt-get install -y -qq rsync openssh-client >/dev/null
             - ` + install + `
-            - cl-cms check -site {{SITE}}
-            - cl-cms publish -site {{SITE}} -no-build -all
+            - hotdog-cms check -site {{SITE}}
+            - hotdog-cms publish -site {{SITE}} -no-build -all
 `,
 		Note: "Enable Pipelines, add DEPLOY_HOST as a secured deployment variable, and for rsync use Repository settings › SSH keys (Pipelines loads that key and its known hosts itself).",
 	},
 	"woodpecker": {
 		Path: ".woodpecker/site.yaml",
-		Body: `# Written by ` + "`cl-cms ci woodpecker`" + `. Checks the site on every pull request and
+		Body: `# Written by ` + "`hotdog-cms ci woodpecker`" + `. Checks the site on every pull request and
 # publishes it to the targets in publish.yaml when {{BRANCH}} moves.
 when:
   - event: pull_request
@@ -172,7 +172,7 @@ steps:
     commands:
       - apk add --no-cache git
       - ` + install + `
-      - cl-cms check -site {{SITE}}
+      - hotdog-cms check -site {{SITE}}
   - name: publish
     image: golang:1.26-alpine
     when:
@@ -187,27 +187,27 @@ steps:
       - ` + install + `
       - |
 ` + indent(sshSetup, 8) + `
-      - cl-cms publish -site {{SITE}} -all
+      - hotdog-cms publish -site {{SITE}} -all
 `,
 		Note: "Add deploy_host (and deploy_key + deploy_known_hosts for rsync) as repository secrets in Woodpecker.",
 	},
 	"git": {
 		Path: "post-receive",
 		Body: `#!/bin/sh
-# Written by ` + "`cl-cms ci git`" + `. Install it as hooks/post-receive in the bare repository
-# (chmod +x). On every push it tells cl-cms which branch moved, so previews
+# Written by ` + "`hotdog-cms ci git`" + `. Install it as hooks/post-receive in the bare repository
+# (chmod +x). On every push it tells hotdog-cms which branch moved, so previews
 # (or a pull agent) rebuild at once instead of at their next check.
 #
 # The token is read from a header file, not passed on the command line, so it
 # never appears in the process list. Create it once, readable only by git:
-#   printf 'X-CLCMS-Token: %s\n' "$(openssl rand -hex 32)" > /etc/cl-cms/hook-header
-# and give cl-cms the same token as CLCMS_HOOK_SECRET.
-URL="${CLCMS_HOOK_URL:-https://preview.example.org/_cl/hook}"
-HEADER=/etc/cl-cms/hook-header
+#   printf 'X-HotDog-Token: %s\n' "$(openssl rand -hex 32)" > /etc/hotdog-cms/hook-header
+# and give hotdog-cms the same token as HOTDOG_HOOK_SECRET.
+URL="${HOTDOG_HOOK_URL:-https://preview.example.org/_hotdog/hook}"
+HEADER=/etc/hotdog-cms/hook-header
 while read -r old new ref; do
   curl -fsS --max-time 10 -X POST -H "@$HEADER" \
     --data-urlencode "ref=$ref" --data-urlencode "after=$new" "$URL" >/dev/null ||
-    echo "cl-cms: could not reach $URL; the next scheduled check will catch up" >&2
+    echo "hotdog-cms: could not reach $URL; the next scheduled check will catch up" >&2
 done
 `,
 		Note: "Copy it to <repo>.git/hooks/post-receive on the git server and make it executable. Previews and pull agents keep their scheduled check as well, so a missed hook only delays a rebuild.",

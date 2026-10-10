@@ -1,8 +1,8 @@
 # Forms and search: the endpoint
 
-A cl-cms site is static files. Two things need a server to answer them: form
-submissions and, if you want it, search. Both go to `cl-cms endpoint`, a
-small server you run beside your web server, which passes `/_cl/` to it. It
+A HotDog CMS site is static files. Two things need a server to answer them: form
+submissions and, if you want it, search. Both go to `hotdog-cms endpoint`, a
+small server you run beside your web server, which passes `/_hotdog/` to it. It
 holds no content, edits nothing, and needs no database.
 
 ## A form
@@ -43,7 +43,7 @@ In this order, and a submission that fails any of them is not sent:
    They're told the message was sent.
 5. **A signed token, 3 seconds to 24 hours old.** The page fetches it when it
    loads. That rejects instant, scripted posts and replays, and it needs no
-   storage. Every endpoint for a site shares `CLCMS_FORM_SECRET`.
+   storage. Every endpoint for a site shares `HOTDOG_FORM_SECRET`.
 6. **Turnstile,** if the form sets `turnstile_sitekey`.
 7. **The fields themselves:**
    - only the declared ones are accepted;
@@ -70,7 +70,7 @@ use it either way, or both:
 - **In the browser:** the page downloads the index when someone searches and
   scores it there. Works on any host, including a plain CDN; costs the visitor
   the index (about 1 MB, 330 KB gzipped, for 135 long articles).
-- **From the endpoint:** `GET /_cl/search/<collection>?q=...&page=N` returns
+- **From the endpoint:** `GET /_hotdog/search/<collection>?q=...&page=N` returns
   one page of results as JSON, scored the same way. The visitor downloads
   only the results.
 
@@ -93,24 +93,24 @@ rate_limit: { count: 5, window: 10m }
 sites:
   - dir: /srv/sites/example.org      # the site's source: site.yaml, forms/
     public: /var/www/example.org     # the built site, for search
-    store: /var/lib/cl-cms/forms/example.org
+    store: /var/lib/hotdog-cms/forms/example.org
 ```
 
 ```sh
-CLCMS_FORM_SECRET=$(openssl rand -hex 32) CLCMS_SMTP_PASSWORD=... cl-cms endpoint -config endpoint.yaml
+HOTDOG_FORM_SECRET=$(openssl rand -hex 32) HOTDOG_SMTP_PASSWORD=... hotdog-cms endpoint -config endpoint.yaml
 ```
 
-In nginx, pass `/_cl/` to it:
+In nginx, pass `/_hotdog/` to it:
 
 ```nginx
-location /_cl/ {
+location /_hotdog/ {
     proxy_pass http://127.0.0.1:8180;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 }
 ```
 
-For local work, `cl-cms serve -endpoint http://127.0.0.1:8180` does the same.
+For local work, `hotdog-cms serve -endpoint http://127.0.0.1:8180` does the same.
 
 ## Where a data store would come in
 

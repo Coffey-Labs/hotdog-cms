@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/site"
-	"git.coffeylabs.org/coffey-labs/cl-cms/starter"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/starter"
 )
 
 // writeStarter puts the starter site in a temporary folder.
@@ -40,7 +40,7 @@ func TestStarterBuilds(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, f := range []string{"index.html", "about/index.html", "articles/index.html", "articles/hello-world/index.html",
-		"tags/cl-cms/index.html", "404.html", "sitemap.xml", "robots.txt", "articles/feed.xml", "llms.txt"} {
+		"tags/hotdog-cms/index.html", "404.html", "sitemap.xml", "robots.txt", "articles/feed.xml", "llms.txt"} {
 		if _, err := os.Stat(filepath.Join(res.Out, f)); err != nil {
 			t.Errorf("missing %s", f)
 		}
@@ -80,7 +80,7 @@ func TestRefusesForeignOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := Run(Options{SiteDir: dir, Out: other}); err == nil {
-		t.Fatal("replaced a folder cl-cms did not write")
+		t.Fatal("replaced a folder hotdog-cms did not write")
 	}
 	if _, err := os.Stat(filepath.Join(other, "precious.txt")); err != nil {
 		t.Fatal("the folder's file is gone")
@@ -137,7 +137,7 @@ func TestPaginationTermsRedirectsRSS(t *testing.T) {
 	if strings.Contains(read("sitemap.xml"), "/tags/linux/") {
 		t.Error("noindex term page is in the sitemap")
 	}
-	if !strings.Contains(read("old/index.html"), "url=/about/") || !strings.Contains(read(".cl-cms-redirects"), "/old/ /about/") {
+	if !strings.Contains(read("old/index.html"), "url=/about/") || !strings.Contains(read(".hotdog-cms-redirects"), "/old/ /about/") {
 		t.Error("redirect not written")
 	}
 	if feed := read("articles/feed.xml"); !strings.Contains(feed, `<rss version="2.0"`) || !strings.Contains(feed, "<category>linux</category>") {

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
-	"git.coffeylabs.org/coffey-labs/cl-cms/starter"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/starter"
 )
 
 func starterSite(t *testing.T, dir string) {
@@ -57,7 +57,7 @@ func TestDirTarget(t *testing.T) {
 	foreign := t.TempDir()
 	os.WriteFile(filepath.Join(foreign, "keep.txt"), []byte("x"), 0o644)
 	if err := Run("local", Target{Type: "dir", Path: foreign}, out, &log); err == nil {
-		t.Fatal("replaced a folder cl-cms did not write")
+		t.Fatal("replaced a folder hotdog-cms did not write")
 	}
 }
 
@@ -100,7 +100,7 @@ func TestRsyncTarget(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(live, "articles", "hello-world", "index.html")); err != nil {
 		t.Fatal("article not published")
 	}
-	for _, leftover := range []string{live + ".cl-cms-staging", live + ".cl-cms-old"} {
+	for _, leftover := range []string{live + ".hotdog-cms-staging", live + ".hotdog-cms-old"} {
 		if _, err := os.Stat(leftover); err == nil {
 			t.Errorf("%s left behind", leftover)
 		}
@@ -109,7 +109,7 @@ func TestRsyncTarget(t *testing.T) {
 	os.MkdirAll(foreign, 0o755)
 	os.WriteFile(filepath.Join(foreign, "keep.txt"), []byte("x"), 0o644)
 	if err := Run("server", Target{Type: "rsync", Host: "h", Path: foreign}, out, &log); err == nil {
-		t.Fatal("replaced a remote folder cl-cms did not write")
+		t.Fatal("replaced a remote folder hotdog-cms did not write")
 	}
 	if _, err := os.Stat(filepath.Join(foreign, "keep.txt")); err != nil {
 		t.Fatal("the remote folder's file is gone")
@@ -135,7 +135,7 @@ func TestTargetValidation(t *testing.T) {
 func TestCommandAndContainerContext(t *testing.T) {
 	out := built(t)
 	var log bytes.Buffer
-	if err := Run("hook", Target{Type: "command", Command: []string{"sh", "-c", `test -f "$CLCMS_OUT/index.html" && test -f "$0/index.html"`, "{out}"}}, out, &log); err != nil {
+	if err := Run("hook", Target{Type: "command", Command: []string{"sh", "-c", `test -f "$HOTDOG_OUT/index.html" && test -f "$0/index.html"`, "{out}"}}, out, &log); err != nil {
 		t.Fatalf("command target: %v", err)
 	}
 	ctx := filepath.Join(t.TempDir(), "ctx")
@@ -226,7 +226,7 @@ func TestPullRefusesFailedChecks(t *testing.T) {
 	if b, _ := os.ReadFile(filepath.Join(www, "about", "index.html")); strings.Contains(string(b), "internal.example") {
 		t.Fatal("the leak reached the live site")
 	}
-	if _, err := os.Stat(www + ".cl-cms-check"); err == nil {
+	if _, err := os.Stat(www + ".hotdog-cms-check"); err == nil {
 		t.Error("staging folder left behind")
 	}
 }

@@ -1,5 +1,5 @@
 # A form. Use it in a page with `form: contact` in the front matter.
-# Submissions go to the endpoint (cl-cms endpoint), which checks them against
+# Submissions go to the endpoint (hotdog-cms endpoint), which checks them against
 # the fields below and emails them to `to`.
 title: Contact
 to: you@example.org

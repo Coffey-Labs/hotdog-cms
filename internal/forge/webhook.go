@@ -34,7 +34,7 @@ func equal(a, b string) bool { return subtle.ConstantTimeCompare([]byte(a), []by
 
 // Verify checks that a delivery was signed with the shared secret, the way
 // the platform signs them. A webhook without a secret is refused outright:
-// anyone could otherwise make cl-cms rebuild on demand.
+// anyone could otherwise make hotdog-cms rebuild on demand.
 func Verify(kind Kind, h http.Header, body []byte, secret string) error {
 	if secret == "" {
 		return errors.New("no webhook secret configured")
@@ -61,11 +61,11 @@ func Verify(kind Kind, h http.Header, body []byte, secret string) error {
 		}
 		return errors.New("X-Gitlab-Token missing or wrong")
 	case Git:
-		if t := h.Get("X-CLCMS-Token"); t != "" {
+		if t := h.Get("X-HotDog-Token"); t != "" {
 			if equal(t, secret) {
 				return nil
 			}
-			return errors.New("X-CLCMS-Token is wrong")
+			return errors.New("X-HotDog-Token is wrong")
 		}
 		checks = [][2]string{{"X-Hub-Signature-256", "sha256="}}
 	}

@@ -29,7 +29,7 @@ type Site struct {
 	Taxonomies  map[string]map[string][]*Page
 	Data        map[string]any // data/*.yaml and data/*.json, by file name without extension
 	BuildTime   time.Time
-	Dev         bool // built by `cl-cms serve`
+	Dev         bool // built by `hotdog-cms serve`
 	// NextScheduled is the earliest publish_at still in the future: the
 	// moment a rebuild will change the site without a new commit.
 	NextScheduled time.Time

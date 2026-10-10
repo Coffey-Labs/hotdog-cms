@@ -11,13 +11,13 @@ import (
 	"path/filepath"
 	"time"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/check"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/gitx"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/check"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/gitx"
 )
 
-// PullOptions configure the pull agent: cl-cms running on the web server
+// PullOptions configure the pull agent: hotdog-cms running on the web server
 // itself, fetching the site's repository and rebuilding when the branch moves.
 // Nothing pushes to the server, so the server needs no deploy access, and the
 // repository can be read with a read-only deploy key or token.
@@ -55,16 +55,16 @@ func Pull(o PullOptions) error {
 			return err
 		}
 		sum := sha256.Sum256([]byte(o.Repo + "\x00" + o.Branch))
-		o.Cache = filepath.Join(base, "cl-cms", "pull-"+hex.EncodeToString(sum[:8]))
+		o.Cache = filepath.Join(base, "hotdog-cms", "pull-"+hex.EncodeToString(sum[:8]))
 	}
 	kick := make(chan struct{}, 1)
 	if o.HookAddr != "" {
 		if o.HookSecret == "" {
-			return errors.New("a webhook needs a secret (CLCMS_HOOK_SECRET)")
+			return errors.New("a webhook needs a secret (HOTDOG_HOOK_SECRET)")
 		}
 		go func() {
 			srv := &http.Server{Addr: o.HookAddr, Handler: hookHandler(o, kick), ReadHeaderTimeout: 10 * time.Second}
-			fmt.Fprintf(o.Log, "listening for %s webhooks on %s/_cl/hook\n", o.HookKind, o.HookAddr)
+			fmt.Fprintf(o.Log, "listening for %s webhooks on %s/_hotdog/hook\n", o.HookKind, o.HookAddr)
 			if err := srv.ListenAndServe(); err != nil {
 				fmt.Fprintf(o.Log, "webhook listener: %v\n", err)
 			}
@@ -121,7 +121,7 @@ func Pull(o PullOptions) error {
 // and only then puts it live, so a commit that fails a check never reaches
 // the web root.
 func buildChecked(siteDir, out string) (*build.Result, error) {
-	staging := out + ".cl-cms-check"
+	staging := out + ".hotdog-cms-check"
 	res, err := build.Run(build.Options{SiteDir: siteDir, Out: staging})
 	if err != nil {
 		return nil, err
@@ -158,7 +158,7 @@ func (o PullOptions) sync() (string, error) {
 
 func hookHandler(o PullOptions, kick chan struct{}) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/_cl/hook" || r.Method != http.MethodPost {
+		if r.URL.Path != "/_hotdog/hook" || r.Method != http.MethodPost {
 			http.NotFound(w, r)
 			return
 		}

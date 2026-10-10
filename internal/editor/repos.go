@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"strings"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
 )
 
 // What the editor reads about a repository from its platform, as the
@@ -161,7 +161,7 @@ func (s *Server) send(ctx context.Context, f *ForgeConfig, token, method, u stri
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "cl-cms-editor")
+	req.Header.Set("User-Agent", "hotdog-cms-editor")
 	res, err := s.http.Do(req)
 	if err != nil {
 		return err

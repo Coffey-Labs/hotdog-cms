@@ -23,10 +23,10 @@ import (
 	"sync"
 	"time"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/check"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/gitx"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/check"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/gitx"
 )
 
 // Options configure the preview builder.

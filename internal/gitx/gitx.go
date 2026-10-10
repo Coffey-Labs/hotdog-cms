@@ -1,4 +1,4 @@
-// Package gitx runs git for cl-cms: cloning and fetching sites from any
+// Package gitx runs git for hotdog-cms: cloning and fetching sites from any
 // repository git can reach, plain or hosted, with optional token auth for
 // private HTTPS repositories.
 //
@@ -22,11 +22,11 @@ type Auth struct {
 	Token string
 }
 
-// FromEnv reads CLCMS_GIT_TOKEN and CLCMS_GIT_USER. defaultUser is the
+// FromEnv reads HOTDOG_GIT_TOKEN and HOTDOG_GIT_USER. defaultUser is the
 // platform's convention for token logins (x-access-token on GitHub, oauth2 on
 // GitLab, ...).
 func FromEnv(defaultUser string) Auth {
-	a := Auth{User: os.Getenv("CLCMS_GIT_USER"), Token: os.Getenv("CLCMS_GIT_TOKEN")}
+	a := Auth{User: os.Getenv("HOTDOG_GIT_USER"), Token: os.Getenv("HOTDOG_GIT_TOKEN")}
 	if a.User == "" {
 		a.User = defaultUser
 	}
@@ -79,7 +79,7 @@ func firstVerb(args []string) string {
 }
 
 // Checkout makes dir a shallow clone of one branch at its tip: cloning the
-// first time, fetching and resetting after. The folder belongs to cl-cms, so
+// first time, fetching and resetting after. The folder belongs to hotdog-cms, so
 // anything in it that isn't on the branch is thrown away.
 func Checkout(auth Auth, repo, branch, dir string) (string, error) {
 	if _, err := os.Stat(dir + "/.git"); err != nil {

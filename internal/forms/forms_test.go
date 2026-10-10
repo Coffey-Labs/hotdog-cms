@@ -93,7 +93,7 @@ func TestRenderEscapes(t *testing.T) {
 	if strings.Contains(s, "<script>x") {
 		t.Error("submit text not escaped")
 	}
-	for _, want := range []string{`action="/_cl/forms/contact"`, `name="_website"`, `name="_t"`, `type="email"`, `maxlength="20"`, `<option>Press</option>`, `required`} {
+	for _, want := range []string{`action="/_hotdog/forms/contact"`, `name="_website"`, `name="_t"`, `type="email"`, `maxlength="20"`, `<option>Press</option>`, `required`} {
 		if !strings.Contains(s, want) {
 			t.Errorf("form is missing %s", want)
 		}

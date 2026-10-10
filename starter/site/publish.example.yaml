@@ -1,4 +1,4 @@
-# Where `cl-cms publish` sends the site. Copy to publish.yaml and keep the
+# Where `hotdog-cms publish` sends the site. Copy to publish.yaml and keep the
 # targets you use. ${NAME} reads an environment variable, so host names and
 # registries can stay out of the repository. No passwords or keys go here:
 # SSH uses your keys and agent, registries use `docker login` / `podman login`.

@@ -1,8 +1,8 @@
 # Checks
 
-`cl-cms check` builds the site and reads every page the way a careful
+`hotdog-cms check` builds the site and reads every page the way a careful
 reviewer would. **Errors** fail it; **warnings** are reported. The same check
-runs before anything is published: `cl-cms publish` and the pull agent
+runs before anything is published: `hotdog-cms publish` and the pull agent
 refuse a build with errors, and previews show the count for each branch.
 There is no flag to skip it. A site that means to break a rule switches the
 rule off in `site.yaml`, where the decision is written down and reviewed
@@ -44,7 +44,7 @@ check:
 
 ## The Content-Security-Policy a site needs
 
-`cl-cms check -csp` prints the policy the built pages need: their own origin,
+`hotdog-cms check -csp` prints the policy the built pages need: their own origin,
 the hosts they load from, and `'unsafe-inline'` only if a page still has
 inline code. A site with no inline scripts or styles gets a strict policy. It
 can't see what scripts fetch at run time, so add those hosts to

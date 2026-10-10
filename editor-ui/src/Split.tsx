@@ -5,7 +5,7 @@ import { useRef, useState, type CSSProperties, type KeyboardEvent, type PointerE
 // person. Double-click puts it back. The width is remembered per browser.
 // On a narrow screen the panes stack and the divider goes away (styles.css).
 
-const KEY = 'clcms-split'
+const KEY = 'hotdog-split'
 const DEFAULT = 44
 const MIN = 25
 const MAX = 75

@@ -1,11 +1,11 @@
 # Previews
 
-`cl-cms preview` builds every branch of a site's repository exactly as it
+`hotdog-cms preview` builds every branch of a site's repository exactly as it
 would be published, and serves each one at its own address. A change on a
 branch, or later an editor's draft, can be looked at for real before it
 reaches the branch the site publishes from.
 
-    cl-cms preview -repo https://git.example.org/me/site.git
+    hotdog-cms preview -repo https://git.example.org/me/site.git
 
 Then open `http://localhost:8160/` for the list, or go straight to a branch at
 `http://<branch>.localhost:8160/`. Browsers send every `*.localhost` name to
@@ -37,8 +37,8 @@ They show work that hasn't been published, so:
   without them:
 
 ```sh
-CLCMS_PREVIEW_AUTH='editor:a-long-password' \
-  cl-cms preview -repo ... -addr 0.0.0.0:8160 -domain preview.example.org -scheme https
+HOTDOG_PREVIEW_AUTH='editor:a-long-password' \
+  hotdog-cms preview -repo ... -addr 0.0.0.0:8160 -domain preview.example.org -scheme https
 ```
 
 Put TLS in front, and point a wildcard DNS name (`*.preview.example.org`) at

@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forms"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forms"
 )
 
-// Server answers /_cl/... for every configured site.
+// Server answers /_hotdog/... for every configured site.
 type Server struct {
 	cfg       *Config
 	sites     map[string]*siteRuntime
@@ -27,7 +27,7 @@ type Server struct {
 	mail      *mailer
 	store     store
 	trusted   []*net.IPNet
-	turnstile string // CLCMS_TURNSTILE_SECRET
+	turnstile string // HOTDOG_TURNSTILE_SECRET
 	search    *searcher
 	now       func() time.Time
 	log       *log.Logger
@@ -40,14 +40,14 @@ func New(configFile string, logw io.Writer) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	secret := os.Getenv("CLCMS_FORM_SECRET")
+	secret := os.Getenv("HOTDOG_FORM_SECRET")
 	if len(secret) < 32 {
-		return nil, errors.New("CLCMS_FORM_SECRET must be set, at least 32 characters (openssl rand -hex 32)")
+		return nil, errors.New("HOTDOG_FORM_SECRET must be set, at least 32 characters (openssl rand -hex 32)")
 	}
 	s := &Server{
 		cfg: cfg, sites: sites, tokens: tokens{secret: []byte(secret)},
 		limit: newLimiter(cfg.RateLimit.Count, cfg.RateLimit.Window),
-		mail:  newMailer(cfg.SMTP), turnstile: os.Getenv("CLCMS_TURNSTILE_SECRET"),
+		mail:  newMailer(cfg.SMTP), turnstile: os.Getenv("HOTDOG_TURNSTILE_SECRET"),
 		now: time.Now, log: log.New(logw, "", log.LstdFlags),
 	}
 	for _, p := range cfg.TrustedProxies {
@@ -65,7 +65,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	w.Header().Set("Cache-Control", "no-store")
-	if r.URL.Path == "/_cl/health" {
+	if r.URL.Path == "/_hotdog/health" {
 		fmt.Fprintln(w, "ok")
 		return
 	}
@@ -78,7 +78,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unknown site", http.StatusNotFound)
 		return
 	}
-	path := strings.TrimPrefix(r.URL.Path, "/_cl/")
+	path := strings.TrimPrefix(r.URL.Path, "/_hotdog/")
 	switch {
 	case strings.HasPrefix(path, "forms/"):
 		rest := strings.TrimPrefix(path, "forms/")

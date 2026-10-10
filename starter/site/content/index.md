@@ -1,10 +1,10 @@
 ---
 title: Home
-summary: A site built with cl-cms.
+summary: A site built with HotDog CMS.
 layout: landing
 sections:
   - hero:
-      eyebrow: Built with cl-cms
+      eyebrow: Built with HotDog CMS
       heading: Your site, in plain files
       text: Pages are Markdown. Templates make them look like this. When someone reads it, nothing runs but a web server handing out files.
       buttons:

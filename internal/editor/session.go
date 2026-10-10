@@ -16,12 +16,12 @@ import (
 // who signed in, on which platform, and their token for it. Nothing is kept
 // server-side, so there's nothing to leak from the editor's disk and nothing
 // to clean up; a session ends when the cookie expires or the person signs
-// out. The key comes from CLCMS_EDITOR_SECRET, shared by every editor
+// out. The key comes from HOTDOG_EDITOR_SECRET, shared by every editor
 // instance that serves the same people.
 
 const (
-	sessionCookie = "clcms_session"
-	stateCookie   = "clcms_oauth"
+	sessionCookie = "hotdog_session"
+	stateCookie   = "hotdog_oauth"
 	sessionTTL    = 8 * time.Hour
 )
 
@@ -39,9 +39,9 @@ type sealer struct{ aead cipher.AEAD }
 
 func newSealer(secret string) (*sealer, error) {
 	if len(secret) < 32 {
-		return nil, errors.New("CLCMS_EDITOR_SECRET must be set, at least 32 characters (openssl rand -hex 32)")
+		return nil, errors.New("HOTDOG_EDITOR_SECRET must be set, at least 32 characters (openssl rand -hex 32)")
 	}
-	key := sha256.Sum256([]byte("cl-cms editor session v1\x00" + secret))
+	key := sha256.Sum256([]byte("hotdog-cms editor session v1\x00" + secret))
 	block, err := aes.NewCipher(key[:])
 	if err != nil {
 		return nil, err

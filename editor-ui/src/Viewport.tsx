@@ -15,7 +15,7 @@ const SIZES: Record<Device, { w: number; h: number; label: string }> = {
 export function useDevice(): [Device, (d: Device) => void] {
   const [d, setD] = useState<Device>(() => {
     try {
-      const v = localStorage.getItem('clcms-device')
+      const v = localStorage.getItem('hotdog-device')
       if (v === 'desktop' || v === 'tablet' || v === 'mobile') return v
     } catch {
       /* storage blocked: start on desktop */
@@ -25,7 +25,7 @@ export function useDevice(): [Device, (d: Device) => void] {
   const set = (v: Device) => {
     setD(v)
     try {
-      localStorage.setItem('clcms-device', v)
+      localStorage.setItem('hotdog-device', v)
     } catch {
       /* not remembered, still works */
     }

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forms"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forms"
 )
 
 // store appends submissions to one JSON-lines file per form: a plain file,

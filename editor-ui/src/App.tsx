@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
+import logoDark from '../../brand/svg/logo-header-dark.svg'
+import logoLight from '../../brand/svg/logo-header-light.svg'
 import { api, signInURL, SignedOut, type SessionInfo, type SiteDetail, type SiteSummary } from './api'
 import { go, href, useRoute, type Route } from './route'
 import { PageEditor } from './PageEditor'
@@ -44,7 +46,11 @@ function Shell({ children, session, onSignOut }: { children: ReactNode; session?
   return (
     <div className="app">
       <header className="top">
-        <Link to={{ view: 'sites' }} className="brand"><span className="mark" aria-hidden="true">▌</span>Editor</Link>
+        <Link to={{ view: 'sites' }} className="brand">
+          <img className="logo only-light" src={logoLight} alt="HotDog CMS" />
+          <img className="logo only-dark" src={logoDark} alt="HotDog CMS" />
+          <span className="brand-sub">Editor</span>
+        </Link>
         {session?.user && (
           <div className="who">
             <span title={`Signed in with ${session.user.forge}`}>{session.user.name} <span className="muted">@{session.user.login}</span></span>
@@ -69,6 +75,8 @@ function SignIn({ session }: { session: SessionInfo }) {
   return (
     <div className="signin">
       <div className="card">
+        <img className="signin-logo only-light" src={logoLight} alt="HotDog CMS" />
+        <img className="signin-logo only-dark" src={logoDark} alt="HotDog CMS" />
         <h1>Sign in</h1>
         <p className="muted">
           With the git platform your sites live on. The editor keeps no accounts of its own: what you can open and change is

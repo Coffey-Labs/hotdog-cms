@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forms"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forms"
 )
 
 // mailer sends submissions over SMTP. It always uses TLS unless the server is

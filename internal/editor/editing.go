@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/preview"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/preview"
 )
 
 // Writing. Every change is a commit made as the signed-in person and pushed
@@ -287,7 +287,7 @@ func (s *Server) review(w http.ResponseWriter, r *http.Request, sess *Session, f
 	default:
 		body += fmt.Sprintf("\n\nChecks: passing, %d warning(s).", res.Warnings)
 	}
-	body += "\n\nOpened from the cl-cms editor by @" + sess.Login + "."
+	body += "\n\nOpened from the HotDog CMS editor by @" + sess.Login + "."
 	rv, err := s.openReview(r.Context(), f, sess.Token, st, req.Branch, strings.TrimSpace(req.Title), strings.TrimSpace(body))
 	if err != nil {
 		s.writeError(w, r, err)

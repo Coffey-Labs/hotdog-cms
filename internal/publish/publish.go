@@ -1,5 +1,5 @@
 // Package publish takes a finished build to wherever the operator serves the
-// site from. cl-cms doesn't decide that: a target is a folder on this machine,
+// site from. hotdog-cms doesn't decide that: a target is a folder on this machine,
 // a server reached over SSH, a container image, or a command of the operator's
 // own, and an operator can run any of them from CI, from a deploy script or by
 // hand. (The pull agent, for servers that fetch their own updates, is in
@@ -26,7 +26,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
 )
 
 // Target is one place a site can be published to.
@@ -47,7 +47,7 @@ type Target struct {
 	Push    bool   `yaml:"push"`    // push to the registry named in image
 	Tool    string `yaml:"tool"`    // docker or podman; default whichever is installed
 	Context string `yaml:"context"` // write the build context here and stop, for a pipeline that builds images itself
-	CSP     bool   `yaml:"csp"`     // send the Content-Security-Policy the pages need (as cl-cms check -csp prints it)
+	CSP     bool   `yaml:"csp"`     // send the Content-Security-Policy the pages need (as hotdog-cms check -csp prints it)
 
 	// command: argv, run without a shell. {out} is replaced with the build folder.
 	Command []string `yaml:"command"`
@@ -140,7 +140,7 @@ func safeRemotePath(p string) error {
 // Run publishes the build in out to one target.
 func Run(name string, t Target, out string, log io.Writer) error {
 	if _, err := os.Stat(filepath.Join(out, build.Marker)); err != nil {
-		return fmt.Errorf("%s is not a cl-cms build; run cl-cms build first", out)
+		return fmt.Errorf("%s is not a hotdog-cms build; run hotdog-cms build first", out)
 	}
 	fmt.Fprintf(log, "publishing to %s (%s)\n", name, t.Type)
 	switch t.Type {
@@ -156,7 +156,7 @@ func Run(name string, t Target, out string, log io.Writer) error {
 			args[i] = strings.ReplaceAll(a, "{out}", out)
 		}
 		cmd := exec.Command(args[0], args[1:]...)
-		cmd.Env = append(os.Environ(), "CLCMS_OUT="+out)
+		cmd.Env = append(os.Environ(), "HOTDOG_OUT="+out)
 		cmd.Stdout, cmd.Stderr = log, log
 		return cmd.Run()
 	}
@@ -170,7 +170,7 @@ func shq(s string) string { return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'
 // unchanged file from the live copy so only changes cross the network, then
 // swaps the two on the server with renames. Visitors see the old site or the
 // new one, never a half-uploaded mix, and the live folder is only replaced if
-// it is empty, missing, or an earlier cl-cms build.
+// it is empty, missing, or an earlier hotdog-cms build.
 func rsync(t Target, out string, log io.Writer) error {
 	for _, tool := range []string{"rsync", "ssh"} {
 		if _, err := exec.LookPath(tool); err != nil {
@@ -186,8 +186,8 @@ func rsync(t Target, out string, log io.Writer) error {
 		cmd.Stdout, cmd.Stderr = log, log
 		return cmd.Run()
 	}
-	live, staging, old := t.Path, t.Path+".cl-cms-staging", t.Path+".cl-cms-old"
-	check := fmt.Sprintf(`if [ -e %[1]s ] && [ ! -e %[1]s/%[2]s ] && [ -n "$(ls -A %[1]s 2>/dev/null)" ]; then echo "%[1]s has files cl-cms did not write; refusing to replace it" >&2; exit 3; fi; mkdir -p %[3]s`,
+	live, staging, old := t.Path, t.Path+".hotdog-cms-staging", t.Path+".hotdog-cms-old"
+	check := fmt.Sprintf(`if [ -e %[1]s ] && [ ! -e %[1]s/%[2]s ] && [ -n "$(ls -A %[1]s 2>/dev/null)" ]; then echo "%[1]s has files hotdog-cms did not write; refusing to replace it" >&2; exit 3; fi; mkdir -p %[3]s`,
 		shq(live), build.Marker, shq(staging))
 	if err := remote(check); err != nil {
 		return fmt.Errorf("checking %s:%s: %w", t.Host, live, err)

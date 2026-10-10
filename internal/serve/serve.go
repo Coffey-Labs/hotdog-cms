@@ -21,7 +21,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
-	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
 )
 
 // Options for the preview server.
@@ -29,7 +29,7 @@ type Options struct {
 	SiteDir string
 	Addr    string // host:port; loopback by default
 	Drafts  bool
-	// Endpoint, if set, is a running `cl-cms endpoint` that /_cl/ requests
+	// Endpoint, if set, is a running `hotdog-cms endpoint` that /_hotdog/ requests
 	// are passed to, so forms and search work in the preview as they will
 	// behind the real web server.
 	Endpoint string
@@ -38,9 +38,9 @@ type Options struct {
 	NoReload bool
 }
 
-const reloadScript = `<script>(()=>{const s=new EventSource("/_cl/events");` +
+const reloadScript = `<script>(()=>{const s=new EventSource("/_hotdog/events");` +
 	`s.addEventListener("reload",()=>location.reload());` +
-	`s.addEventListener("error-msg",e=>console.error("cl-cms build failed:\n"+e.data));})();</script>`
+	`s.addEventListener("error-msg",e=>console.error("hotdog-cms build failed:\n"+e.data));})();</script>`
 
 type hub struct {
 	mu      sync.Mutex
@@ -69,7 +69,7 @@ func Run(opt Options) error {
 		return err
 	}
 	base := "http://" + ln.Addr().String()
-	tmp, err := os.MkdirTemp("", "cl-cms-preview-")
+	tmp, err := os.MkdirTemp("", "hotdog-cms-preview-")
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func Run(opt Options) error {
 	})
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/_cl/events", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/_hotdog/events", func(w http.ResponseWriter, r *http.Request) {
 		fl, ok := w.(http.Flusher)
 		if !ok {
 			http.Error(w, "streaming unsupported", http.StatusInternalServerError)
@@ -138,9 +138,9 @@ func Run(opt Options) error {
 			return fmt.Errorf("-endpoint %q is not a URL like http://127.0.0.1:8180", opt.Endpoint)
 		}
 		proxy := httputil.NewSingleHostReverseProxy(target)
-		mux.Handle("/_cl/forms/", proxy)
-		mux.Handle("/_cl/search/", proxy)
-		log.Printf("passing /_cl/forms/ and /_cl/search/ to %s", opt.Endpoint)
+		mux.Handle("/_hotdog/forms/", proxy)
+		mux.Handle("/_hotdog/search/", proxy)
+		log.Printf("passing /_hotdog/forms/ and /_hotdog/search/ to %s", opt.Endpoint)
 	}
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		mu.RLock()

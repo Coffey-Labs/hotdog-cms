@@ -1,4 +1,4 @@
-module git.coffeylabs.org/coffey-labs/cl-cms
+module git.coffeylabs.org/coffey-labs/hotdog-cms
 
 go 1.26.0
 
