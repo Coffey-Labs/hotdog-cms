@@ -7,6 +7,7 @@ export type Route =
   | { view: 'site'; id: string; branch?: string }
   | { view: 'page'; id: string; source: string; branch?: string }
   | { view: 'present'; id: string; url: string; branch?: string }
+  | { view: 'media'; id: string; branch?: string }
 
 export function parse(loc: Location): Route {
   const parts = loc.pathname.split('/').filter(Boolean).map(decodeURIComponent)
@@ -14,6 +15,7 @@ export function parse(loc: Location): Route {
   const branch = q.get('branch') || undefined
   if (parts[0] === 'sites' && parts[1]) {
     if (parts[2] === 'page' && q.get('source')) return { view: 'page', id: parts[1], source: q.get('source')!, branch }
+    if (parts[2] === 'media') return { view: 'media', id: parts[1], branch }
     if (parts[2] === 'present' && q.get('url')) return { view: 'present', id: parts[1], url: q.get('url')!, branch }
     return { view: 'site', id: parts[1], branch }
   }
@@ -31,6 +33,8 @@ export function href(r: Route): string {
     case 'page':
       q.set('source', r.source)
       return `/sites/${encodeURIComponent(r.id)}/page?${q}`
+    case 'media':
+      return `/sites/${encodeURIComponent(r.id)}/media${q.size ? `?${q}` : ''}`
     case 'present':
       q.set('url', r.url)
       return `/sites/${encodeURIComponent(r.id)}/present?${q}`

@@ -19,6 +19,8 @@ export type SiteDetail = {
 }
 export type PageDetail = { source: string; frontMatter: Record<string, unknown>; frontMatterRaw: string; body: string; branch: string; commit: string }
 export type Edit = { set?: Record<string, unknown>; frontMatter?: string; body: string }
+export type MediaItem = { url: string; width: number; height: number; thumb: string; bytes: number; files: number; usedBy: string[]; alt: string }
+export type Uploaded = { branch: string; commit: string; created: boolean; url: string; width: number; height: number; notes: string[] | null; files: string[] }
 
 export class SignedOut extends Error {}
 export class Conflict extends Error {}
@@ -53,6 +55,19 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return data as T
 }
 
+// Pictures go up as a multipart form; the same headers guard it.
+async function upload(id: string, file: File, fields: Record<string, string>): Promise<Uploaded> {
+  const form = new FormData()
+  for (const [k, v] of Object.entries(fields)) form.set(k, v)
+  form.set('file', file)
+  const res = await fetch(site(id, 'media'), { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'X-HotDog': '1' }, body: form })
+  if (res.status === 401) throw new SignedOut('Your sign-in has ended. Sign in again.')
+  const data = await res.json().catch(() => ({}))
+  if (res.status === 409) throw new Conflict((data as { error?: string }).error || 'This changed since you opened it.')
+  if (!res.ok) throw new Error((data as { error?: string }).error || `The editor answered ${res.status}.`)
+  return data as Uploaded
+}
+
 const site = (id: string, action: string) => `/api/sites/${encodeURIComponent(id)}/${action}`
 
 export const api = {
@@ -62,6 +77,9 @@ export const api = {
   live: (id: string, b: { source: string; branch: string; edit: Edit | null }) => post<{ url?: string; path?: string; error?: string }>(site(id, 'live'), b),
   review: (id: string, b: { branch: string; title: string; description: string }) => post<Review>(site(id, 'review'), b),
   publish: (id: string, b: { branch: string }) => post<{ published: boolean; number: number }>(site(id, 'publish'), b),
+  upload: (id: string, file: File, b: { branch: string; baseCommit: string; source: string }) => upload(id, file, b),
+  media: (id: string, branch?: string) => get<MediaItem[]>(`${site(id, 'media')}${branch ? `?branch=${encodeURIComponent(branch)}` : ''}`),
+  mediaFile: (id: string, url: string, branch?: string) => `${site(id, 'media-file')}?url=${encodeURIComponent(url)}${branch ? `&branch=${encodeURIComponent(branch)}` : ''}`,
   session: () => get<SessionInfo>('/api/session'),
   sites: () => get<SiteSummary[]>('/api/sites'),
   site: (id: string, branch?: string) => get<SiteDetail>(`/api/sites/${encodeURIComponent(id)}${branch ? `?branch=${encodeURIComponent(branch)}` : ''}`),

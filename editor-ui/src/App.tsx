@@ -3,6 +3,7 @@ import logoDark from '../../brand/svg/logo-header-dark.svg'
 import logoLight from '../../brand/svg/logo-header-light.svg'
 import { api, signInURL, SignedOut, type SessionInfo, type SiteDetail, type SiteSummary } from './api'
 import { go, href, useRoute, type Route } from './route'
+import { MediaLibrary } from './Media'
 import { PageEditor } from './PageEditor'
 import { Present } from './Present'
 
@@ -38,6 +39,7 @@ export function App() {
       {route.view === 'site' && <SiteView id={route.id} branch={route.branch} />}
       {route.view === 'page' && <PageRoute id={route.id} source={route.source} branch={route.branch} />}
       {route.view === 'present' && <Present id={route.id} url={route.url} branch={route.branch} />}
+      {route.view === 'media' && <MediaLibrary id={route.id} branch={route.branch} />}
     </Shell>
   )
 }
@@ -146,6 +148,10 @@ function SiteView({ id, branch }: { id: string; branch?: string }) {
           {(d.collections || []).map((c) => (
             <button type="button" key={c.name} className={`side-item ${collection === c.name ? 'on' : ''}`} onClick={() => setCollection(c.name)}>{c.title} <span>{c.count}</span></button>
           ))}
+        </nav>
+        <nav aria-label="Site files">
+          <h2 className="side-label">Files</h2>
+          <Link to={{ view: 'media', id, branch }} className="side-item">Pictures</Link>
         </nav>
         <nav aria-label="Drafts">
           <h2 className="side-label">Drafts</h2>

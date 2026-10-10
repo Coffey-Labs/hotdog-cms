@@ -152,14 +152,35 @@ once. The plan:
 
 ### E2 · Media
 
-*In progress, 2026-10-10:* re-encoding is built (`internal/media`). Uploads
-are decoded by Go's own decoders, turned upright, stripped of EXIF, location,
-comments and anything after the image data, and published at 480, 960 and
-1600 px wide. Each size gets a WebP copy when that's smaller (38 to 60%
-smaller on real photos). The WebP encoder is libwebp translated to pure Go and
-vendored in `internal/media/webpenc`: no system library, no cgo. SVG is
-refused. Next: responsive markup in the build, then upload, library and alt
-text in the editor.
+*Built 2026-10-10:*
+- **Re-encoding** (`internal/media`):
+  - uploads are decoded by Go's own decoders, never by C;
+  - turned upright, then stripped of EXIF, location, comments and anything
+    after the image data;
+  - published at 480, 960 and 1600 px wide, each with a WebP copy when that's
+    smaller (38 to 60% smaller on real photos). The WebP encoder is libwebp
+    translated to pure Go and vendored in `internal/media/webpenc`: no system
+    library, no cgo.
+  - SVG is refused, and a file claiming to be enormous is refused before it's
+    decoded.
+- **Upload commits to the draft,** as the person. From the publishing branch
+  it starts the page's draft and carries unsaved text across.
+- **Insert picture:** from the button, or by dropping or pasting a picture
+  onto the body. Upload or pick from the library. Alt text is required, or an
+  explicit "decorative" choice. A library picture brings the alt text it was
+  given before.
+- **Pictures library:** a page per site listing every picture, its sizes and
+  weight, which files use it, and what's unused. Thumbnails come from the
+  person's checkout, as sandboxed images only.
+- **Responsive markup in the build:** a Markdown image of a `media/` picture
+  becomes a `<picture>` with the WebP copies, `srcset`, `width` and `height`,
+  and lazy loading (`markdown.image_sizes` sets `sizes`).
+- **New checks:** `image-location` (a JPEG carrying GPS, an error) and
+  `image-weight` (over 500 KB, a warning).
+- **Tried end to end** on a throwaway repository on the Coffey Labs Gitea
+  (since deleted).
+- **Not yet:** deleting unused pictures from the library, and object storage
+  for sites with a lot of media.
 
 - Upload by drag and drop. Every image is re-encoded on the way in:
   - EXIF stripped (location included);

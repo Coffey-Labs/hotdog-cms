@@ -129,7 +129,7 @@ func newModule() *module {
 // diagnostics, which are dropped.
 type wasiHost struct{ mod *module }
 
-func (h *wasiHost) Init(m any)                { h.mod = m.(*module) }
+func (h *wasiHost) Init(m any)               { h.mod = m.(*module) }
 func (h *wasiHost) Xfd_close(fd int32) int32 { return 0 }
 
 func (h *wasiHost) Xfd_write(fd, iovs, iovsLen, nwrittenPtr int32) int32 {

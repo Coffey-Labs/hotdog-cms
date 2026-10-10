@@ -37,8 +37,8 @@ type MediaSize struct {
 
 var mediaVariantRe = regexp.MustCompile(`^(.+)-(\d+)w\.(jpg|png|webp)$`)
 
-// loadMedia indexes static/media/, by the main file's address.
-func loadMedia(staticDir string) map[string]*MediaPicture {
+// LoadMedia indexes static/media/, by the main file's address.
+func LoadMedia(staticDir string) map[string]*MediaPicture {
 	root := filepath.Join(staticDir, "media")
 	type found struct {
 		main     string // its address, if the main JPEG or PNG is there
@@ -61,7 +61,7 @@ func loadMedia(staticDir string) map[string]*MediaPicture {
 		dir, name := path.Split(u)
 		if m := mediaVariantRe.FindStringSubmatch(name); m != nil {
 			w, _ := strconv.Atoi(m[2])
-			get(dir+m[1]).sizes = append(get(dir+m[1]).sizes, MediaSize{URL: u, Width: w, WebP: m[3] == "webp"})
+			get(dir + m[1]).sizes = append(get(dir+m[1]).sizes, MediaSize{URL: u, Width: w, WebP: m[3] == "webp"})
 			return nil
 		}
 		ext := path.Ext(name)

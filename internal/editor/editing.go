@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/media"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/preview"
 )
 
@@ -33,8 +34,14 @@ func (s *Server) apiWrite(w http.ResponseWriter, r *http.Request, sess *Session,
 		apiError(w, http.StatusForbidden, "The platform gives you read-only access to this site.")
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 2<<20)
+	limit := int64(2 << 20)
+	if action == "media" {
+		limit = media.MaxBytes + 1<<20
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, limit)
 	switch action {
+	case "media":
+		s.upload(w, r, sess, f, st)
 	case "save":
 		s.save(w, r, sess, f, st)
 	case "new":

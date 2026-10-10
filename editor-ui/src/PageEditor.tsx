@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { api, CheckFailed, Conflict, type Edit, type PageDetail, type Problem, type SiteDetail } from './api'
+import { api, CheckFailed, Conflict, type Edit, type PageDetail, type Problem, type SiteDetail, type Uploaded } from './api'
 import { go, href } from './route'
+import { ACCEPT, InsertPicture } from './Media'
 import { liveChannel } from './Present'
 import { Split } from './Split'
 import { DevicePicker, PreviewFrame, useDevice } from './Viewport'
@@ -79,6 +80,12 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
   const [device, setDevice] = useDevice()
   const [reviewOpen, setReviewOpen] = useState(false)
   const [problems, setProblems] = useState<Problem[]>()
+  const [picture, setPicture] = useState<{ file?: File }>()
+  const bodyRef = useRef<HTMLTextAreaElement>(null)
+  // Edits carried across a branch change that the editor made itself (an
+  // upload that started a draft), so nothing typed is lost.
+  const carry = useRef<{ fields: Fields; body: string; yaml: string; yamlMode: boolean }>(undefined)
+  const uploaded = useRef<Uploaded>(undefined)
   const cur = branch || site?.publishBranch || ''
 
   useEffect(() => {
@@ -86,10 +93,12 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
     api.page(id, source, branch).then(
       (p) => {
         setPage(p)
-        setFields(fieldsFrom(p.frontMatter))
-        setBody(p.body)
-        setYaml(p.frontMatterRaw)
-        setYamlMode(false)
+        const c = carry.current
+        carry.current = undefined
+        setFields(c ? c.fields : fieldsFrom(p.frontMatter))
+        setBody(c ? c.body : p.body)
+        setYaml(c ? c.yaml : p.frontMatterRaw)
+        setYamlMode(c ? c.yamlMode : false)
       },
       (e: Error) => setLoadError(e.message),
     )
@@ -176,6 +185,31 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
     }
   }
 
+  // A picture goes in where the cursor was, on a line of its own.
+  const insertPicture = (md: string) => {
+    const el = bodyRef.current
+    const at = el ? el.selectionStart : body.length
+    const before = body.slice(0, at)
+    const after = body.slice(at)
+    const lead = before === '' || before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n'
+    const trail = after.startsWith('\n\n') ? '' : after.startsWith('\n') ? '\n' : after === '' ? '\n' : '\n\n'
+    const next = before + lead + md + trail + after
+    setBody(next)
+    setPicture(undefined)
+    const r = uploaded.current
+    uploaded.current = undefined
+    if (!r) return
+    const notes = (r.notes || []).join(' ')
+    setStatus({ kind: 'good', text: `Added ${r.url}${r.created ? ` on a new draft, ${r.branch}` : ''}. ${notes} Save to keep it in the page.`.trim() })
+    onSiteChanged()
+    if (r.created || r.branch !== cur) {
+      if (fields) carry.current = { fields, body: next, yaml, yamlMode }
+      go({ view: 'page', id, source, branch: r.branch })
+    } else if (page) {
+      setPage({ ...page, commit: r.commit })
+    }
+  }
+
   const publish = async () => {
     setBusy(true)
     setStatus({ kind: 'info', text: 'Checking the draft and publishing…' })
@@ -257,8 +291,46 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
             )}
           </div>
         )}
-        <h2 className="side-label">Body <span className="muted small">Markdown</span></h2>
-        <textarea className="code body-edit" value={body} onChange={(e) => setBody(e.target.value)} spellCheck aria-label="Page body, Markdown" />
+        <div className="body-head">
+          <h2 className="side-label">Body <span className="muted small">Markdown</span></h2>
+          {canWrite && <button type="button" className="ghost small" onClick={() => setPicture({})}>Insert picture</button>}
+        </div>
+        <textarea
+          ref={bodyRef}
+          className="code body-edit"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          onDragOver={(e) => canWrite && e.dataTransfer.types.includes('Files') && e.preventDefault()}
+          onDrop={(e) => {
+            const f = Array.from(e.dataTransfer.files).find((x) => ACCEPT.split(',').includes(x.type))
+            if (f && canWrite) {
+              e.preventDefault()
+              setPicture({ file: f })
+            }
+          }}
+          onPaste={(e) => {
+            const f = Array.from(e.clipboardData.files).find((x) => ACCEPT.split(',').includes(x.type))
+            if (f && canWrite) {
+              e.preventDefault()
+              setPicture({ file: f })
+            }
+          }}
+          spellCheck
+          aria-label="Page body, Markdown"
+        />
+        {picture && (
+          <InsertPicture
+            id={id}
+            branch={cur}
+            baseCommit={page.commit}
+            source={source}
+            onDraft={onDraft}
+            file={picture.file}
+            onUploaded={(r) => (uploaded.current = r)}
+            onInsert={insertPicture}
+            onClose={() => setPicture(undefined)}
+          />
+        )}
       </section>
       }
       right={

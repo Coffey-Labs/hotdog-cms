@@ -61,7 +61,7 @@ type Image struct {
 	URL    string // the main file's address on the site
 	Width  int
 	Height int
-	Type   string // image/jpeg or image/png
+	Type   string   // image/jpeg or image/png
 	Files  []File   // each size, followed by its WebP copy where that's smaller
 	Notes  []string // what was done to it, in words, for the person who uploaded it
 }

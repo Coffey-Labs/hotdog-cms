@@ -69,7 +69,7 @@ func New(configFile string, logw io.Writer) (*Server, error) {
 	s.live = newLiveServer(cfg.Live, cfg.PublicURL)
 	frames = append(frames, s.live.origin())
 	frameSrc := strings.Join(frames, " ")
-	s.csp = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src " + frameSrc + "; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+	s.csp = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-src " + frameSrc + "; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 	return s, nil
 }
 
@@ -196,6 +196,10 @@ func (s *Server) apiRoute(w http.ResponseWriter, r *http.Request) {
 		s.apiSite(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "page":
 		s.apiPage(w, r, sess, f, parts[1])
+	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "media":
+		s.apiMedia(w, r, sess, f, parts[1])
+	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "media-file":
+		s.apiMediaFile(w, r, sess, f, parts[1])
 	default:
 		apiError(w, http.StatusNotFound, "no such thing")
 	}
