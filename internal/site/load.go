@@ -134,6 +134,7 @@ func loadPage(file, rel string, md *Markdown) (*Page, error) {
 	}
 	p.Layout = str(fm["layout"])
 	p.Image = str(fm["image"])
+	p.RedirectTo = str(fm["redirect_to"])
 	p.Draft = truthy(fm["draft"])
 	p.NoIndex = truthy(fm["noindex"])
 	if w, ok := fm["weight"].(int); ok {
@@ -181,8 +182,17 @@ func loadPage(file, rel string, md *Markdown) (*Page, error) {
 		p.Collection = strings.SplitN(dir, "/", 2)[0]
 	}
 
-	if p.Content, err = md.Render(body); err != nil {
-		return nil, err
+	switch str(fm["format"]) {
+	case "", "markdown":
+		if p.Content, err = md.Render(body); err != nil {
+			return nil, err
+		}
+	case "html":
+		if p.Content, err = md.HTML(body); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("format %q is not markdown or html", str(fm["format"]))
 	}
 	p.Raw = string(body)
 	p.WordCount = CountWords(PlainMarkdown(p.Raw))

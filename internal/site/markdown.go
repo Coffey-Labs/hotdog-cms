@@ -2,6 +2,7 @@ package site
 
 import (
 	"bytes"
+	"fmt"
 	"html/template"
 	"net/url"
 	"regexp"
@@ -18,6 +19,7 @@ import (
 // on, and even then it passes a sanitizer, so a page can carry a <figure> or a
 // <details> but not a <script> or an onclick.
 type Markdown struct {
+	trust    bool
 	md       goldmark.Markdown
 	sanitize *bluemonday.Policy
 	emailOff bool
@@ -36,7 +38,7 @@ func NewMarkdown(c MarkdownConfig, host string) *Markdown {
 		goldmark.WithExtensions(exts...),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID(), parser.WithAttribute()),
 	}
-	m := &Markdown{emailOff: c.EmailOff, newTab: c.ExternalLinks == "new_tab", host: strings.ToLower(host)}
+	m := &Markdown{trust: c.TrustHTML, emailOff: c.EmailOff, newTab: c.ExternalLinks == "new_tab", host: strings.ToLower(host)}
 	if c.TrustHTML {
 		rendererOpts = append(rendererOpts, goldmark.WithRendererOptions(html.WithUnsafe()))
 	} else if c.UnsafeHTML {
@@ -83,6 +85,35 @@ func (m *Markdown) Inline(src []byte) (template.HTML, error) {
 	return template.HTML(s), nil
 }
 
+// HTML takes a body written as HTML rather than Markdown (front matter
+// format: html), applying the same rule raw HTML in Markdown gets: passed
+// through when the site trusts its authors, sanitized when it allows raw HTML,
+// refused otherwise.
+func (m *Markdown) HTML(src []byte) (template.HTML, error) {
+	switch {
+	case m.trust:
+	case m.sanitize != nil:
+		src = m.sanitize.SanitizeBytes(src)
+	default:
+		return "", fmt.Errorf("format: html needs markdown.trust_html or markdown.unsafe_html in site.yaml")
+	}
+	out := src
+	if m.newTab {
+		out = m.markNewTab(out)
+	}
+	return template.HTML(out), nil
+}
+
+func (m *Markdown) markNewTab(out []byte) []byte {
+	return anchorRe.ReplaceAllFunc(out, func(a []byte) []byte {
+		sub := anchorRe.FindSubmatch(a)
+		if bytes.Contains(bytes.ToLower(a), []byte("target=")) || !m.External(string(sub[1])) {
+			return a
+		}
+		return append(a[:len(a)-1:len(a)-1], []byte(` target="_blank" rel="noopener noreferrer">`)...)
+	})
+}
+
 // Render turns Markdown into HTML that is safe to place in a page.
 func (m *Markdown) Render(src []byte) (template.HTML, error) {
 	var buf bytes.Buffer
@@ -97,13 +128,7 @@ func (m *Markdown) Render(src []byte) (template.HTML, error) {
 		out = mailtoRe.ReplaceAll(out, []byte("<!--email_off-->$0<!--/email_off-->"))
 	}
 	if m.newTab {
-		out = anchorRe.ReplaceAllFunc(out, func(a []byte) []byte {
-			sub := anchorRe.FindSubmatch(a)
-			if bytes.Contains(bytes.ToLower(a), []byte("target=")) || !m.External(string(sub[1])) {
-				return a
-			}
-			return append(a[:len(a)-1:len(a)-1], []byte(` target="_blank" rel="noopener noreferrer">`)...)
-		})
+		out = m.markNewTab(out)
 	}
 	// Safe by construction: goldmark escapes text and, without WithUnsafe,
 	// omits raw HTML; with it, the sanitizer above has had the last word.

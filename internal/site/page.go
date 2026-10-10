@@ -41,6 +41,7 @@ type Page struct {
 	Prev, Next *Page               // neighbours within the collection, in its order
 	WordCount  int
 	Raw        string     // the Markdown body as written
+	RedirectTo string     // front matter redirect_to: listed like any page, built as a redirect
 	LeadImage  *LeadImage // the picture the body opens with, if it opens with one
 	Paginator  *Paginator // for list and taxonomy pages
 	Site       *Site
@@ -64,6 +65,15 @@ type Paginator struct {
 type Section struct {
 	Type string
 	Data map[string]any
+}
+
+// Href is where a link to the page should go: its own address, or, for a
+// page that redirects (a link post, a page that moved), its destination.
+func (p *Page) Href() string {
+	if p.RedirectTo != "" {
+		return p.RedirectTo
+	}
+	return p.Path
 }
 
 // IsHome reports whether this is the front page.

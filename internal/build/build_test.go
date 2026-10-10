@@ -159,3 +159,42 @@ func TestOwnHostLinksStayInTab(t *testing.T) {
 		t.Errorf("new-tab rule wrong: %s", h)
 	}
 }
+
+func TestHTMLBodiesAndRedirectTo(t *testing.T) {
+	dir := writeStarter(t)
+	page := "---\ntitle: Raw\nformat: html\n---\n<section class=\"x\">\n\n    <p>indented, after a blank line</p>\n<script>alert(1)</script>\n</section>\n"
+	os.WriteFile(filepath.Join(dir, "content", "raw.md"), []byte(page), 0o644)
+	// Without trust_html or unsafe_html, an HTML body is refused.
+	if _, err := Run(Options{SiteDir: dir}); err == nil || !strings.Contains(err.Error(), "trust_html") {
+		t.Fatalf("HTML body accepted without permission: %v", err)
+	}
+	cfgPath := filepath.Join(dir, "site.yaml")
+	base, _ := os.ReadFile(cfgPath)
+	// Sanitized: the script goes, the indented paragraph stays a paragraph.
+	os.WriteFile(cfgPath, append(base, []byte("markdown:\n  unsafe_html: true\n")...), 0o644)
+	res, err := Run(Options{SiteDir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, _ := os.ReadFile(filepath.Join(res.Out, "raw", "index.html"))
+	if strings.Contains(string(out), "<script>alert") || strings.Contains(string(out), "<pre><code>") || !strings.Contains(string(out), "<p>indented, after a blank line</p>") {
+		t.Errorf("sanitized HTML body wrong:\n%s", out)
+	}
+	// A link post: listed and in the feed at its destination, built as a redirect, not in the sitemap.
+	os.WriteFile(cfgPath, base, 0o644)
+	os.Remove(filepath.Join(dir, "content", "raw.md"))
+	os.WriteFile(filepath.Join(dir, "content", "articles", "elsewhere.md"), []byte("---\ntitle: Written elsewhere\ndate: 2026-10-11\nredirect_to: https://example.net/post/\n---\n"), 0o644)
+	if res, err = Run(Options{SiteDir: dir}); err != nil {
+		t.Fatal(err)
+	}
+	read := func(p string) string { b, _ := os.ReadFile(filepath.Join(res.Out, p)); return string(b) }
+	if !strings.Contains(read("articles/elsewhere/index.html"), "url=https://example.net/post/") {
+		t.Error("redirect_to page is not a redirect")
+	}
+	if strings.Contains(read("sitemap.xml"), "/articles/elsewhere/") {
+		t.Error("redirect_to page is in the sitemap")
+	}
+	if !strings.Contains(read("articles/feed.xml"), "https://example.net/post/") {
+		t.Error("feed doesn't link the redirect_to destination")
+	}
+}

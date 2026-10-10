@@ -125,6 +125,21 @@ func Run(opt Options) (*Result, error) {
 		} else {
 			name = "content/" + name
 		}
+		if p.RedirectTo != "" {
+			dst := pageFile(work, p.Path)
+			if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+				return nil, err
+			}
+			var buf bytes.Buffer
+			if err := redirectTpl.Execute(&buf, p.RedirectTo); err != nil {
+				return nil, err
+			}
+			if err := os.WriteFile(dst, buf.Bytes(), 0o644); err != nil {
+				return nil, err
+			}
+			res.Pages++
+			continue
+		}
 		layout, err := tpl.layoutFor(p, s.Config)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", name, err)

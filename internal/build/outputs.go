@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"html/template"
+	"image"
 	"os"
 	"path"
 	"path/filepath"
@@ -17,6 +18,20 @@ import (
 
 func indexable(p *site.Page) bool {
 	return !p.NoIndex && !p.Draft && p.Kind != site.KindError
+}
+
+// inSitemap: indexable, and an address that holds a page rather than a redirect.
+func inSitemap(p *site.Page) bool { return indexable(p) && p.RedirectTo == "" }
+
+// link is a page's absolute address for feeds: its own, or where it redirects.
+func link(s *site.Site, p *site.Page) string {
+	if p.RedirectTo == "" {
+		return p.Permalink
+	}
+	if strings.HasPrefix(p.RedirectTo, "/") {
+		return s.Config.URL + p.RedirectTo
+	}
+	return p.RedirectTo
 }
 
 func writeSitemap(s *site.Site, out string) error {
@@ -31,7 +46,7 @@ func writeSitemap(s *site.Site, out string) error {
 	}
 	set := urlset{NS: "http://www.sitemaps.org/schemas/sitemap/0.9"}
 	for _, p := range s.Pages {
-		if !indexable(p) {
+		if !inSitemap(p) {
 			continue
 		}
 		u := url{Loc: p.Permalink}
@@ -53,7 +68,7 @@ func writeRobots(s *site.Site, out string) error {
 
 // writeFeed writes an Atom feed for one collection.
 func writeFeed(s *site.Site, name string, cc site.CollectionConfig, out string) (string, error) {
-	type link struct {
+	type atomLink struct {
 		Href string `xml:"href,attr"`
 		Rel  string `xml:"rel,attr,omitempty"`
 	}
@@ -62,25 +77,25 @@ func writeFeed(s *site.Site, name string, cc site.CollectionConfig, out string) 
 		Body string `xml:",chardata"`
 	}
 	type entry struct {
-		Title   string `xml:"title"`
-		Link    link   `xml:"link"`
-		ID      string `xml:"id"`
-		Updated string `xml:"updated"`
-		Summary string `xml:"summary,omitempty"`
-		Content text   `xml:"content"`
+		Title   string   `xml:"title"`
+		Link    atomLink `xml:"link"`
+		ID      string   `xml:"id"`
+		Updated string   `xml:"updated"`
+		Summary string   `xml:"summary,omitempty"`
+		Content text     `xml:"content"`
 	}
 	type author struct {
 		Name string `xml:"name"`
 	}
 	type feed struct {
-		XMLName xml.Name `xml:"feed"`
-		NS      string   `xml:"xmlns,attr"`
-		Title   string   `xml:"title"`
-		ID      string   `xml:"id"`
-		Updated string   `xml:"updated"`
-		Links   []link   `xml:"link"`
-		Author  *author  `xml:"author,omitempty"`
-		Entries []entry  `xml:"entry"`
+		XMLName xml.Name   `xml:"feed"`
+		NS      string     `xml:"xmlns,attr"`
+		Title   string     `xml:"title"`
+		ID      string     `xml:"id"`
+		Updated string     `xml:"updated"`
+		Links   []atomLink `xml:"link"`
+		Author  *author    `xml:"author,omitempty"`
+		Entries []entry    `xml:"entry"`
 	}
 	path := cc.FeedPath
 	if path == "" {
@@ -99,7 +114,7 @@ func writeFeed(s *site.Site, name string, cc site.CollectionConfig, out string) 
 		NS:    "http://www.w3.org/2005/Atom",
 		Title: title,
 		ID:    s.Config.URL + path,
-		Links: []link{{Href: s.Config.URL + path, Rel: "self"}, {Href: s.Config.URL + "/" + name + "/"}},
+		Links: []atomLink{{Href: s.Config.URL + path, Rel: "self"}, {Href: s.Config.URL + "/" + name + "/"}},
 	}
 	if s.Config.Author != "" {
 		f.Author = &author{Name: s.Config.Author}
@@ -120,7 +135,7 @@ func writeFeed(s *site.Site, name string, cc site.CollectionConfig, out string) 
 			newest = lm
 		}
 		f.Entries = append(f.Entries, entry{
-			Title: p.Title, Link: link{Href: p.Permalink}, ID: p.Permalink,
+			Title: p.Title, Link: atomLink{Href: link(s, p)}, ID: link(s, p),
 			Updated: lm.Format(time.RFC3339), Summary: p.Summary,
 			Content: text{Type: "html", Body: string(p.Content)},
 		})
@@ -146,7 +161,7 @@ func writeLLMs(s *site.Site, out string) error {
 	}
 	b.WriteString("## Pages\n\n")
 	for _, p := range s.Pages {
-		if !indexable(p) || p.Kind == site.KindTerm || p.Kind == site.KindTerms {
+		if !inSitemap(p) || p.Kind == site.KindTerm || p.Kind == site.KindTerms {
 			continue
 		}
 		line := fmt.Sprintf("- [%s](%s)", p.Title, p.Permalink)
@@ -177,6 +192,13 @@ func writeRSS(s *site.Site, name string, cc site.CollectionConfig, out string) (
 		IsPermaLink string `xml:"isPermaLink,attr"`
 		Value       string `xml:",chardata"`
 	}
+	type media struct {
+		URL    string `xml:"url,attr"`
+		Medium string `xml:"medium,attr"`
+		Type   string `xml:"type,attr,omitempty"`
+		Width  int    `xml:"width,attr,omitempty"`
+		Height int    `xml:"height,attr,omitempty"`
+	}
 	type item struct {
 		Title       string   `xml:"title"`
 		Link        string   `xml:"link"`
@@ -184,6 +206,14 @@ func writeRSS(s *site.Site, name string, cc site.CollectionConfig, out string) (
 		PubDate     string   `xml:"pubDate,omitempty"`
 		Description string   `xml:"description,omitempty"`
 		Categories  []string `xml:"category"`
+		Media       *media   `xml:"media:content,omitempty"`
+	}
+	type chanImage struct {
+		URL    string `xml:"url"`
+		Title  string `xml:"title"`
+		Link   string `xml:"link"`
+		Width  int    `xml:"width,omitempty"`
+		Height int    `xml:"height,omitempty"`
 	}
 	type atomLink struct {
 		Href string `xml:"href,attr"`
@@ -191,19 +221,34 @@ func writeRSS(s *site.Site, name string, cc site.CollectionConfig, out string) (
 		Type string `xml:"type,attr"`
 	}
 	type channel struct {
-		Title         string   `xml:"title"`
-		Link          string   `xml:"link"`
-		AtomLink      atomLink `xml:"atom:link"`
-		Description   string   `xml:"description"`
-		Language      string   `xml:"language"`
-		LastBuildDate string   `xml:"lastBuildDate"`
-		Items         []item   `xml:"item"`
+		Title         string     `xml:"title"`
+		Link          string     `xml:"link"`
+		AtomLink      atomLink   `xml:"atom:link"`
+		Description   string     `xml:"description"`
+		Language      string     `xml:"language"`
+		LastBuildDate string     `xml:"lastBuildDate"`
+		Image         *chanImage `xml:"image,omitempty"`
+		Items         []item     `xml:"item"`
 	}
 	type rss struct {
 		XMLName xml.Name `xml:"rss"`
 		Version string   `xml:"version,attr"`
 		Atom    string   `xml:"xmlns:atom,attr"`
+		Media   string   `xml:"xmlns:media,attr"`
 		Channel channel  `xml:"channel"`
+	}
+	// imageAt describes an image in static/ for a feed, or nil if it isn't there.
+	imageAt := func(p string) (string, string, int, int) {
+		f, err := os.Open(filepath.Join(s.Dir, "static", filepath.FromSlash(path.Clean("/"+p))))
+		if err != nil {
+			return "", "", 0, 0
+		}
+		defer f.Close()
+		c, format, err := image.DecodeConfig(f)
+		if err != nil {
+			return "", "", 0, 0
+		}
+		return s.Config.URL + p, "image/" + format, c.Width, c.Height
 	}
 	path := cc.FeedPath
 	if path == "" {
@@ -225,7 +270,12 @@ func writeRSS(s *site.Site, name string, cc site.CollectionConfig, out string) (
 	ch := channel{
 		Title: title, Link: s.Config.URL + "/" + name + "/",
 		AtomLink:    atomLink{Href: s.Config.URL + path, Rel: "self", Type: "application/rss+xml"},
-		Description: desc, Language: s.Config.Language, LastBuildDate: rfc(s.BuildTime),
+		Description: desc, Language: strings.ToLower(s.Config.Language), LastBuildDate: rfc(s.BuildTime),
+	}
+	if cc.FeedImage != "" {
+		if u, _, w, h := imageAt(cc.FeedImage); u != "" {
+			ch.Image = &chanImage{URL: u, Title: title, Link: ch.Link, Width: w, Height: h}
+		}
 	}
 	for i, p := range s.Collection(name) {
 		if i >= size {
@@ -237,7 +287,7 @@ func writeRSS(s *site.Site, name string, cc site.CollectionConfig, out string) (
 		if i == 0 && !p.Date.IsZero() {
 			ch.LastBuildDate = rfc(p.Date)
 		}
-		it := item{Title: p.Title, Link: p.Permalink, GUID: guid{"true", p.Permalink}, Description: site.Excerpt(400, p.Summary)}
+		it := item{Title: p.Title, Link: link(s, p), GUID: guid{"true", link(s, p)}, Description: site.Excerpt(400, p.Summary)}
 		if !p.Date.IsZero() {
 			it.PubDate = rfc(p.Date)
 		}
@@ -246,13 +296,18 @@ func writeRSS(s *site.Site, name string, cc site.CollectionConfig, out string) (
 				it.Categories = append(it.Categories, v)
 			}
 		}
+		if p.Image != "" && strings.HasPrefix(p.Image, "/") {
+			if u, typ, w, h := imageAt(p.Image); u != "" {
+				it.Media = &media{URL: u, Medium: "image", Type: typ, Width: w, Height: h}
+			}
+		}
 		ch.Items = append(ch.Items, it)
 	}
 	dst := filepath.Join(out, filepath.FromSlash(strings.TrimPrefix(path, "/")))
 	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 		return "", err
 	}
-	return path, writeXML(dst, rss{Version: "2.0", Atom: "http://www.w3.org/2005/Atom", Channel: ch})
+	return path, writeXML(dst, rss{Version: "2.0", Atom: "http://www.w3.org/2005/Atom", Media: "http://search.yahoo.com/mrss/", Channel: ch})
 }
 
 func strList(v any) []string {

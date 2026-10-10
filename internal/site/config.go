@@ -79,8 +79,10 @@ type CollectionConfig struct {
 	FeedPath string `yaml:"feed_path"` // where; default /<collection>/feed.xml
 	FeedSize int    `yaml:"feed_size"` // entries in the feed; default 20
 	// FeedFormat is atom (the default) or rss.
-	FeedFormat      string `yaml:"feed_format"`
-	FeedTitle       string `yaml:"feed_title"`
+	FeedFormat string `yaml:"feed_format"`
+	FeedTitle  string `yaml:"feed_title"`
+	// FeedImage is the channel's logo in an RSS feed, a path in static/.
+	FeedImage       string `yaml:"feed_image"`
 	FeedDescription string `yaml:"feed_description"`
 	// Paginate overrides the site's paginate for this collection's list.
 	Paginate int `yaml:"paginate"`

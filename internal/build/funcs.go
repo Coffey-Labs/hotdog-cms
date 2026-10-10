@@ -144,6 +144,30 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 			return v
 		},
 		"now": func() time.Time { return s.BuildTime },
+		// kindIs "string" .x: what a front matter or data value is (string, map, list, number, bool).
+		"kindIs": func(kind string, v any) bool {
+			switch v.(type) {
+			case string:
+				return kind == "string"
+			case map[string]any:
+				return kind == "map"
+			case []any:
+				return kind == "list"
+			case int, int64, float64:
+				return kind == "number"
+			case bool:
+				return kind == "bool"
+			}
+			return false
+		},
+		// joinAny ", " .list: join a list of any values as text.
+		"joinAny": func(sep string, v []any) string {
+			parts := make([]string, len(v))
+			for i, x := range v {
+				parts[i] = fmt.Sprint(x)
+			}
+			return strings.Join(parts, sep)
+		},
 		"add": func(a, b int) int { return a + b },
 		"mod": func(a, b int) int { return a % b },
 		// excerpt 220 .Summary: plain text, cut at a word, with an ellipsis.
