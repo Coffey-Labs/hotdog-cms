@@ -30,15 +30,23 @@ type Site struct {
 	Data        map[string]any // data/*.yaml and data/*.json, by file name without extension
 	BuildTime   time.Time
 	Dev         bool // built by `cl-cms serve`
-	Markdown    *Markdown
-	terms       map[string]*termIndex
+	// NextScheduled is the earliest publish_at still in the future: the
+	// moment a rebuild will change the site without a new commit.
+	NextScheduled time.Time
+	Markdown      *Markdown
+	terms         map[string]*termIndex
 }
 
 // Options change what Load includes.
 type Options struct {
-	Drafts bool   // include pages with draft: true
+	Drafts bool   // include pages with draft: true, and scheduled pages before their time
 	URL    string // replace the configured URL (local preview)
 	Dev    bool
+	Now    time.Time // the time scheduled pages are judged against; default now
+	// Overrides replaces the content of source files (paths under content/,
+	// such as "about.md"), or adds files that don't exist yet: a page being
+	// edited, before it is saved.
+	Overrides map[string][]byte
 }
 
 // Load reads a whole site directory.
@@ -63,12 +71,39 @@ func Load(dir string, opt Options) (*Site, error) {
 		BuildTime:   time.Now().UTC(),
 		Dev:         opt.Dev,
 	}
+	now := opt.Now
+	if now.IsZero() {
+		now = time.Now()
+	}
 	if s.Data, err = loadData(filepath.Join(dir, "data")); err != nil {
 		return nil, err
 	}
 	md := NewMarkdown(cfg.Markdown, host)
 	s.Markdown = md
 	content := filepath.Join(dir, "content")
+	seen := map[string]bool{}
+	// add takes one source file into the site, unless it is a draft or a
+	// page scheduled for later and this build leaves those out.
+	add := func(raw []byte, rel string) error {
+		pg, err := loadPage(raw, rel, md)
+		if err != nil {
+			return fmt.Errorf("content/%s: %w", rel, err)
+		}
+		if pg.Draft && !opt.Drafts {
+			return nil
+		}
+		if !pg.PublishAt.IsZero() && pg.PublishAt.After(now) {
+			if s.NextScheduled.IsZero() || pg.PublishAt.Before(s.NextScheduled) {
+				s.NextScheduled = pg.PublishAt
+			}
+			if !opt.Drafts {
+				return nil
+			}
+		}
+		pg.Site = s
+		s.Pages = append(s.Pages, pg)
+		return nil
+	}
 	err = filepath.WalkDir(content, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -76,23 +111,36 @@ func Load(dir string, opt Options) (*Site, error) {
 		if d.IsDir() || !strings.HasSuffix(d.Name(), ".md") {
 			return nil
 		}
-		rel, _ := filepath.Rel(content, p)
-		pg, err := loadPage(p, filepath.ToSlash(rel), md)
+		r, _ := filepath.Rel(content, p)
+		rel := filepath.ToSlash(r)
+		if o, ok := opt.Overrides[rel]; ok {
+			seen[rel] = true
+			return add(o, rel)
+		}
+		raw, err := os.ReadFile(p)
 		if err != nil {
-			return fmt.Errorf("content/%s: %w", filepath.ToSlash(rel), err)
+			return err
 		}
-		if pg.Draft && !opt.Drafts {
-			return nil
-		}
-		pg.Site = s
-		s.Pages = append(s.Pages, pg)
-		return nil
+		return add(raw, rel)
 	})
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("no content/ folder in %s", dir)
 		}
 		return nil, err
+	}
+	// Overrides for files that don't exist yet: a new page, not yet saved.
+	for rel, raw := range opt.Overrides {
+		if seen[rel] {
+			continue
+		}
+		clean := path.Clean("/" + rel)[1:]
+		if clean != rel || !strings.HasSuffix(rel, ".md") {
+			return nil, fmt.Errorf("override %q is not a page source", rel)
+		}
+		if err := add(raw, rel); err != nil {
+			return nil, err
+		}
 	}
 	s.assemble()
 	if err := s.checkPaths(); err != nil {
@@ -105,11 +153,8 @@ var leadImageRe = regexp.MustCompile(`\A\s*!\[([^\]]*)\]\(([^)\s]+)\)`)
 
 var frontMatterRe = regexp.MustCompile(`(?s)\A---\r?\n(.*?)\r?\n---\r?\n?`)
 
-func loadPage(file, rel string, md *Markdown) (*Page, error) {
-	raw, err := os.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
+func loadPage(raw []byte, rel string, md *Markdown) (*Page, error) {
+	var err error
 	raw = bytes.TrimPrefix(raw, []byte("\xef\xbb\xbf"))
 	fm := map[string]any{}
 	body := raw
@@ -145,6 +190,9 @@ func loadPage(file, rel string, md *Markdown) (*Page, error) {
 	}
 	if p.Updated, err = date(fm["updated"]); err != nil {
 		return nil, fmt.Errorf("updated: %w", err)
+	}
+	if p.PublishAt, err = date(fm["publish_at"]); err != nil {
+		return nil, fmt.Errorf("publish_at: %w", err)
 	}
 	if p.Sections, err = sections(fm["sections"]); err != nil {
 		return nil, err
@@ -463,7 +511,7 @@ func strList(v any) []string {
 	return nil
 }
 
-var dateLayouts = []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02 15:04:05", "2006-01-02 15:04", "2006-01-02"}
+var dateLayouts = []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02T15:04", "2006-01-02 15:04:05", "2006-01-02 15:04", "2006-01-02"}
 
 func date(v any) (time.Time, error) {
 	switch t := v.(type) {

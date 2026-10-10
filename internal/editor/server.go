@@ -35,6 +35,7 @@ type Server struct {
 	csp  string
 	// cloneURL is where a site is cloned from; the site's repo, except in tests.
 	cloneURL func(*SiteConfig) string
+	live     *liveServer
 }
 
 // New builds the editor from editor.yaml. CLCMS_EDITOR_SECRET seals sessions.
@@ -65,10 +66,9 @@ func New(configFile string, logw io.Writer) (*Server, error) {
 			frames = append(frames, u.Scheme+"://*."+st.Preview.Domain+portSuffix(st.Preview.Port))
 		}
 	}
-	frameSrc := "'none'"
-	if len(frames) > 0 {
-		frameSrc = strings.Join(frames, " ")
-	}
+	s.live = newLiveServer(cfg.Live, cfg.PublicURL)
+	frames = append(frames, s.live.origin())
+	frameSrc := strings.Join(frames, " ")
 	s.csp = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src " + frameSrc + "; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 	return s, nil
 }
@@ -82,6 +82,10 @@ func portSuffix(p string) string {
 
 // Listen is the configured address.
 func (s *Server) Listen() string { return s.cfg.Listen }
+
+// Live is the live preview server and where it listens. It must be served
+// on its own address: its origin keeps sites' scripts away from the editor.
+func (s *Server) Live() (http.Handler, string) { return s.live, s.live.cfg.Listen }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h := w.Header()
@@ -168,11 +172,23 @@ func (s *Server) apiRoute(w http.ResponseWriter, r *http.Request) {
 		apiError(w, http.StatusUnauthorized, "Sign in to continue.")
 		return
 	}
-	if r.Method != http.MethodGet {
-		apiError(w, http.StatusMethodNotAllowed, "read-only for now")
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if r.Method == http.MethodPost {
+		if !s.sameOrigin(r) {
+			apiError(w, http.StatusForbidden, "That request didn't come from the editor.")
+			return
+		}
+		if len(parts) == 3 && parts[0] == "sites" {
+			s.apiWrite(w, r, sess, f, parts[1], parts[2])
+			return
+		}
+		apiError(w, http.StatusNotFound, "no such thing")
 		return
 	}
-	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if r.Method != http.MethodGet {
+		apiError(w, http.StatusMethodNotAllowed, "not here")
+		return
+	}
 	switch {
 	case len(parts) == 1 && parts[0] == "sites":
 		s.apiSites(w, r, sess, f)
@@ -336,7 +352,7 @@ func (s *Server) apiPage(w http.ResponseWriter, r *http.Request, sess *Session, 
 	if branch == "" {
 		branch = st.Branch
 	}
-	_, siteDir, _, err := s.ws.checkout(sess, f.Kind, st, s.cloneURL(st), branch)
+	_, siteDir, commit, err := s.ws.checkout(sess, f.Kind, st, s.cloneURL(st), branch)
 	if err != nil {
 		apiError(w, http.StatusBadGateway, "Couldn't fetch the site: "+trimErr(err))
 		return
@@ -346,8 +362,9 @@ func (s *Server) apiPage(w http.ResponseWriter, r *http.Request, sess *Session, 
 		apiError(w, http.StatusNotFound, "No such page.")
 		return
 	}
-	fm, body := splitFrontMatter(raw)
-	writeJSON(w, http.StatusOK, map[string]any{"source": r.URL.Query().Get("source"), "frontMatter": fm, "body": body})
+	fm, _ := splitFrontMatter(raw)
+	fmRaw, body := splitSource(raw)
+	writeJSON(w, http.StatusOK, map[string]any{"source": r.URL.Query().Get("source"), "frontMatter": fm, "frontMatterRaw": fmRaw, "body": body, "branch": branch, "commit": commit})
 }
 
 // splitFrontMatter separates the YAML block from the body, for display.

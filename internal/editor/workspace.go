@@ -3,6 +3,7 @@ package editor
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -172,4 +173,72 @@ func readSource(siteDir, source string) ([]byte, error) {
 		return nil, fmt.Errorf("not a page source: %q", source)
 	}
 	return os.ReadFile(filepath.Join(siteDir, filepath.FromSlash(clean)))
+}
+
+// errConflict means the branch moved since the person started editing.
+var errConflict = errors.New("this branch changed since you opened it")
+
+// save commits files to a branch as the signed-in person and pushes it with
+// their token. baseBranch is the branch the change starts from; target is the
+// branch it goes to (a new draft branch when create is set). If baseCommit is
+// given and the branch has moved past it, nothing is written: someone else's
+// change is never silently overwritten.
+func (ws *workspaces) save(sess *Session, kind forge.Kind, sc *SiteConfig, repo, baseBranch, target string, create bool, baseCommit string, files map[string][]byte, message string) (string, error) {
+	dir := ws.dir(sess, sc, baseBranch)
+	defer ws.lock(dir)()
+	if err := os.MkdirAll(filepath.Dir(dir), 0o700); err != nil {
+		return "", err
+	}
+	auth := gitx.Auth{User: kind.TokenUser(), Token: sess.Token}
+	tip, err := gitx.Checkout(auth, repo, baseBranch, dir)
+	if err != nil {
+		return "", err
+	}
+	if baseCommit != "" && tip != baseCommit {
+		return "", errConflict
+	}
+	for rel, data := range files {
+		clean := filepath.ToSlash(filepath.Clean("/" + rel))[1:]
+		if clean != rel || strings.HasPrefix(clean, ".git/") || clean == ".git" {
+			return "", fmt.Errorf("refusing to write %q", rel)
+		}
+		p := filepath.Join(dir, filepath.FromSlash(clean))
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			return "", err
+		}
+		if err := os.WriteFile(p, data, 0o644); err != nil {
+			return "", err
+		}
+		if _, err := gitx.Run(auth, dir, "add", "--", clean); err != nil {
+			return "", err
+		}
+	}
+	if _, err := gitx.Run(auth, dir, "-c", "user.name="+sess.Name, "-c", "user.email="+sess.Email, "-c", "commit.gpgsign=false",
+		"commit", "--quiet", "--allow-empty-message", "-m", message); err != nil {
+		if strings.Contains(err.Error(), "nothing to commit") {
+			return tip, nil
+		}
+		return "", err
+	}
+	commit, err := gitx.Run(auth, dir, "rev-parse", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	// A plain push: never --force, so a branch someone else moved meanwhile is
+	// refused by the platform rather than overwritten.
+	_, pushErr := gitx.Run(auth, dir, "push", "--quiet", "origin", "HEAD:refs/heads/"+target)
+	if create || pushErr != nil {
+		// Leave the base branch's checkout as it was.
+		_, _ = gitx.Run(auth, dir, "reset", "--quiet", "--hard", tip)
+	}
+	if pushErr != nil {
+		if strings.Contains(pushErr.Error(), "rejected") || strings.Contains(pushErr.Error(), "non-fast-forward") {
+			return "", errConflict
+		}
+		if strings.Contains(pushErr.Error(), "403") || strings.Contains(pushErr.Error(), "denied") {
+			return "", errors.New("the platform didn't let you push to this repository")
+		}
+		return "", pushErr
+	}
+	return commit, nil
 }

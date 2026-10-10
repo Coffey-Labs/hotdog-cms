@@ -93,12 +93,14 @@ func writeAssets(srcDir, out string) (*Assets, error) {
 		sum := sha256.Sum256(data)
 		ext := path.Ext(rel)
 		hashed := strings.TrimSuffix(rel, ext) + "." + hex.EncodeToString(sum[:])[:10] + ext
-		dst := filepath.Join(out, filepath.FromSlash(hashed))
-		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-			return nil, err
-		}
-		if err := os.WriteFile(dst, data, 0o644); err != nil {
-			return nil, err
+		if out != "" { // "" only computes the names, for rendering one page
+			dst := filepath.Join(out, filepath.FromSlash(hashed))
+			if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+				return nil, err
+			}
+			if err := os.WriteFile(dst, data, 0o644); err != nil {
+				return nil, err
+			}
 		}
 		a.urls[rel] = "/" + hashed
 	}
@@ -157,8 +159,10 @@ func (a *Assets) add(out, rel string, data []byte) error {
 	sum := sha256.Sum256(data)
 	ext := path.Ext(rel)
 	hashed := strings.TrimSuffix(rel, ext) + "." + hex.EncodeToString(sum[:])[:10] + ext
-	if err := os.WriteFile(filepath.Join(out, filepath.FromSlash(hashed)), data, 0o644); err != nil {
-		return err
+	if out != "" {
+		if err := os.WriteFile(filepath.Join(out, filepath.FromSlash(hashed)), data, 0o644); err != nil {
+			return err
+		}
 	}
 	a.urls[rel] = "/" + hashed
 	return nil

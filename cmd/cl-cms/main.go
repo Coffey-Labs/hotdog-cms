@@ -425,9 +425,18 @@ func cmdEditor(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("editor at %s\n", srv.Listen())
-	hs := &http.Server{Addr: srv.Listen(), Handler: srv, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 60 * time.Second, WriteTimeout: 120 * time.Second, MaxHeaderBytes: 32 << 10}
-	return hs.ListenAndServe()
+	live, liveAddr := srv.Live()
+	fmt.Printf("editor at %s, live preview at %s\n", srv.Listen(), liveAddr)
+	errc := make(chan error, 2)
+	go func() {
+		ls := &http.Server{Addr: liveAddr, Handler: live, ReadHeaderTimeout: 10 * time.Second, MaxHeaderBytes: 16 << 10}
+		errc <- ls.ListenAndServe()
+	}()
+	go func() {
+		hs := &http.Server{Addr: srv.Listen(), Handler: srv, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 60 * time.Second, WriteTimeout: 120 * time.Second, MaxHeaderBytes: 32 << 10}
+		errc <- hs.ListenAndServe()
+	}()
+	return <-errc
 }
 
 func report(r *build.Result) {

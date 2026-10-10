@@ -30,6 +30,7 @@ type Session struct {
 	Forge   string    `json:"f"` // platform host
 	Login   string    `json:"l"`
 	Name    string    `json:"n"`
+	Email   string    `json:"m"` // commits are attributed to this address
 	Token   string    `json:"t"`
 	Expires time.Time `json:"e"`
 }

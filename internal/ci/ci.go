@@ -46,6 +46,9 @@ on:
   pull_request:
   push:
     branches: [{{BRANCH}}]
+  # Hourly, so pages with a publish_at go live when their time comes.
+  schedule:
+    - cron: "17 * * * *"
 permissions:
   contents: read
 jobs:
@@ -61,7 +64,7 @@ jobs:
       - name: Check
         run: cl-cms check -site {{SITE}}
       - name: Publish
-        if: github.event_name == 'push' && github.ref == 'refs/heads/{{BRANCH}}'
+        if: (github.event_name == 'push' || github.event_name == 'schedule') && github.ref == 'refs/heads/{{BRANCH}}'
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
@@ -109,6 +112,8 @@ site:check:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == "{{BRANCH}}"
 
+# Add a pipeline schedule (hourly) under Build › Pipeline schedules so pages
+# with a publish_at go live on time.
 site:publish:
   stage: deploy
   needs: [site:check]
@@ -159,6 +164,8 @@ when:
   - event: pull_request
   - event: push
     branch: {{BRANCH}}
+  # A cron job named in Woodpecker's settings, so scheduled pages go live on time.
+  - event: cron
 steps:
   - name: check
     image: golang:1.26-alpine
@@ -169,7 +176,7 @@ steps:
   - name: publish
     image: golang:1.26-alpine
     when:
-      - event: push
+      - event: [push, cron]
         branch: {{BRANCH}}
     environment:
       DEPLOY_HOST: { from_secret: deploy_host }

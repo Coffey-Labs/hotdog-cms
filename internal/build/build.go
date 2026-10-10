@@ -27,6 +27,7 @@ type Options struct {
 	Drafts  bool
 	URL     string // replace site.yaml's url (local preview)
 	Dev     bool
+	Now     time.Time // judge scheduled pages against this time; default now
 }
 
 // Result says what a build produced.
@@ -57,7 +58,7 @@ func Run(opt Options) (*Result, error) {
 		return nil, err
 	}
 
-	s, err := site.Load(siteDir, site.Options{Drafts: opt.Drafts, URL: opt.URL, Dev: opt.Dev})
+	s, err := site.Load(siteDir, site.Options{Drafts: opt.Drafts, URL: opt.URL, Dev: opt.Dev, Now: opt.Now})
 	if err != nil {
 		return nil, err
 	}
@@ -71,9 +72,9 @@ func Run(opt Options) (*Result, error) {
 		return nil, err
 	}
 
-	assets, err := writeAssets(filepath.Join(siteDir, "assets"), work)
+	tpl, err := prepare(siteDir, s, work)
 	if err != nil {
-		return nil, fmt.Errorf("assets: %w", err)
+		return nil, err
 	}
 	if err := copyTree(filepath.Join(siteDir, "static"), work, nil); err != nil {
 		return nil, fmt.Errorf("static: %w", err)
@@ -83,39 +84,6 @@ func Run(opt Options) (*Result, error) {
 		return !d.IsDir() && strings.HasSuffix(rel, ".md")
 	}); err != nil {
 		return nil, fmt.Errorf("content: %w", err)
-	}
-
-	md := s.Markdown
-	icons, err := loadIcons(filepath.Join(siteDir, "icons"))
-	if err != nil {
-		return nil, err
-	}
-	siteForms, err := forms.Load(siteDir)
-	if err != nil {
-		return nil, err
-	}
-	if len(siteForms) > 0 {
-		if err := assets.add(work, "cl-forms.js", forms.Script); err != nil {
-			return nil, err
-		}
-		if err := assets.add(work, "cl-forms.css", forms.Style); err != nil {
-			return nil, err
-		}
-	}
-	fm := funcs(s, assets, md, icons)
-	// form "contact" renders forms/contact.yaml.
-	fm["form"] = func(name string) (template.HTML, error) {
-		f, ok := siteForms[name]
-		if !ok {
-			return "", fmt.Errorf("no forms/%s.yaml", name)
-		}
-		js, _ := assets.URL("cl-forms.js")
-		css, _ := assets.URL("cl-forms.css")
-		return f.Render(js, css)
-	}
-	tpl, err := loadTemplates(siteDir, fm)
-	if err != nil {
-		return nil, err
 	}
 	res := &Result{Site: s, Out: out}
 	for _, p := range s.Pages {
@@ -222,6 +190,82 @@ func Run(opt Options) (*Result, error) {
 	}
 	res.Duration = time.Since(start)
 	return res, nil
+}
+
+// prepare fingerprints the assets (writing them into out, unless out is
+// empty) and loads the templates with everything they can call.
+func prepare(siteDir string, s *site.Site, out string) (*Templates, error) {
+	assets, err := writeAssets(filepath.Join(siteDir, "assets"), out)
+	if err != nil {
+		return nil, fmt.Errorf("assets: %w", err)
+	}
+	icons, err := loadIcons(filepath.Join(siteDir, "icons"))
+	if err != nil {
+		return nil, err
+	}
+	siteForms, err := forms.Load(siteDir)
+	if err != nil {
+		return nil, err
+	}
+	if len(siteForms) > 0 {
+		if err := assets.add(out, "cl-forms.js", forms.Script); err != nil {
+			return nil, err
+		}
+		if err := assets.add(out, "cl-forms.css", forms.Style); err != nil {
+			return nil, err
+		}
+	}
+	fm := funcs(s, assets, s.Markdown, icons)
+	// form "contact" renders forms/contact.yaml.
+	fm["form"] = func(name string) (template.HTML, error) {
+		f, ok := siteForms[name]
+		if !ok {
+			return "", fmt.Errorf("no forms/%s.yaml", name)
+		}
+		js, _ := assets.URL("cl-forms.js")
+		css, _ := assets.URL("cl-forms.css")
+		return f.Render(js, css)
+	}
+	return loadTemplates(siteDir, fm)
+}
+
+// RenderPage renders one page of a site with its source replaced by content,
+// without building the rest: the live preview of a page being edited. Asset
+// addresses match a full build of the same site, so the page can be shown
+// beside that build's files. It returns the HTML and the page's address.
+func RenderPage(siteDir, source string, content []byte, opt Options) ([]byte, string, error) {
+	rel := strings.TrimPrefix(filepath.ToSlash(source), "content/")
+	s, err := site.Load(siteDir, site.Options{Drafts: true, URL: opt.URL, Now: opt.Now, Overrides: map[string][]byte{rel: content}})
+	if err != nil {
+		return nil, "", err
+	}
+	tpl, err := prepare(siteDir, s, "")
+	if err != nil {
+		return nil, "", err
+	}
+	for _, p := range s.Pages {
+		if p.Source != rel {
+			continue
+		}
+		if p.RedirectTo != "" {
+			var buf bytes.Buffer
+			err := redirectTpl.Execute(&buf, p.RedirectTo)
+			return buf.Bytes(), p.Path, err
+		}
+		layout, err := tpl.layoutFor(p, s.Config)
+		if err != nil {
+			return nil, "", err
+		}
+		if err := tpl.checkSections(p); err != nil {
+			return nil, "", err
+		}
+		var buf bytes.Buffer
+		if err := tpl.layouts[layout].ExecuteTemplate(&buf, "base", p); err != nil {
+			return nil, "", fmt.Errorf("layout %s: %w", layout, err)
+		}
+		return buf.Bytes(), p.Path, nil
+	}
+	return nil, "", fmt.Errorf("%s isn't a page of this site", source)
 }
 
 func pageFile(root, urlPath string) string {

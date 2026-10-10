@@ -76,6 +76,29 @@ interface first, because the other two are built on its plumbing.
 
 ### E1 · Write (the in-between interface)
 
+*Built 2026-10-10:*
+- **Page editor:** common front matter as a form, or all of it as YAML
+  (edits keep key order and comments); the body as Markdown; the page's check
+  findings inline.
+- **Live preview:** rendered by the build engine as you type, served from its
+  own origin (`<token>.localhost:8191`) so a site's scripts can't reach the
+  editor's session.
+- **Viewport picker** (John): desktop, tablet and mobile, both while editing
+  and in a full-window **Present** mode for demos; desktop scales to fit; the
+  choice is remembered.
+- **Save** commits as the person. The first save on the publishing branch
+  starts a `draft/<page>` branch; nothing is ever written to the publishing
+  branch. A save based on a commit the branch has moved past is refused.
+- **New page** starts its own draft.
+- **Submit for review** opens a pull request with the preview link and the
+  check summary.
+- **Publish** merges it only if the draft passes the checks, and the platform
+  still decides who may merge.
+- **Scheduled publishing:** `publish_at`, honored by the build, the pull agent
+  (which rebuilds when a page comes due) and the CI templates (an hourly run).
+- **Not yet:** GitLab and Bitbucket reviews (E0's platform note), and media
+  (E2).
+
 - Markdown with a live preview rendered by the same engine as the build, so
   what you see is exactly what publishes.
 - Front matter as a form, driven by what the site's layouts use (title,

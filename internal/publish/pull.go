@@ -77,12 +77,14 @@ func Pull(o PullOptions) error {
 		tick = t.C
 	}
 	last := ""
+	var due time.Time // a scheduled page's publish_at: rebuild then, commit or not
 	for {
 		head, err := o.sync()
+		dueNow := !due.IsZero() && !time.Now().Before(due)
 		switch {
 		case err != nil:
 			fmt.Fprintf(o.Log, "pull: %v\n", err)
-		case head != last:
+		case head != last || dueNow:
 			var res *build.Result
 			res, err = buildChecked(filepath.Join(o.Cache, o.Subdir), o.Out)
 			if err != nil {
@@ -91,6 +93,10 @@ func Pull(o PullOptions) error {
 			} else {
 				fmt.Fprintf(o.Log, "published %s: %d pages to %s in %s\n", short(head), res.Pages, res.Out, res.Duration.Round(time.Millisecond))
 				last = head
+				due = res.Site.NextScheduled
+				if !due.IsZero() {
+					fmt.Fprintf(o.Log, "next scheduled page goes live at %s\n", due.Format(time.RFC3339))
+				}
 				if o.OnBuild != nil {
 					o.OnBuild(res)
 				}
@@ -99,9 +105,14 @@ func Pull(o PullOptions) error {
 		if o.Every == 0 && o.HookAddr == "" {
 			return err
 		}
+		var wake <-chan time.Time
+		if !due.IsZero() {
+			wake = time.After(time.Until(due) + time.Second)
+		}
 		select {
 		case <-tick:
 		case <-kick:
+		case <-wake:
 		}
 	}
 }

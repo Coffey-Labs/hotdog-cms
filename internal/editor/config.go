@@ -25,6 +25,7 @@ type Config struct {
 	Cache     string        `yaml:"cache"`      // where site checkouts live; default under the user cache folder
 	Forges    []ForgeConfig `yaml:"forges"`
 	Sites     []SiteConfig  `yaml:"sites"`
+	Live      LiveConfig    `yaml:"live"` // the live preview of pages being edited
 }
 
 // ForgeConfig is an OAuth application on a git platform.

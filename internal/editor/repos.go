@@ -1,9 +1,13 @@
 package editor
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"strings"
 
@@ -142,4 +146,86 @@ func (s *Server) reviews(ctx context.Context, f *ForgeConfig, token string, site
 		out = append(out, Review{Number: pr.Number, Title: pr.Title, Branch: pr.Head.Ref, Author: pr.User.Login, URL: pr.HTMLURL})
 	}
 	return out, nil
+}
+
+// send makes a write call to the platform API as the signed-in person.
+func (s *Server) send(ctx context.Context, f *ForgeConfig, token, method, u string, body, out any) error {
+	b, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, method, u, bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "cl-cms-editor")
+	res, err := s.http.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode == http.StatusUnauthorized {
+		return errSignedOut
+	}
+	if res.StatusCode >= 300 {
+		var e struct {
+			Message string `json:"message"`
+		}
+		_ = json.NewDecoder(io.LimitReader(res.Body, 64<<10)).Decode(&e)
+		if e.Message == "" {
+			e.Message = res.Status
+		}
+		return &platformError{Status: res.StatusCode, Message: e.Message}
+	}
+	if out != nil {
+		return json.NewDecoder(io.LimitReader(res.Body, 8<<20)).Decode(out)
+	}
+	return nil
+}
+
+type platformError struct {
+	Status  int
+	Message string
+}
+
+func (e *platformError) Error() string { return fmt.Sprintf("the platform said: %s", e.Message) }
+
+// openReview opens a pull request from branch into the site's publishing branch.
+func (s *Server) openReview(ctx context.Context, f *ForgeConfig, token string, site *SiteConfig, branch, title, body string) (Review, error) {
+	base := s.apiBase(f)
+	if base == "" {
+		return Review{}, errNotYet
+	}
+	p, err := repoPath(site)
+	if err != nil {
+		return Review{}, err
+	}
+	var d struct {
+		Number  int    `json:"number"`
+		HTMLURL string `json:"html_url"`
+	}
+	if err := s.send(ctx, f, token, http.MethodPost, base+"/repos/"+p+"/pulls", map[string]string{"title": title, "head": branch, "base": site.Branch, "body": body}, &d); err != nil {
+		return Review{}, err
+	}
+	return Review{Number: d.Number, Title: title, Branch: branch, URL: d.HTMLURL}, nil
+}
+
+// merge merges a pull request. The platform decides whether this person may.
+func (s *Server) merge(ctx context.Context, f *ForgeConfig, token string, site *SiteConfig, number int) error {
+	base := s.apiBase(f)
+	if base == "" {
+		return errNotYet
+	}
+	p, err := repoPath(site)
+	if err != nil {
+		return err
+	}
+	u := fmt.Sprintf("%s/repos/%s/pulls/%d/merge", base, p, number)
+	if f.Kind == forge.GitHub {
+		return s.send(ctx, f, token, http.MethodPut, u, map[string]string{"merge_method": "merge"}, nil)
+	}
+	return s.send(ctx, f, token, http.MethodPost, u, map[string]any{"Do": "merge", "delete_branch_after_merge": true}, nil)
 }

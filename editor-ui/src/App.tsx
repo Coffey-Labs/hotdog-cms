@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
-import { api, signInURL, SignedOut, type PageDetail, type SessionInfo, type SiteDetail, type SiteSummary } from './api'
+import { api, signInURL, SignedOut, type SessionInfo, type SiteDetail, type SiteSummary } from './api'
 import { go, href, useRoute, type Route } from './route'
+import { PageEditor } from './PageEditor'
+import { Present } from './Present'
 
 function Link({ to, children, className }: { to: Route; children: ReactNode; className?: string }) {
   const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
@@ -32,7 +34,8 @@ export function App() {
     <Shell session={s} onSignOut={() => api.logout().then(() => session.reload())}>
       {route.view === 'sites' && <Sites />}
       {route.view === 'site' && <SiteView id={route.id} branch={route.branch} />}
-      {route.view === 'page' && <PageView id={route.id} source={route.source} branch={route.branch} />}
+      {route.view === 'page' && <PageRoute id={route.id} source={route.source} branch={route.branch} />}
+      {route.view === 'present' && <Present id={route.id} url={route.url} branch={route.branch} />}
     </Shell>
   )
 }
@@ -157,7 +160,11 @@ function SiteView({ id, branch }: { id: string; branch?: string }) {
         <Checks build={d.build} />
         <div className="toolbar">
           <h2>{collection === '' ? 'All pages' : collection === '-' ? 'Pages' : (d.collections || []).find((c) => c.name === collection)?.title}</h2>
-          {d.preview && <a className="button" href={d.preview} target="_blank" rel="noopener noreferrer">Open preview ↗</a>}
+          <span className="toolbar-actions">
+            {d.canWrite && <NewPage id={id} collections={d.collections} />}
+            {d.preview && <button type="button" className="button" onClick={() => go({ view: 'present', id, url: d.preview!, branch })}>Present</button>}
+            {d.preview && <a className="button" href={d.preview} target="_blank" rel="noopener noreferrer">Open preview ↗</a>}
+          </span>
         </div>
         <table className="pages">
           <thead><tr><th>Title</th><th>Address</th><th>Date</th></tr></thead>
@@ -205,37 +212,43 @@ function Checks({ build }: { build: SiteDetail['build'] }) {
   )
 }
 
-function PageView({ id, source, branch }: { id: string; source: string; branch?: string }) {
-  const page = useLoad(() => api.page(id, source, branch), [id, source, branch])
+function PageRoute({ id, source, branch }: { id: string; source: string; branch?: string }) {
   const site = useLoad(() => api.site(id, branch), [id, branch])
-  const info = site.data?.pages?.find((p) => p.source === source)
-  const previewURL = site.data?.preview && info ? site.data.preview.replace(/\/$/, '') + info.path : undefined
-  if (page.error) return <Problem error={page.error} />
-  if (!page.data) return <p className="pad muted">Loading the page…</p>
-  const p: PageDetail = page.data
+  return <PageEditor id={id} source={source} branch={branch} site={site.data} onSiteChanged={site.reload} />
+}
+
+function NewPage({ id, collections }: { id: string; collections: SiteDetail['collections'] }) {
+  const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
+  const [col, setCol] = useState(collections?.[0]?.name || '')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string>()
+  if (!open) return <button type="button" className="button" onClick={() => setOpen(true)}>New page</button>
+  const create = async () => {
+    setBusy(true)
+    setErr(undefined)
+    try {
+      const r = await api.newPage(id, { collection: col, title })
+      go({ view: 'page', id, source: r.source, branch: r.branch })
+    } catch (e) {
+      setErr((e as Error).message)
+      setBusy(false)
+    }
+  }
   return (
-    <div className="pageview">
-      <section className="editor-pane">
-        <Link to={{ view: 'site', id, branch }} className="back">← {site.data?.name || 'Site'}</Link>
-        <h1>{String(p.frontMatter.title ?? info?.title ?? source)}</h1>
-        <p className="muted mono small">{source}{info ? ` → ${info.path}` : ''}</p>
-        <h2 className="side-label">Front matter</h2>
-        <dl className="fm">
-          {Object.entries(p.frontMatter).map(([k, v]) => (
-            <div key={k}><dt>{k}</dt><dd className={typeof v === 'string' ? '' : 'mono small'}>{typeof v === 'string' ? v : JSON.stringify(v)}</dd></div>
-          ))}
-        </dl>
-        <h2 className="side-label">Body</h2>
-        <pre className="body">{p.body || '(empty)'}</pre>
-        <p className="muted small">Editing arrives with the next milestone: saving will commit to a draft branch, as you.</p>
-      </section>
-      <section className="preview-pane" aria-label="Preview">
-        {previewURL ? (
-          <iframe title="Preview" src={previewURL} sandbox="allow-same-origin allow-scripts allow-popups" />
-        ) : (
-          <p className="pad muted">No preview server is configured for this site.</p>
-        )}
-      </section>
+    <div className="newpage form">
+      <label>In
+        <select value={col} onChange={(e) => setCol(e.target.value)}>
+          {(collections || []).map((c) => <option key={c.name} value={c.name}>{c.title}</option>)}
+          <option value="">Pages (top level)</option>
+        </select>
+      </label>
+      <label>Title<input value={title} autoFocus onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && title.trim() && create()} /></label>
+      <div className="actions">
+        <button type="button" className="button primary" disabled={busy || !title.trim()} onClick={create}>Start a draft</button>
+        <button type="button" className="ghost" onClick={() => setOpen(false)}>Cancel</button>
+      </div>
+      {err && <p className="notice bad">{err}</p>}
     </div>
   )
 }

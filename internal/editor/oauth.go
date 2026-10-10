@@ -19,9 +19,10 @@ import (
 )
 
 // Signing in is the platform's OAuth authorization-code flow with PKCE.
-// The editor never sees a password. It asks only for what it needs (reading
-// the person's profile and the repositories they can see; writing comes with
-// the milestone that writes), and the state and PKCE verifier travel in a
+// The editor never sees a password. It asks for the person's profile and for
+// repository access, which saving needs (pushing draft branches, opening and
+// merging pull requests); the platform still decides, per repository, what
+// that person may actually do. The state and PKCE verifier travel in a
 // sealed, short-lived cookie rather than in server memory.
 
 type endpoints struct{ authorize, token, user, scope string }
@@ -36,11 +37,11 @@ func (f *ForgeConfig) endpoints() endpoints {
 		}
 		return endpoints{b + "/login/oauth/authorize", b + "/login/oauth/access_token", api + "/user", "read:user repo"}
 	case forge.GitLab:
-		return endpoints{b + "/oauth/authorize", b + "/oauth/token", b + "/api/v4/user", "read_user read_api read_repository"}
+		return endpoints{b + "/oauth/authorize", b + "/oauth/token", b + "/api/v4/user", "read_user api"}
 	case forge.Bitbucket:
 		return endpoints{"https://bitbucket.org/site/oauth2/authorize", "https://bitbucket.org/site/oauth2/access_token", "https://api.bitbucket.org/2.0/user", ""}
 	default: // Gitea, Forgejo
-		return endpoints{b + "/login/oauth/authorize", b + "/login/oauth/access_token", b + "/api/v1/user", "read:user read:repository"}
+		return endpoints{b + "/login/oauth/authorize", b + "/login/oauth/access_token", b + "/api/v1/user", "read:user write:repository"}
 	}
 }
 
@@ -121,13 +122,13 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "The platform didn't accept the sign-in. Try again.", http.StatusBadGateway)
 		return
 	}
-	login, name, err := s.whoami(r.Context(), f, token)
+	login, name, email, err := s.whoami(r.Context(), f, token)
 	if err != nil {
 		s.log.Printf("sign-in with %s: %v", f.Host, err)
 		http.Error(w, "Couldn't read your profile from the platform.", http.StatusBadGateway)
 		return
 	}
-	sess := Session{Forge: f.Host, Login: login, Name: name, Token: token, Expires: time.Now().Add(sessionTTL)}
+	sess := Session{Forge: f.Host, Login: login, Name: name, Email: email, Token: token, Expires: time.Now().Add(sessionTTL)}
 	if err := s.seal.setCookie(w, r, sessionCookie, sess, sessionTTL); err != nil {
 		http.Error(w, "couldn't start the session", http.StatusInternalServerError)
 		return
@@ -174,7 +175,7 @@ func (s *Server) exchange(ctx context.Context, f *ForgeConfig, code, verifier st
 	return d.AccessToken, nil
 }
 
-func (s *Server) whoami(ctx context.Context, f *ForgeConfig, token string) (login, name string, err error) {
+func (s *Server) whoami(ctx context.Context, f *ForgeConfig, token string) (login, name, email string, err error) {
 	var d struct {
 		Login       string `json:"login"`
 		Username    string `json:"username"`
@@ -182,16 +183,27 @@ func (s *Server) whoami(ctx context.Context, f *ForgeConfig, token string) (logi
 		Name        string `json:"name"`
 		FullName    string `json:"full_name"`
 		DisplayName string `json:"display_name"`
+		Email       string `json:"email"`
 	}
 	if err := s.api(ctx, f, token, f.endpoints().user, &d); err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 	login = firstNonEmpty(d.Login, d.Username, d.Nickname)
 	name = firstNonEmpty(d.FullName, d.Name, d.DisplayName, login)
 	if login == "" {
-		return "", "", errors.New("the platform didn't say who you are")
+		return "", "", "", errors.New("the platform didn't say who you are")
 	}
-	return login, name, nil
+	// The address commits are attributed to: the one the platform shows, or
+	// a no-reply address on the platform when the person keeps theirs private.
+	email = d.Email
+	if email == "" {
+		if f.Kind == forge.GitHub {
+			email = login + "@users.noreply.github.com"
+		} else {
+			email = login + "@noreply." + f.Host
+		}
+	}
+	return login, name, email, nil
 }
 
 func firstNonEmpty(v ...string) string {

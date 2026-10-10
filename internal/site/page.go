@@ -42,6 +42,7 @@ type Page struct {
 	WordCount  int
 	Raw        string     // the Markdown body as written
 	RedirectTo string     // front matter redirect_to: listed like any page, built as a redirect
+	PublishAt  time.Time  // front matter publish_at: left out of live builds until then
 	LeadImage  *LeadImage // the picture the body opens with, if it opens with one
 	Paginator  *Paginator // for list and taxonomy pages
 	Site       *Site
