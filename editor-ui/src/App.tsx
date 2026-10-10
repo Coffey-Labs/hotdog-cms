@@ -6,6 +6,7 @@ import { go, href, useRoute, type Route } from './route'
 import { MediaLibrary } from './Media'
 import { PageEditor } from './PageEditor'
 import { Present } from './Present'
+import { ThemePicker } from './Theme'
 
 function Link({ to, children, className }: { to: Route; children: ReactNode; className?: string }) {
   const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
@@ -53,12 +54,15 @@ function Shell({ children, session, onSignOut }: { children: ReactNode; session?
           <img className="logo only-dark" src={logoDark} alt="HotDog CMS" />
           <span className="brand-sub">Editor</span>
         </Link>
+        <div className="who">
+          <ThemePicker />
         {session?.user && (
-          <div className="who">
+          <>
             <span title={`Signed in with ${session.user.forge}`}>{session.user.name} <span className="muted">@{session.user.login}</span></span>
             <button type="button" className="ghost" onClick={onSignOut}>Sign out</button>
-          </div>
+          </>
         )}
+        </div>
       </header>
       <main id="main">{children}</main>
     </div>

@@ -87,6 +87,8 @@ interface first, because the other two are built on its plumbing.
   and in a full-window **Present** mode for demos; desktop scales to fit; the
   choice is remembered. Present opens in its own tab and follows the edit as
   it's typed.
+- **Light, dark or automatic** (John): a switch in the header, remembered
+  per browser and applied before the page draws; automatic follows the device.
 - **Resizable split** (John): the divider between editor and preview drags,
   moves with the arrow keys, and resets on double-click; the width is
   remembered per browser.

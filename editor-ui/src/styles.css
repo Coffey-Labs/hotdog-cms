@@ -1,5 +1,6 @@
 /* The editor's look. Colors live in the tokens at the top; nothing below
-   names one. Light and dark follow the system. The accent is HotDog CMS
+   names one. Light and dark follow the system unless the person picks one
+   (data-theme on <html>, set by theme.js before the page draws). The accent is HotDog CMS
    ketchup on light grounds (deepened from #E4483A so text and buttons pass
    4.5:1) and mustard on dark ones; see brand/README.txt. */
 :root {
@@ -12,12 +13,18 @@
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #12161c; --surface: #1a2029; --raised: #1e2530; --text: #e9e6e0; --muted: #a2a8b3;
     --line: #2b323d; --accent: #f4be2c; --accent-text: #1a1310; --accent-soft: #2e2611;
     --good: #6fd29b; --good-soft: #15291f; --warn: #ff9f5a; --warn-soft: #2e1d12; --bad: #f97066; --bad-soft: #2f1716;
     color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+    --bg: #12161c; --surface: #1a2029; --raised: #1e2530; --text: #e9e6e0; --muted: #a2a8b3;
+    --line: #2b323d; --accent: #f4be2c; --accent-text: #1a1310; --accent-soft: #2e2611;
+    --good: #6fd29b; --good-soft: #15291f; --warn: #ff9f5a; --warn-soft: #2e1d12; --bad: #f97066; --bad-soft: #2f1716;
+    color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body, #root { height: 100%; }
@@ -48,7 +55,9 @@ button.ghost { border: 1px solid var(--line); background: transparent; color: va
 .signin-logo { height: 36px; width: auto; margin: 0 0 1rem; }
 .brand-sub { color: var(--muted); font-weight: 600; padding-left: .55rem; border-left: 1px solid var(--line); }
 .only-dark { display: none !important; }
-@media (prefers-color-scheme: dark) { .only-dark { display: block !important; } .only-light { display: none !important; } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .only-dark { display: block !important; } :root:not([data-theme="light"]) .only-light { display: none !important; } }
+:root[data-theme="dark"] .only-dark { display: block !important; }
+:root[data-theme="dark"] .only-light { display: none !important; }
 .who { display: flex; align-items: center; gap: .8rem; font-size: .9rem; }
 main { flex: 1; min-height: 0; overflow: auto; }
 
@@ -186,3 +195,6 @@ button.small, .small.ghost { font-size: .8rem; padding: .2rem .55rem; }
 .alt-field { display: grid; gap: .3rem; font-weight: 600; }
 .alt-field input { font-weight: 400; }
 .drop label.button { display: inline-flex; font-weight: 600; }
+
+/* ---- Theme switch (Theme.tsx) ------------------------------------------- */
+.theme-pick button { font-size: .78rem; padding: .2rem .55rem; }
