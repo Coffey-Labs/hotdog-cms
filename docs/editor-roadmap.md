@@ -85,7 +85,11 @@ interface first, because the other two are built on its plumbing.
   editor's session.
 - **Viewport picker** (John): desktop, tablet and mobile, both while editing
   and in a full-window **Present** mode for demos; desktop scales to fit; the
-  choice is remembered.
+  choice is remembered. Present opens in its own tab and follows the edit as
+  it's typed.
+- **Resizable split** (John): the divider between editor and preview drags,
+  moves with the arrow keys, and resets on double-click; the width is
+  remembered per browser.
 - **Save** commits as the person. The first save on the publishing branch
   starts a `draft/<page>` branch; nothing is ever written to the publishing
   branch. A save based on a commit the branch has moved past is refused.

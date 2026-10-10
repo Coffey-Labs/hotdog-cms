@@ -141,3 +141,17 @@ button.small, .small.ghost { font-size: .8rem; padding: .2rem .55rem; }
 .present { display: flex; flex-direction: column; height: 100%; }
 .present .frame-box { background: var(--raised); }
 @media (max-width: 820px) { .row2 { grid-template-columns: 1fr; } .preview-pane { min-height: 80vh; } }
+
+/* ---- The resizable split (Split.tsx) ------------------------------------ */
+.pageview { grid-template-columns: minmax(300px, var(--split, 44%)) 6px minmax(320px, 1fr); }
+.pageview .editor-pane { border-right: 0; }
+.divider { cursor: col-resize; background: var(--line); touch-action: none; position: relative; }
+.divider::after { content: ""; position: absolute; inset: 0 -4px; }
+.divider:hover, .divider:focus-visible, .pageview.resizing .divider { background: var(--accent); outline: none; }
+.pageview.resizing { cursor: col-resize; user-select: none; }
+.pageview.resizing iframe { pointer-events: none; }
+@media (max-width: 820px) {
+  .pageview { grid-template-columns: 1fr; }
+  .divider { display: none; }
+  .pageview .editor-pane { border-bottom: 1px solid var(--line); }
+}

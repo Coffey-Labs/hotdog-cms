@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, CheckFailed, Conflict, type Edit, type PageDetail, type Problem, type SiteDetail } from './api'
-import { go } from './route'
+import { go, href } from './route'
+import { liveChannel } from './Present'
+import { Split } from './Split'
 import { DevicePicker, PreviewFrame, useDevice } from './Viewport'
 
 // Editing one page: the common front matter as a form (or all of it as
@@ -102,8 +104,14 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
   }, [page, fields, orig, body, yaml, yamlMode])
   const dirty = edit !== null
 
-  // The live preview follows the edit, a moment after typing stops.
+  // The live preview follows the edit, a moment after typing stops, here and
+  // in any Present tab showing it.
   const timer = useRef<number>(0)
+  const channel = useRef<BroadcastChannel>(undefined)
+  useEffect(() => {
+    channel.current = liveChannel()
+    return () => channel.current?.close()
+  }, [])
   const renderLive = useCallback(
     (e: Edit | null) => {
       if (!page) return
@@ -114,6 +122,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
             setPreviewNote(undefined)
             if (r.url !== previewURL) setPreviewURL(r.url)
             else setReload((n) => n + 1)
+            channel.current?.postMessage({ url: r.url })
           }
         },
         (err: Error) => setPreviewNote(err.message),
@@ -174,6 +183,9 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
     try {
       await api.publish(id, { branch: cur })
       setStatus({ kind: 'good', text: 'Published: the change is merged. The live site updates when its publishing pipeline runs.' })
+      // The merge may have removed the draft branch; carry on from the
+      // published one.
+      if (site) go({ view: 'page', id, source, branch: site.publishBranch })
       onSiteChanged()
     } catch (e) {
       if (e instanceof CheckFailed) setProblems(e.problems)
@@ -189,7 +201,8 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
     setFields({ ...fields, [k]: e.target.type === 'checkbox' ? !!e.target.checked : e.target.value })
 
   return (
-    <div className="pageview">
+    <Split
+      left={
       <section className="editor-pane">
         <div className="pane-head">
           <a className="back" href={`/sites/${encodeURIComponent(id)}${branch ? `?branch=${encodeURIComponent(branch)}` : ''}`} onClick={(e) => { e.preventDefault(); go({ view: 'site', id, branch }) }}>← {site?.name || 'Site'}</a>
@@ -247,18 +260,22 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
         <h2 className="side-label">Body <span className="muted small">Markdown</span></h2>
         <textarea className="code body-edit" value={body} onChange={(e) => setBody(e.target.value)} spellCheck aria-label="Page body, Markdown" />
       </section>
-
+      }
+      right={
       <section className="preview-pane" aria-label="Preview">
         <div className="preview-bar">
           <DevicePicker device={device} onChange={setDevice} />
           <span className="spacer" />
-          {previewURL && <button type="button" className="ghost small" onClick={() => go({ view: 'present', id, url: previewURL, branch })}>Present</button>}
+          {/* A new tab, so the edit in progress stays open here; the preview
+              of the unsaved text lives on the server, so it shows there too. */}
+          {previewURL && <a className="ghost small linkbtn" href={href({ view: 'present', id, url: previewURL, branch })} target="_blank" rel="noopener">Present ↗</a>}
           {previewURL && <a className="ghost small linkbtn" href={previewURL} target="_blank" rel="noopener noreferrer">Open ↗</a>}
         </div>
         {previewNote && <p className="notice warn small preview-note">{previewNote}</p>}
         <PreviewFrame src={previewURL} device={device} title={`Preview of ${fields.title}`} reloadKey={reload} />
       </section>
-    </div>
+      }
+    />
   )
 }
 
