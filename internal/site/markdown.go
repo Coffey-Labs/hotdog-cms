@@ -25,6 +25,9 @@ type Markdown struct {
 	emailOff bool
 	newTab   bool
 	host     string // this site's host, for telling external links apart
+
+	media      map[string]*MediaPicture // static/media/, by main file address
+	imageSizes string
 }
 
 // NewMarkdown builds the renderer for a site's settings. host is the site's
@@ -38,7 +41,10 @@ func NewMarkdown(c MarkdownConfig, host string) *Markdown {
 		goldmark.WithExtensions(exts...),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID(), parser.WithAttribute()),
 	}
-	m := &Markdown{trust: c.TrustHTML, emailOff: c.EmailOff, newTab: c.ExternalLinks == "new_tab", host: strings.ToLower(host)}
+	m := &Markdown{trust: c.TrustHTML, emailOff: c.EmailOff, newTab: c.ExternalLinks == "new_tab", host: strings.ToLower(host), imageSizes: c.ImageSizes}
+	if m.imageSizes == "" {
+		m.imageSizes = defaultImageSizes
+	}
 	if c.TrustHTML {
 		rendererOpts = append(rendererOpts, goldmark.WithRendererOptions(html.WithUnsafe()))
 	} else if c.UnsafeHTML {
@@ -125,7 +131,7 @@ func (m *Markdown) HTML(src []byte) (template.HTML, error) {
 	default:
 		return "", fmt.Errorf("format: html needs markdown.trust_html or markdown.unsafe_html in site.yaml")
 	}
-	out := src
+	out := m.pictures(src)
 	if m.newTab {
 		out = m.markNewTab(out)
 	}
@@ -152,6 +158,8 @@ func (m *Markdown) Render(src []byte) (template.HTML, error) {
 	if m.sanitize != nil {
 		out = m.sanitize.SanitizeBytes(out)
 	}
+	// After the sanitizer: the picture markup is ours, not the author's.
+	out = m.pictures(out)
 	if m.emailOff {
 		out = protectAddresses(out)
 	}

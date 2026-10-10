@@ -117,3 +117,42 @@ func TestCleanSitePasses(t *testing.T) {
 		t.Errorf("clean site's CSP isn't strict: %s", r.CSP)
 	}
 }
+
+// gpsJPEG is the start of a JPEG whose EXIF block has a GPS entry: enough
+// for the rule, which reads only the header.
+func gpsJPEG() string {
+	tiff := []byte{'I', 'I', 42, 0, 8, 0, 0, 0,
+		1, 0, // IFD0: one entry, the GPS pointer
+		0x25, 0x88, 4, 0, 1, 0, 0, 0, 26, 0, 0, 0,
+		0, 0, 0, 0,
+		1, 0, // GPS IFD: one entry
+		1, 0, 2, 0, 2, 0, 0, 0, 'N', 0, 0, 0,
+		0, 0, 0, 0}
+	seg := append([]byte("Exif\x00\x00"), tiff...)
+	b := []byte{0xFF, 0xD8, 0xFF, 0xE1, byte((len(seg) + 2) >> 8), byte(len(seg) + 2)}
+	b = append(b, seg...)
+	return string(append(b, 0xFF, 0xDA, 0, 2, 0xFF, 0xD9))
+}
+
+func TestImageRules(t *testing.T) {
+	dir, out, cfg := mkSite(t, map[string]string{
+		"index.html":    `<html><head>` + head + `</head><body></body></html>`,
+		"card.png":      "png",
+		"img/home.jpg":  gpsJPEG(),
+		"img/plain.jpg": "\xFF\xD8\xFF\xDA\x00\x02\xFF\xD9",
+		"img/big.png":   strings.Repeat("x", 600<<10),
+	}, "")
+	r, err := Run(dir, out, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := rules(r)
+	if got["error image-location"] != 1 || got["warning image-weight"] != 1 {
+		t.Fatalf("got %v", got)
+	}
+	for _, p := range r.Problems {
+		if p.Rule == "image-location" && p.File != "public/img/home.jpg" {
+			t.Errorf("flagged %s", p.File)
+		}
+	}
+}

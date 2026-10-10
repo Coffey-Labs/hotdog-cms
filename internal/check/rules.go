@@ -3,12 +3,16 @@ package check
 import (
 	"bufio"
 	"encoding/xml"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"time"
+
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/media"
 )
 
 // Hosts whose scripts track visitors. Loading one on page view means the
@@ -237,3 +241,41 @@ func (c *checker) sitewide(pages []*page) {
 		}
 	}
 }
+
+// Published pictures: a photo straight off a phone carries the place it was
+// taken, which on a home page is the author's address. Pictures uploaded
+// through the editor are re-encoded and never have it; this catches the ones
+// committed by hand.
+func (c *checker) images() {
+	_ = filepath.WalkDir(c.out, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(p))
+		if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".webp" && ext != ".gif" {
+			return nil
+		}
+		rel, _ := filepath.Rel(c.out, p)
+		file := "public/" + filepath.ToSlash(rel)
+		info, err := d.Info()
+		if err == nil && info.Size() > imageHeavy {
+			c.add(Warning, "image-weight", file, "is %d KB; pictures over %d KB slow pages down (the editor resizes uploads)", info.Size()>>10, imageHeavy>>10)
+		}
+		if ext != ".jpg" && ext != ".jpeg" {
+			return nil
+		}
+		f, err := os.Open(p)
+		if err != nil {
+			return nil
+		}
+		head := make([]byte, 256<<10) // EXIF sits at the start
+		n, _ := io.ReadFull(f, head)
+		f.Close()
+		if media.ReadJPEGMeta(head[:n]).GPS {
+			c.add(Error, "image-location", file, "carries the GPS location where it was taken; upload it through the editor, or remove it (exiftool -gps:all= FILE)")
+		}
+		return nil
+	})
+}
+
+const imageHeavy = 500 << 10

@@ -41,6 +41,8 @@ check:
 | `robots-sitemap` | warning | robots.txt is missing, or doesn't point to the sitemap. |
 | `security-txt` | warning, error if expired | `/.well-known/security.txt` missing, without `Expires:`, expired, or within 30 days of it. |
 | `img-alt` | warning | Images without an `alt` attribute (`alt=""` is right for decoration). |
+| `image-location` | error | A JPEG that carries the GPS location where it was taken: on a personal site, often the author's home. Pictures uploaded through the editor never do. |
+| `image-weight` | warning | A picture over 500 KB. |
 
 ## The Content-Security-Policy a site needs
 

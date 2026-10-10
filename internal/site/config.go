@@ -58,6 +58,10 @@ type MarkdownConfig struct {
 	// whose every author is trusted with script tags, such as a one-person
 	// archive full of embeds; it overrides unsafe_html's sanitizer.
 	TrustHTML bool `yaml:"trust_html"`
+	// ImageSizes is the sizes attribute given to pictures from media/, telling
+	// browsers how wide they'll show so they fetch the right file. The default
+	// suits a text column up to 50rem wide.
+	ImageSizes string `yaml:"image_sizes"`
 }
 
 // AutolinkOn reports whether bare URLs become links.

@@ -79,6 +79,7 @@ func Load(dir string, opt Options) (*Site, error) {
 		return nil, err
 	}
 	md := NewMarkdown(cfg.Markdown, host)
+	md.media = loadMedia(filepath.Join(dir, "static"))
 	s.Markdown = md
 	content := filepath.Join(dir, "content")
 	seen := map[string]bool{}
