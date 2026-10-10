@@ -21,6 +21,19 @@ gitlab.com, gitea.com, codeberg.org and bitbucket.org. For a self-hosted
 server, say which it is with `-platform gitea` (or `gitlab`, `github`,
 `forgejo`, `gogs`).
 
+## Tested against
+
+- **Gitea 28.1** (a private, self-hosted instance):
+  - private clones over HTTPS with a token;
+  - previews posting `pending` and then `success` commit statuses with the
+    preview link;
+  - a real Gitea webhook delivery (signed with a secret) accepted, rebuilding
+    the preview at once, and the same delivery with its body altered refused.
+- **Plain git:** a push through the generated `post-receive` hook.
+- **The rest** are covered by tests built from each platform's documented
+  webhook and status formats, and have not been run against the live
+  services yet.
+
 ## Secrets
 
 All from the environment, never from flags, so they don't land in shell
@@ -29,7 +42,7 @@ history or the process list:
 | Variable | For |
 |---|---|
 | `CLCMS_GIT_TOKEN` | Cloning private repositories over HTTPS. SSH URLs use your keys and agent instead. |
-| `CLCMS_GIT_USER` | The user name to go with the token. Defaults per platform: `x-access-token` (GitHub), `oauth2` (GitLab), `x-token-auth` (Bitbucket); set it to your account name on Gitea, Forgejo and Gogs. |
+| `CLCMS_GIT_USER` | The user name to go with the token. Defaults per platform: `x-access-token` (GitHub), `oauth2` (GitLab), `x-token-auth` (Bitbucket). Gitea accepts the token with any user name, so it needs nothing here; on Gogs, set it to the account's name if the default is refused. |
 | `CLCMS_HOOK_SECRET` | The secret the platform signs webhooks with. Without it, the webhook endpoint is off. |
 | `CLCMS_FORGE_TOKEN` | Posting commit statuses. Give it only that permission (GitHub: "Commit statuses: write"; GitLab: `api` on a project token; Gitea/Forgejo: repository write). |
 

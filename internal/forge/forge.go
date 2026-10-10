@@ -49,8 +49,9 @@ func (k Kind) TokenUser() string {
 	case Bitbucket:
 		return "x-token-auth"
 	}
-	// Gitea, Forgejo and Gogs accept the token with the account's user name;
-	// set CLCMS_GIT_USER to it.
+	// Gitea takes the token as the password with any user name (checked on
+	// Gitea 28.1). Forgejo is a fork of it; for Gogs, set CLCMS_GIT_USER to the
+	// account's name if the default is refused.
 	return "cl-cms"
 }
 
