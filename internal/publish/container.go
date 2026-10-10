@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
 )
@@ -53,7 +54,8 @@ const nginxConf = `server {
     }
 
     location = /` + build.Marker + ` { return 404; }
-    error_page 404 /404.html;
+    location = /` + build.RedirectsFile + ` { return 404; }
+{{REDIRECTS}}    error_page 404 /404.html;
 }
 `
 
@@ -76,7 +78,8 @@ const caddyFile = `:8080 {
 	header @hashed Cache-Control "public, immutable, max-age=31536000"
 	header ?Cache-Control "no-cache"
 	respond /` + build.Marker + ` 404
-	file_server
+	respond /` + build.RedirectsFile + ` 404
+{{REDIRECTS}}	file_server
 	handle_errors {
 		@404 expression {err.status_code} == 404
 		rewrite @404 /404.html
@@ -144,9 +147,22 @@ func writeContext(ctx, out, server string) error {
 	if err := build.CopyTree(out, site); err != nil {
 		return err
 	}
-	files := map[string]string{"Containerfile": nginxContainerfile, "nginx.conf": nginxConf}
+	// The site's redirects become real 301s; the pages the build wrote at
+	// the old addresses are only the fallback for hosts that can't do this.
+	var nginxRules, caddyRules strings.Builder
+	if raw, err := os.ReadFile(filepath.Join(out, build.RedirectsFile)); err == nil {
+		for _, line := range strings.Split(strings.TrimSpace(string(raw)), "\n") {
+			from, to, ok := strings.Cut(line, " ")
+			if !ok || strings.ContainsAny(from+to, "\";{}\n\r\t ") {
+				return fmt.Errorf("redirect %q can't be written into a server config", line)
+			}
+			fmt.Fprintf(&nginxRules, "    location = %s { return 301 %s; }\n", from, to)
+			fmt.Fprintf(&caddyRules, "\tredir %s %s 301\n", from, to)
+		}
+	}
+	files := map[string]string{"Containerfile": nginxContainerfile, "nginx.conf": strings.Replace(nginxConf, "{{REDIRECTS}}", nginxRules.String(), 1)}
 	if server == "caddy" {
-		files = map[string]string{"Containerfile": caddyContainerfile, "Caddyfile": caddyFile}
+		files = map[string]string{"Containerfile": caddyContainerfile, "Caddyfile": strings.Replace(caddyFile, "{{REDIRECTS}}", caddyRules.String(), 1)}
 	}
 	// Dockerfile as well, for tools that look only for that name.
 	files["Dockerfile"] = files["Containerfile"]

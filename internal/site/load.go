@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html"
 	"io/fs"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -29,6 +30,8 @@ type Site struct {
 	Data        map[string]any // data/*.yaml and data/*.json, by file name without extension
 	BuildTime   time.Time
 	Dev         bool // built by `cl-cms serve`
+	Markdown    *Markdown
+	terms       map[string]*termIndex
 }
 
 // Options change what Load includes.
@@ -43,6 +46,10 @@ func Load(dir string, opt Options) (*Site, error) {
 	cfg, err := LoadConfig(dir)
 	if err != nil {
 		return nil, err
+	}
+	host := ""
+	if u, err := url.Parse(cfg.URL); err == nil {
+		host = u.Hostname() // the real site's host, even in a preview
 	}
 	if opt.URL != "" {
 		cfg.URL = strings.TrimRight(opt.URL, "/")
@@ -59,7 +66,8 @@ func Load(dir string, opt Options) (*Site, error) {
 	if s.Data, err = loadData(filepath.Join(dir, "data")); err != nil {
 		return nil, err
 	}
-	md := NewMarkdown(cfg.Markdown)
+	md := NewMarkdown(cfg.Markdown, host)
+	s.Markdown = md
 	content := filepath.Join(dir, "content")
 	err = filepath.WalkDir(content, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -92,6 +100,8 @@ func Load(dir string, opt Options) (*Site, error) {
 	}
 	return s, nil
 }
+
+var leadImageRe = regexp.MustCompile(`\A\s*!\[([^\]]*)\]\(([^)\s]+)\)`)
 
 var frontMatterRe = regexp.MustCompile(`(?s)\A---\r?\n(.*?)\r?\n---\r?\n?`)
 
@@ -174,10 +184,16 @@ func loadPage(file, rel string, md *Markdown) (*Page, error) {
 	if p.Content, err = md.Render(body); err != nil {
 		return nil, err
 	}
-	text := plain(string(p.Content))
-	p.WordCount = len(strings.Fields(text))
+	p.Raw = string(body)
+	p.WordCount = CountWords(PlainMarkdown(p.Raw))
+	if p.Title == "" {
+		p.Title = firstHeading(p.Raw)
+	}
+	if m := leadImageRe.FindStringSubmatch(p.Raw); m != nil {
+		p.LeadImage = &LeadImage{Src: m[2], Alt: m[1]}
+	}
 	if p.Summary == "" {
-		p.Summary = firstParagraph(string(p.Content))
+		p.Summary = firstLine(p.Raw)
 	}
 	if p.Title == "" {
 		return nil, fmt.Errorf("title is required")
@@ -269,46 +285,8 @@ func (s *Site) assemble() {
 		list.Pages = pages
 	}
 
-	for _, tax := range cfg.Taxonomies {
-		terms := map[string][]*Page{}
-		display := map[string]string{}
-		for _, p := range s.Pages {
-			if p.Kind != KindPage {
-				continue
-			}
-			for _, v := range strList(p.Params[tax]) {
-				slug := Slugify(v)
-				if slug == "" {
-					continue
-				}
-				if _, seen := display[slug]; !seen {
-					display[slug] = strings.TrimPrefix(v, "#")
-				}
-				p.Terms[tax] = append(p.Terms[tax], slug)
-				terms[slug] = append(terms[slug], p)
-			}
-		}
-		s.Taxonomies[tax] = terms
-		index := &Page{Kind: KindTerms, Title: titleCase(tax), Path: "/" + tax + "/", Taxonomy: tax, Term: tax,
-			Params: map[string]any{}, Terms: map[string][]string{}, Site: s}
-		index.Permalink = cfg.URL + index.Path
-		for slug, pages := range terms {
-			sortPages(pages, "date")
-			tp := &Page{Kind: KindTerm, Title: display[slug], Path: "/" + tax + "/" + slug + "/", Taxonomy: tax, Term: slug,
-				Pages: pages, Params: map[string]any{}, Terms: map[string][]string{}, Site: s}
-			tp.Permalink = cfg.URL + tp.Path
-			s.Pages = append(s.Pages, tp)
-			index.Pages = append(index.Pages, tp)
-		}
-		sort.Slice(index.Pages, func(i, j int) bool {
-			a, b := index.Pages[i], index.Pages[j]
-			if len(a.Pages) != len(b.Pages) {
-				return len(a.Pages) > len(b.Pages)
-			}
-			return a.Term < b.Term
-		})
-		s.Pages = append(s.Pages, index)
-	}
+	s.assembleTaxonomies()
+	s.paginate()
 	sort.Slice(s.Pages, func(i, j int) bool { return s.Pages[i].Path < s.Pages[j].Path })
 }
 
@@ -323,6 +301,16 @@ func (s *Site) checkPaths() error {
 			return fmt.Errorf("%s and %s both want %s", other, src, p.Path)
 		}
 		seen[p.Path] = src
+	}
+	return nil
+}
+
+// PageAt returns the page at a URL path, or nil.
+func (s *Site) PageAt(path string) *Page {
+	for _, p := range s.Pages {
+		if p.Path == path {
+			return p
+		}
 	}
 	return nil
 }
@@ -487,6 +475,39 @@ func date(v any) (time.Time, error) {
 var tagRe = regexp.MustCompile(`<[^>]*>`)
 
 func plain(h string) string { return html.UnescapeString(tagRe.ReplaceAllString(h, " ")) }
+
+// firstHeading returns the text of the body's first "# " heading.
+func firstHeading(md string) string {
+	for _, line := range strings.Split(md, "\n") {
+		if t := strings.TrimSpace(line); strings.HasPrefix(t, "# ") {
+			return strings.TrimSpace(t[2:])
+		}
+	}
+	return ""
+}
+
+// firstLine is a summary for a page that has none: the first line of prose,
+// skipping headings, code, images, quotes and lists, as plain text cut to 220
+// characters.
+func firstLine(md string) string {
+	for _, line := range strings.Split(md, "\n") {
+		t := strings.TrimSpace(line)
+		if t == "" {
+			continue
+		}
+		skip := false
+		for _, pre := range []string{"#", "```", "!", ">", "-", "*"} {
+			if strings.HasPrefix(t, pre) {
+				skip = true
+				break
+			}
+		}
+		if !skip {
+			return Excerpt(220, t)
+		}
+	}
+	return ""
+}
 
 var paraRe = regexp.MustCompile(`(?s)<p>(.*?)</p>`)
 

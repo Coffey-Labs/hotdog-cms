@@ -83,7 +83,7 @@ func Run(opt Options) (*Result, error) {
 		return nil, fmt.Errorf("content: %w", err)
 	}
 
-	md := site.NewMarkdown(s.Config.Markdown)
+	md := s.Markdown
 	icons, err := loadIcons(filepath.Join(siteDir, "icons"))
 	if err != nil {
 		return nil, err
@@ -138,14 +138,29 @@ func Run(opt Options) (*Result, error) {
 		}
 	}
 	for name, cc := range cfg.Collections {
-		if !cc.Feed || s.Collection(name) == nil {
+		if s.Collection(name) == nil {
 			continue
 		}
-		p, err := writeFeed(s, name, cc, work)
+		if cc.Search {
+			if err := writeSearch(s, name, work); err != nil {
+				return nil, fmt.Errorf("search index for %s: %w", name, err)
+			}
+		}
+		if !cc.Feed {
+			continue
+		}
+		write := writeFeed
+		if cc.FeedFormat == "rss" {
+			write = writeRSS
+		}
+		p, err := write(s, name, cc, work)
 		if err != nil {
 			return nil, fmt.Errorf("feed for %s: %w", name, err)
 		}
 		res.Feeds = append(res.Feeds, p)
+	}
+	if err := writeRedirects(s, work); err != nil {
+		return nil, err
 	}
 	if cfg.Outputs.LLMs {
 		if err := writeLLMs(s, work); err != nil {

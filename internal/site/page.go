@@ -40,7 +40,24 @@ type Page struct {
 	Taxonomy   string              // for term and terms pages
 	Prev, Next *Page               // neighbours within the collection, in its order
 	WordCount  int
+	Raw        string     // the Markdown body as written
+	LeadImage  *LeadImage // the picture the body opens with, if it opens with one
+	Paginator  *Paginator // for list and taxonomy pages
 	Site       *Site
+}
+
+// LeadImage is an image at the very top of a page's body, which templates can
+// use as the page's social card.
+type LeadImage struct{ Src, Alt string }
+
+// Paginator is one page of a paginated list.
+type Paginator struct {
+	Number     int     // 1-based
+	TotalPages int     // at least 1
+	TotalItems int     // across every page
+	Items      []*Page // the items on this page
+	First      *Page   // page 1
+	Prev, Next *Page   // neighbouring pages, nil at either end
 }
 
 // Section is one block of a page built from sections.
@@ -52,9 +69,9 @@ type Section struct {
 // IsHome reports whether this is the front page.
 func (p *Page) IsHome() bool { return p.Path == "/" }
 
-// ReadingTime is minutes at 220 words a minute, at least one.
+// ReadingTime is minutes at 220 words a minute, rounded, at least one.
 func (p *Page) ReadingTime() int {
-	m := (p.WordCount + 219) / 220
+	m := (p.WordCount + 110) / 220
 	if m < 1 {
 		return 1
 	}

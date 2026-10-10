@@ -24,9 +24,17 @@ type Config struct {
 	Collections map[string]CollectionConfig `yaml:"collections"`
 	Taxonomies  []string                    `yaml:"taxonomies"`
 	Menus       map[string][]MenuItem       `yaml:"menus"`
-	Outputs     OutputsConfig               `yaml:"outputs"`
-	Check       CheckConfig                 `yaml:"check"`
-	Params      map[string]any              `yaml:"params"`
+	// Paginate splits list and taxonomy pages into pages of this many items
+	// (/articles/page/2/). 0 keeps every list on one page.
+	Paginate int `yaml:"paginate"`
+	// TermIndexMin marks taxonomy pages with fewer items than this noindex and
+	// leaves them out of the sitemap: an archive with a thousand tags used once
+	// would otherwise hand search engines a thousand thin pages.
+	TermIndexMin int            `yaml:"term_index_min"`
+	Redirects    []Redirect     `yaml:"redirects"`
+	Outputs      OutputsConfig  `yaml:"outputs"`
+	Check        CheckConfig    `yaml:"check"`
+	Params       map[string]any `yaml:"params"`
 }
 
 // MarkdownConfig controls how page bodies are rendered.
@@ -41,6 +49,24 @@ type MarkdownConfig struct {
 	// back into text, so it reads "[email protected]" with scripts off, to a
 	// text browser and to a crawler. A privacy notice has to show its contact.
 	EmailOff bool `yaml:"email_off"`
+	// Autolink turns bare URLs into links. On unless set to false.
+	Autolink *bool `yaml:"autolink"`
+	// ExternalLinks: "new_tab" opens links to other sites in a new tab
+	// (target=_blank rel="noopener noreferrer"), so authors needn't mark them.
+	ExternalLinks string `yaml:"external_links"`
+	// TrustHTML passes raw HTML through without the sanitizer. Only for a site
+	// whose every author is trusted with script tags, such as a one-person
+	// archive full of embeds; it overrides unsafe_html's sanitizer.
+	TrustHTML bool `yaml:"trust_html"`
+}
+
+// AutolinkOn reports whether bare URLs become links.
+func (m MarkdownConfig) AutolinkOn() bool { return m.Autolink == nil || *m.Autolink }
+
+// Redirect sends one old address somewhere else.
+type Redirect struct {
+	From string `yaml:"from"`
+	To   string `yaml:"to"`
 }
 
 // CollectionConfig is the per-folder setting for a collection such as
@@ -52,6 +78,15 @@ type CollectionConfig struct {
 	Feed     bool   `yaml:"feed"`      // write an Atom feed
 	FeedPath string `yaml:"feed_path"` // where; default /<collection>/feed.xml
 	FeedSize int    `yaml:"feed_size"` // entries in the feed; default 20
+	// FeedFormat is atom (the default) or rss.
+	FeedFormat      string `yaml:"feed_format"`
+	FeedTitle       string `yaml:"feed_title"`
+	FeedDescription string `yaml:"feed_description"`
+	// Paginate overrides the site's paginate for this collection's list.
+	Paginate int `yaml:"paginate"`
+	// Search writes /<collection>/search.json, an index of the collection's
+	// pages for a search box to load when someone searches.
+	Search bool `yaml:"search"`
 }
 
 // MenuItem is one link in a menu from site.yaml.
@@ -123,6 +158,21 @@ func LoadConfig(dir string) (*Config, error) {
 		case "", "date", "title", "weight":
 		default:
 			return nil, fmt.Errorf("site.yaml: collection %s: sort %q is not date, title or weight", name, cc.Sort)
+		}
+		switch cc.FeedFormat {
+		case "", "atom", "rss":
+		default:
+			return nil, fmt.Errorf("site.yaml: collection %s: feed_format %q is not atom or rss", name, cc.FeedFormat)
+		}
+	}
+	switch c.Markdown.ExternalLinks {
+	case "", "new_tab":
+	default:
+		return nil, fmt.Errorf("site.yaml: markdown.external_links %q: the only option is new_tab", c.Markdown.ExternalLinks)
+	}
+	for _, r := range c.Redirects {
+		if !strings.HasPrefix(r.From, "/") || strings.Contains(r.From, "..") || r.To == "" {
+			return nil, fmt.Errorf("site.yaml: redirect %q -> %q: from must be a path starting with /, and to must be set", r.From, r.To)
 		}
 	}
 	for _, t := range c.Taxonomies {
