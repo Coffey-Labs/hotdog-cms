@@ -13,6 +13,7 @@ import (
 
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/check"
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/publish"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/serve"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/site"
 	"git.coffeylabs.org/coffey-labs/cl-cms/starter"
@@ -27,6 +28,8 @@ Usage:
   cl-cms serve [flags]         preview the site, rebuilding as you edit
   cl-cms build [flags]         build the site into public/
   cl-cms check [flags]         build, then look for broken links and forbidden strings
+  cl-cms publish [target...]   build, then publish to targets in publish.yaml
+  cl-cms pull -repo URL -out DIR   on a web server: publish from git when the branch moves
   cl-cms version
 
 Run "cl-cms <command> -h" for a command's flags.
@@ -47,6 +50,10 @@ func main() {
 		err = cmdBuild(args)
 	case "check":
 		err = cmdCheck(args)
+	case "publish":
+		err = cmdPublish(args)
+	case "pull":
+		err = cmdPull(args)
 	case "version", "-v", "--version":
 		fmt.Println("cl-cms", version)
 	case "help", "-h", "--help":
@@ -153,6 +160,70 @@ func cmdServe(args []string) error {
 		return err
 	}
 	return serve.Run(serve.Options{SiteDir: *dir, Addr: *addr, Drafts: *drafts})
+}
+
+func cmdPublish(args []string) error {
+	fl := flag.NewFlagSet("publish", flag.ExitOnError)
+	dir := fl.String("site", ".", "the site's folder")
+	targetsFile := fl.String("targets", "", "targets file (default <site>/publish.yaml); keep it outside the repository if it names hosts")
+	noBuild := fl.Bool("no-build", false, "publish the existing build in <site>/public instead of building first")
+	all := fl.Bool("all", false, "publish to every target in the file")
+	_ = fl.Parse(args)
+	file := *targetsFile
+	if file == "" {
+		file = filepath.Join(*dir, "publish.yaml")
+	}
+	targets, err := publish.Load(file)
+	if err != nil {
+		return err
+	}
+	names := fl.Args()
+	switch {
+	case *all:
+		names = publish.Names(targets)
+	case len(names) == 0 && len(targets) == 1:
+		names = publish.Names(targets)
+	case len(names) == 0:
+		return fmt.Errorf("name a target (%s) or pass -all", strings.Join(publish.Names(targets), ", "))
+	}
+	for _, n := range names {
+		if _, ok := targets[n]; !ok {
+			return fmt.Errorf("no target %q in %s", n, file)
+		}
+	}
+	out := filepath.Join(*dir, "public")
+	if !*noBuild {
+		res, err := build.Run(build.Options{SiteDir: *dir})
+		if err != nil {
+			return err
+		}
+		report(res)
+		out = res.Out
+	}
+	for _, n := range names {
+		if err := publish.Run(n, targets[n], out, os.Stdout); err != nil {
+			return fmt.Errorf("target %s: %w", n, err)
+		}
+	}
+	return nil
+}
+
+func cmdPull(args []string) error {
+	fl := flag.NewFlagSet("pull", flag.ExitOnError)
+	repo := fl.String("repo", "", "the site's git repository (required)")
+	branch := fl.String("branch", "main", "the branch to publish")
+	subdir := fl.String("subdir", "", "the site's folder inside the repository")
+	out := fl.String("out", "", "the web root to publish into (required)")
+	cache := fl.String("cache", "", "where to keep the clone (default under the user cache folder)")
+	every := fl.Duration("every", 0, "keep checking at this interval (e.g. 1m); 0 checks once and exits")
+	_ = fl.Parse(args)
+	if *repo == "" || *out == "" {
+		return errors.New("usage: cl-cms pull -repo URL -out DIR [-branch main] [-every 1m]")
+	}
+	if *subdir != "" && (filepath.IsAbs(*subdir) || strings.Contains(*subdir, "..")) {
+		return errors.New("-subdir must be a relative path inside the repository")
+	}
+	return publish.Pull(publish.PullOptions{Repo: *repo, Branch: *branch, Subdir: *subdir, Out: *out, Cache: *cache, Every: *every, Log: os.Stdout})
 }
 
 func report(r *build.Result) {

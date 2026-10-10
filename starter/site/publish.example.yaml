@@ -1,0 +1,31 @@
+# Where `cl-cms publish` sends the site. Copy to publish.yaml and keep the
+# targets you use. ${NAME} reads an environment variable, so host names and
+# registries can stay out of the repository. No passwords or keys go here:
+# SSH uses your keys and agent, registries use `docker login` / `podman login`.
+targets:
+  # A web server on this machine: publish into its document root.
+  local:
+    type: dir
+    path: /var/www/example.org
+
+  # Bare metal or a VPS over SSH. Only changed files are sent, and the new
+  # site replaces the old one in a single swap on the server.
+  server:
+    type: rsync
+    host: deploy@${DEPLOY_HOST}
+    path: /var/www/example.org
+    # port: 2222
+
+  # A container image with the site and a small web server (nginx or caddy)
+  # on port 8080. push sends it to the registry named in the image.
+  image:
+    type: container
+    image: ${REGISTRY}/example-site:latest
+    server: nginx
+    push: false
+    # context: build/image   # only write the build context, for a pipeline that builds images itself
+
+  # Anything else: your own command, run without a shell. {out} is the build.
+  # bucket:
+  #   type: command
+  #   command: [aws, s3, sync, "{out}", "s3://example-site", --delete]

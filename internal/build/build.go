@@ -228,3 +228,26 @@ func swap(work, out string) error {
 	}
 	return os.RemoveAll(old)
 }
+
+// Install copies a finished build into dst the same way Run writes its own
+// output: beside it first, then swapped in whole. dst must be empty, missing,
+// or an earlier cl-cms build.
+func Install(src, dst string) error {
+	if _, err := os.Stat(filepath.Join(src, marker)); err != nil {
+		return fmt.Errorf("%s is not a cl-cms build", src)
+	}
+	work := fmt.Sprintf("%s.new-%d", dst, os.Getpid())
+	_ = os.RemoveAll(work)
+	defer os.RemoveAll(work)
+	if err := copyTree(src, work, nil); err != nil {
+		return err
+	}
+	return swap(work, dst)
+}
+
+// Marker is the name of the file every build carries, for publishers that
+// need to recognise a folder they may replace.
+const Marker = marker
+
+// CopyTree copies a folder as it is.
+func CopyTree(src, dst string) error { return copyTree(src, dst, nil) }
