@@ -1,2 +1,6 @@
 /bin/
 /prototypes/
+/internal/editor/ui/dist/*
+!/internal/editor/ui/dist/.keep
+/editor-ui/node_modules/
+/editor-ui/*.tsbuildinfo

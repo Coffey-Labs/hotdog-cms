@@ -17,6 +17,7 @@ import (
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/check"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/ci"
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/editor"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/endpoint"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/gitx"
@@ -41,6 +42,7 @@ Usage:
   cl-cms preview -repo URL     build every branch as it would be published, each at its own address
   cl-cms ci <platform>         write the CI file for github, gitea, forgejo, gitlab, bitbucket, woodpecker, or a git hook
   cl-cms endpoint -config FILE the small server for form submissions and search, behind your web server
+  cl-cms editor -config FILE   the editor: sign in with your git platform and work on sites (never on a site's host)
 
 Platforms: GitHub, GitLab, Gitea, Forgejo/Codeberg, Gogs, Bitbucket, or any git server.
 Secrets come from the environment, never flags:
@@ -50,6 +52,7 @@ Secrets come from the environment, never flags:
   CLCMS_FORM_SECRET                 sign form tokens (endpoint; same on every endpoint of a site)
   CLCMS_SMTP_PASSWORD               the endpoint's SMTP password
   CLCMS_TURNSTILE_SECRET            check Cloudflare Turnstile on forms that use it
+  CLCMS_EDITOR_SECRET               seal editor sessions (same on every editor serving the same people)
   cl-cms version
 
 Run "cl-cms <command> -h" for a command's flags.
@@ -80,6 +83,8 @@ func main() {
 		err = cmdCI(args)
 	case "endpoint":
 		err = cmdEndpoint(args)
+	case "editor":
+		err = cmdEditor(args)
 	case "version", "-v", "--version":
 		fmt.Println("cl-cms", version)
 	case "help", "-h", "--help":
@@ -396,6 +401,19 @@ func cmdEndpoint(args []string) error {
 	}
 	fmt.Printf("endpoint listening on %s\n", srv.Listen())
 	hs := &http.Server{Addr: srv.Listen(), Handler: srv, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10}
+	return hs.ListenAndServe()
+}
+
+func cmdEditor(args []string) error {
+	fl := flag.NewFlagSet("editor", flag.ExitOnError)
+	config := fl.String("config", "editor.yaml", "the editor's configuration")
+	_ = fl.Parse(args)
+	srv, err := editor.New(*config, os.Stdout)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("editor at %s\n", srv.Listen())
+	hs := &http.Server{Addr: srv.Listen(), Handler: srv, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 60 * time.Second, WriteTimeout: 120 * time.Second, MaxHeaderBytes: 32 << 10}
 	return hs.ListenAndServe()
 }
 

@@ -1,0 +1,43 @@
+// Talking to the editor server. Reads are plain GETs; anything that changes
+// state sends the X-CLCMS header, which the server requires along with a
+// matching Origin, so another site can't make the browser act for you.
+
+export type Forge = { host: string; kind: string }
+export type User = { login: string; name: string; forge: string }
+export type SessionInfo = { signedIn: boolean; user?: User; forges: Forge[] }
+export type SiteSummary = { id: string; name: string; repo: string; branch: string; canWrite: boolean }
+export type PageInfo = { path: string; title: string; source?: string; collection?: string; kind: string; date?: string; draft?: boolean; redirect?: string }
+export type CollectionInfo = { name: string; title: string; count: number }
+export type Problem = { Level: 'error' | 'warning'; Rule: string; File: string; What: string }
+export type BuildResult = { commit: string; pages: number; errors: number; warnings: number; problems: Problem[] | null; failed?: string }
+export type Draft = { branch: string; commit: string; preview?: string }
+export type Review = { number: number; title: string; branch: string; author: string; url: string; preview?: string }
+export type SiteDetail = {
+  id: string; name: string; repo: string; branch: string; publishBranch: string; commit: string; canWrite: boolean
+  siteName: string; siteURL: string; collections: CollectionInfo[] | null; pages: PageInfo[] | null
+  drafts: Draft[] | null; reviews: Review[] | null; build: BuildResult; preview?: string; notYet?: string
+}
+export type PageDetail = { source: string; frontMatter: Record<string, unknown>; body: string }
+
+export class SignedOut extends Error {}
+
+async function get<T>(path: string): Promise<T> {
+  const res = await fetch(path, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+  if (res.status === 401) throw new SignedOut('Sign in to continue.')
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error((data as { error?: string }).error || `The editor answered ${res.status}.`)
+  return data as T
+}
+
+export const api = {
+  session: () => get<SessionInfo>('/api/session'),
+  sites: () => get<SiteSummary[]>('/api/sites'),
+  site: (id: string, branch?: string) => get<SiteDetail>(`/api/sites/${encodeURIComponent(id)}${branch ? `?branch=${encodeURIComponent(branch)}` : ''}`),
+  page: (id: string, source: string, branch?: string) =>
+    get<PageDetail>(`/api/sites/${encodeURIComponent(id)}/page?source=${encodeURIComponent(source)}${branch ? `&branch=${encodeURIComponent(branch)}` : ''}`),
+  logout: () => fetch('/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'X-CLCMS': '1' } }),
+}
+
+export function signInURL(forge: string, returnTo: string) {
+  return `/auth/login?forge=${encodeURIComponent(forge)}&return=${encodeURIComponent(returnTo)}`
+}

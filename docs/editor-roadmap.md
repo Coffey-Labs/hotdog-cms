@@ -44,6 +44,22 @@ interface first, because the other two are built on its plumbing.
 
 ### E0 · Foundations
 
+*Built 2026-10-10:*
+- **Server:** `cl-cms editor` (Go), with the React + TypeScript interface
+  embedded.
+- **Sign-in:** OAuth with PKCE for all five platforms; branches, reviews and
+  permissions read from Gitea, Forgejo and GitHub.
+- **Sessions:** AES-GCM sealed cookies.
+- **Workspaces:** per-person checkouts made with the person's own token, then
+  built and checked.
+- **Interface:** sites list, a site view (pages by collection, drafts,
+  reviews, check results), and a page view with a live preview beside it.
+- **Security:** a strict CSP on the editor itself, a CSRF guard on anything
+  that changes state, and page sources confined to `content/`.
+- **Tests:** a fake platform covers the whole sign-in and browsing flow.
+- **Tried against the Coffey Labs Gitea** with an OAuth app, "cl-cms editor
+  (local test)", whose only redirect is loopback.
+
 - `cl-cms editor`: a separate server, by default listening on loopback, with
   its own strict CSP.
 - **Sign-in through the git platform** (OAuth with Gitea, GitHub, GitLab,
