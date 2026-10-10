@@ -11,6 +11,7 @@ Websites from Markdown files and templates, with no database.
     cl-cms check             build, then report broken links and forbidden strings
     cl-cms publish <target>  build, then publish: a folder, a server over SSH, a container image, or your own command
     cl-cms pull -repo URL -out DIR   on the web server: publish from git when the branch moves
+    cl-cms preview -repo URL     every branch built as it would be published, at <branch>.localhost:8160
 
 A site is a folder:
 
@@ -26,5 +27,6 @@ A site is a folder:
 | `static/` | Files copied as they are |
 
 The output is plain files for any web server, on bare metal, a VPS or in a
-container; `docs/publishing.md` covers each. `DESIGN.md` has the plan and what
+container; `docs/publishing.md` covers each, and `docs/previews.md` covers
+looking at a change before it's published. `DESIGN.md` has the plan and what
 comes next.

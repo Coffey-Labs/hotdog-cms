@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io/fs"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/check"
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/preview"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/publish"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/serve"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/site"
@@ -30,6 +32,7 @@ Usage:
   cl-cms check [flags]         build, then look for broken links and forbidden strings
   cl-cms publish [target...]   build, then publish to targets in publish.yaml
   cl-cms pull -repo URL -out DIR   on a web server: publish from git when the branch moves
+  cl-cms preview -repo URL     build every branch as it would be published, each at its own address
   cl-cms version
 
 Run "cl-cms <command> -h" for a command's flags.
@@ -54,6 +57,8 @@ func main() {
 		err = cmdPublish(args)
 	case "pull":
 		err = cmdPull(args)
+	case "preview":
+		err = cmdPreview(args)
 	case "version", "-v", "--version":
 		fmt.Println("cl-cms", version)
 	case "help", "-h", "--help":
@@ -224,6 +229,59 @@ func cmdPull(args []string) error {
 		return errors.New("-subdir must be a relative path inside the repository")
 	}
 	return publish.Pull(publish.PullOptions{Repo: *repo, Branch: *branch, Subdir: *subdir, Out: *out, Cache: *cache, Every: *every, Log: os.Stdout})
+}
+
+func cmdPreview(args []string) error {
+	fl := flag.NewFlagSet("preview", flag.ExitOnError)
+	repo := fl.String("repo", "", "the site's git repository (required)")
+	subdir := fl.String("subdir", "", "the site's folder inside the repository")
+	branches := fl.String("branches", "", "comma-separated branch patterns to preview, e.g. main,feature/* (default all)")
+	root := fl.String("root", "", "where previews are built (default under the user cache folder)")
+	addr := fl.String("addr", "127.0.0.1:8160", "address to listen on; anything but loopback needs CLCMS_PREVIEW_AUTH")
+	domain := fl.String("domain", "localhost", "previews are served at <branch>.<domain>")
+	scheme := fl.String("scheme", "http", "the scheme browsers use (https behind a TLS proxy)")
+	port := fl.String("port", "", "the port browsers use, if not the listening port on localhost or 80/443 elsewhere")
+	every := fl.Duration("every", 30*time.Second, "how often to look for branches that moved")
+	drafts := fl.Bool("drafts", true, "include draft pages")
+	_ = fl.Parse(args)
+	if *repo == "" {
+		return errors.New("usage: cl-cms preview -repo URL [-branches main,feature/*] [-addr 127.0.0.1:8160]")
+	}
+	if *subdir != "" && (filepath.IsAbs(*subdir) || strings.Contains(*subdir, "..")) {
+		return errors.New("-subdir must be a relative path inside the repository")
+	}
+	if *root == "" {
+		base, err := os.UserCacheDir()
+		if err != nil {
+			return err
+		}
+		*root = filepath.Join(base, "cl-cms", "previews")
+	}
+	if *port == "" && *domain == "localhost" {
+		if _, p, err := net.SplitHostPort(*addr); err == nil {
+			*port = p
+		}
+	}
+	var auth *preview.Auth
+	if v := os.Getenv("CLCMS_PREVIEW_AUTH"); v != "" {
+		u, p, ok := strings.Cut(v, ":")
+		if !ok || u == "" || len(p) < 12 {
+			return errors.New("CLCMS_PREVIEW_AUTH must be user:password, with a password of at least 12 characters")
+		}
+		auth = &preview.Auth{User: u, Pass: p}
+	}
+	var refs []string
+	for _, r := range strings.Split(*branches, ",") {
+		if r = strings.TrimSpace(r); r != "" {
+			refs = append(refs, r)
+		}
+	}
+	b, err := preview.NewBuilder(preview.Options{Repo: *repo, Subdir: *subdir, Refs: refs, Root: *root,
+		Domain: strings.ToLower(*domain), Port: *port, Scheme: *scheme, Drafts: *drafts, Log: os.Stdout})
+	if err != nil {
+		return err
+	}
+	return b.Serve(*addr, auth, *every)
 }
 
 func report(r *build.Result) {
