@@ -55,9 +55,37 @@ func NewMarkdown(c MarkdownConfig, host string) *Markdown {
 	return m
 }
 
+// protectAddresses puts Cloudflare's email_off markers around everything its
+// Email Address Obfuscation would rewrite: mailto links, and email addresses
+// and fediverse handles (@user@host, which look like addresses to it) in text.
+// Without them a reader sees "[email protected]" where the address was.
+func protectAddresses(h []byte) []byte {
+	h = mailtoRe.ReplaceAll(h, []byte("<!--email_off-->$0<!--/email_off-->"))
+	var b bytes.Buffer
+	off := false
+	for _, seg := range tagSplitRe.FindAllIndex(h, -1) {
+		part := h[seg[0]:seg[1]]
+		switch {
+		case bytes.Equal(part, []byte("<!--email_off-->")):
+			off = true
+			b.Write(part)
+		case bytes.Equal(part, []byte("<!--/email_off-->")):
+			off = false
+			b.Write(part)
+		case part[0] == '<' || off:
+			b.Write(part)
+		default:
+			b.Write(addressRe.ReplaceAll(part, []byte("<!--email_off-->$0<!--/email_off-->")))
+		}
+	}
+	return b.Bytes()
+}
+
 var (
-	mailtoRe = regexp.MustCompile(`<a href="mailto:[^"]*"[^>]*>.*?</a>`)
-	anchorRe = regexp.MustCompile(`<a\s[^>]*?href="([^"]+)"[^>]*>`)
+	tagSplitRe = regexp.MustCompile(`<!--.*?-->|<[^>]*>|[^<]+`)
+	addressRe  = regexp.MustCompile(`@?[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}`)
+	mailtoRe   = regexp.MustCompile(`<a href="mailto:[^"]*"[^>]*>.*?</a>`)
+	anchorRe   = regexp.MustCompile(`<a\s[^>]*?href="([^"]+)"[^>]*>`)
 )
 
 // External reports whether a link leads off this site: an absolute http(s)
@@ -125,7 +153,7 @@ func (m *Markdown) Render(src []byte) (template.HTML, error) {
 		out = m.sanitize.SanitizeBytes(out)
 	}
 	if m.emailOff {
-		out = mailtoRe.ReplaceAll(out, []byte("<!--email_off-->$0<!--/email_off-->"))
+		out = protectAddresses(out)
 	}
 	if m.newTab {
 		out = m.markNewTab(out)

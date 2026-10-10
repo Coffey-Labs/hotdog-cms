@@ -8,7 +8,7 @@ Websites from Markdown files and templates, with no database.
     cd mysite
     cl-cms serve             preview at http://127.0.0.1:8140, reloading as you save
     cl-cms build             write the finished site to public/
-    cl-cms check             build, then report broken links and forbidden strings
+    cl-cms check [-csp]      build, then check it: tracking, privacy, links, SEO, security (docs/checks.md)
     cl-cms publish <target>  build, then publish: a folder, a server over SSH, a container image, or your own command
     cl-cms pull -repo URL -out DIR   on the web server: publish from git when the branch moves
     cl-cms preview -repo URL     every branch built as it would be published, at <branch>.localhost:8160

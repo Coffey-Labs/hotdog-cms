@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/check"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/gitx"
 )
@@ -83,7 +84,7 @@ func Pull(o PullOptions) error {
 			fmt.Fprintf(o.Log, "pull: %v\n", err)
 		case head != last:
 			var res *build.Result
-			res, err = build.Run(build.Options{SiteDir: filepath.Join(o.Cache, o.Subdir), Out: o.Out})
+			res, err = buildChecked(filepath.Join(o.Cache, o.Subdir), o.Out)
 			if err != nil {
 				err = fmt.Errorf("build of %s failed, the live site is unchanged: %w", short(head), err)
 				fmt.Fprintln(o.Log, err)
@@ -103,6 +104,37 @@ func Pull(o PullOptions) error {
 		case <-kick:
 		}
 	}
+}
+
+// buildChecked builds into a staging folder, runs the site's checks on it,
+// and only then puts it live, so a commit that fails a check never reaches
+// the web root.
+func buildChecked(siteDir, out string) (*build.Result, error) {
+	staging := out + ".cl-cms-check"
+	res, err := build.Run(build.Options{SiteDir: siteDir, Out: staging})
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(staging)
+	rep, err := check.Run(siteDir, staging, res.Site.Config)
+	if err != nil {
+		return nil, err
+	}
+	if n := rep.Errors(); n > 0 {
+		first := ""
+		for _, p := range rep.Problems {
+			if p.Level == check.Error {
+				first = p.String()
+				break
+			}
+		}
+		return nil, fmt.Errorf("%d check error(s), first: %s", n, first)
+	}
+	if err := build.Install(staging, out); err != nil {
+		return nil, err
+	}
+	res.Out = out
+	return res, nil
 }
 
 // sync brings the private clone to the branch's tip and returns its commit.

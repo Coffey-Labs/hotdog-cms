@@ -193,3 +193,52 @@ func TestPull(t *testing.T) {
 		t.Fatal("a broken build changed the live site")
 	}
 }
+
+func TestPullRefusesFailedChecks(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	repo := t.TempDir()
+	starterSite(t, repo)
+	cfg, _ := os.ReadFile(filepath.Join(repo, "site.yaml"))
+	os.WriteFile(filepath.Join(repo, "site.yaml"), []byte(strings.Replace(string(cfg), "  forbid: []", "  forbid: ['internal\\.example']", 1)), 0o644)
+	git := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", repo, "-c", "user.name=t", "-c", "user.email=t@example.test", "-c", "commit.gpgsign=false"}, args...)...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	git("init", "-q", "-b", "main")
+	git("add", "-A")
+	git("commit", "-q", "-m", "site")
+	www := filepath.Join(t.TempDir(), "www")
+	opt := PullOptions{Repo: repo, Out: www, Cache: filepath.Join(t.TempDir(), "clone"), Log: &bytes.Buffer{}}
+	if err := Pull(opt); err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(filepath.Join(repo, "content", "about.md"), []byte("---\ntitle: About\n---\nOur server is db1.internal.example.\n"), 0o644)
+	git("commit", "-q", "-am", "leak a host name")
+	err := Pull(opt)
+	if err == nil || !strings.Contains(err.Error(), "check error") {
+		t.Fatalf("a commit failing its checks was published: %v", err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(www, "about", "index.html")); strings.Contains(string(b), "internal.example") {
+		t.Fatal("the leak reached the live site")
+	}
+	if _, err := os.Stat(www + ".cl-cms-check"); err == nil {
+		t.Error("staging folder left behind")
+	}
+}
+
+func TestContainerCSP(t *testing.T) {
+	out := built(t)
+	ctx := filepath.Join(t.TempDir(), "ctx")
+	if err := Run("image", Target{Type: "container", Context: ctx, CSP: true}, out, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	conf, _ := os.ReadFile(filepath.Join(ctx, "nginx.conf"))
+	if !strings.Contains(string(conf), `add_header Content-Security-Policy "default-src 'self'; script-src 'self';`) {
+		t.Errorf("nginx.conf has no strict CSP:\n%s", conf)
+	}
+}

@@ -114,7 +114,7 @@ h1{margin:0 0 4px}p.sub{color:var(--muted);margin:0 0 28px}
 ul{list-style:none;padding:0;display:grid;gap:12px}
 li{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
 a{color:inherit;font-weight:650}code{font-size:.9em}.meta{color:var(--muted);font-size:.9rem}
-.err{color:var(--bad);white-space:pre-wrap;font-size:.88rem;margin:8px 0 0}
+.err{color:var(--bad);white-space:pre-wrap;font-size:.88rem;margin:8px 0 0}.bad{color:var(--bad)}
 </style></head><body><main>
 <h1>Previews</h1>
 <p class="sub">Each branch, built exactly as it would be published. Nothing here is live.</p>
@@ -122,6 +122,7 @@ a{color:inherit;font-weight:650}code{font-size:.9em}.meta{color:var(--muted);fon
 <ul>{{ range . }}<li>
   {{ if .Commit }}<a href="{{ .URL }}">{{ .Branch }}</a>{{ else }}<strong>{{ .Branch }}</strong>{{ end }}
   <div class="meta">{{ if .Commit }}<code>{{ printf "%.10s" .Commit }}</code> · {{ .Pages }} pages · built {{ .Built.Format "2 Jan 15:04:05" }}{{ else }}no good build yet{{ end }}</div>
+  {{ if .Commit }}<div class="meta">{{ if .Errors }}<strong class="bad">{{ .Errors }} check error(s): publishing is blocked until they're fixed</strong>{{ else }}Passes the checks{{ end }}{{ with .Warnings }} · {{ . }} warning(s){{ end }}</div>{{ end }}
   {{ with .Error }}<p class="err">The last build failed, so the previous build (if any) is still shown.
 {{ . }}</p>{{ end }}
 </li>{{ end }}</ul>

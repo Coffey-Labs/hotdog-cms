@@ -1,6 +1,9 @@
 package site
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestSimpleFrontMatter(t *testing.T) {
 	fm, ok := simpleFrontMatter("title: \"A title\"\ndate: 2026-08-17\ntags: [#DarkMode, #Linux, 2013]\ndraft: false\n")
@@ -46,5 +49,23 @@ func TestSections(t *testing.T) {
 	}
 	if _, err := sections([]any{map[string]any{"a": nil, "b": nil}}); err == nil {
 		t.Error("accepted two sections in one list item")
+	}
+}
+
+func TestEmailOffWrapsTextAddresses(t *testing.T) {
+	md := NewMarkdown(MarkdownConfig{EmailOff: true}, "example.org")
+	h, _ := md.Render([]byte("Mail [me](mailto:a@example.org), or press@example.org, or follow @jc@social.example.\n"))
+	s := string(h)
+	for _, want := range []string{
+		`<!--email_off--><a href="mailto:a@example.org">me</a><!--/email_off-->`,
+		`<!--email_off--><a href="mailto:press@example.org">press@example.org</a><!--/email_off-->`, // autolinked
+		`<!--email_off-->@jc@social.example<!--/email_off-->`,
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("missing %s in %s", want, s)
+		}
+	}
+	if strings.Count(s, "<!--email_off-->") != 3 {
+		t.Errorf("addresses wrapped twice: %s", s)
 	}
 }

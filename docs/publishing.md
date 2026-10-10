@@ -14,6 +14,14 @@ run it:
   rebuilds when the branch moves. Nothing connects in to the server, so it needs
   no deploy access; the repository can be read with a read-only key.
 
+## Every route is checked
+
+Before anything is published, `cl-cms check` runs on the build
+([checks.md](checks.md)). `cl-cms publish` stops on an error, and the pull
+agent leaves the live site as it was. There is no flag to skip this; a rule a
+site means to break is switched off in `site.yaml`, where it is reviewed with
+everything else.
+
 ## Push: targets
 
 Targets live in `publish.yaml` (see `publish.example.yaml`), or in a file you

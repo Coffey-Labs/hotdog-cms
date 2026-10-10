@@ -47,6 +47,7 @@ type Target struct {
 	Push    bool   `yaml:"push"`    // push to the registry named in image
 	Tool    string `yaml:"tool"`    // docker or podman; default whichever is installed
 	Context string `yaml:"context"` // write the build context here and stop, for a pipeline that builds images itself
+	CSP     bool   `yaml:"csp"`     // send the Content-Security-Policy the pages need (as cl-cms check -csp prints it)
 
 	// command: argv, run without a shell. {out} is replaced with the build folder.
 	Command []string `yaml:"command"`

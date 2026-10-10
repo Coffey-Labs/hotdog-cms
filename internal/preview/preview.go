@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/check"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/gitx"
 )
@@ -47,15 +48,17 @@ type Options struct {
 
 // Preview is one built branch.
 type Preview struct {
-	Branch  string
-	Slug    string
-	Commit  string
-	Built   time.Time
-	Pages   int
-	Error   string // the last build's error; the previous good build is still served
-	URL     string
-	dir     string
-	pending string // commit of a failed build, so it isn't retried until the branch moves
+	Branch   string
+	Slug     string
+	Commit   string
+	Built    time.Time
+	Pages    int
+	Error    string // the last build's error; the previous good build is still served
+	Errors   int    // check errors in the current build: publishing it would be refused
+	Warnings int    // check warnings in the current build
+	URL      string
+	dir      string
+	pending  string // commit of a failed build, so it isn't retried until the branch moves
 }
 
 // Builder keeps the set of previews current.
@@ -198,6 +201,11 @@ func (b *Builder) buildBranch(branch, slug, commit string) {
 		return
 	}
 	p.Commit, p.Built, p.Pages, p.Error, p.pending = commit, time.Now(), res.Pages, "", ""
+	p.Errors, p.Warnings = 0, 0
+	if rep, err := check.Run(filepath.Join(src, b.o.Subdir), out, res.Site.Config); err == nil {
+		p.Errors = rep.Errors()
+		p.Warnings = len(rep.Problems) - p.Errors
+	}
 	fmt.Fprintf(b.o.Log, "preview %s (%s @ %s): %d pages at %s/\n", slug, branch, short(commit), res.Pages, url)
 	go b.status(commit, forge.Success, url+"/", fmt.Sprintf("Preview ready, %d pages", res.Pages))
 }

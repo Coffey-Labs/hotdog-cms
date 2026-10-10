@@ -156,21 +156,30 @@ func cmdBuild(args []string) error {
 func cmdCheck(args []string) error {
 	fl := flag.NewFlagSet("check", flag.ExitOnError)
 	dir, out, drafts := buildFlags(fl)
+	csp := fl.Bool("csp", false, "also print the Content-Security-Policy the pages need")
 	_ = fl.Parse(args)
 	res, err := build.Run(build.Options{SiteDir: *dir, Out: *out, Drafts: *drafts})
 	if err != nil {
 		return err
 	}
 	report(res)
-	problems, err := check.Run(res.Site.Dir, res.Out, res.Site.Config)
+	rep, err := check.Run(res.Site.Dir, res.Out, res.Site.Config)
 	if err != nil {
 		return err
 	}
-	for _, p := range problems {
-		fmt.Println("  ✗", p)
+	for _, p := range rep.Problems {
+		fmt.Println(" ", p)
 	}
-	if len(problems) > 0 {
-		return fmt.Errorf("%d problem(s)", len(problems))
+	if *csp {
+		fmt.Printf("\nThe Content-Security-Policy these pages need (add hosts your scripts fetch to connect-src):\n  %s\n", rep.CSP)
+	}
+	errs, warns := rep.Errors(), len(rep.Problems)-rep.Errors()
+	if errs > 0 {
+		return fmt.Errorf("%d error(s), %d warning(s)", errs, warns)
+	}
+	if warns > 0 {
+		fmt.Printf("No errors; %d warning(s).\n", warns)
+		return nil
 	}
 	fmt.Println("No problems found.")
 	return nil
@@ -227,6 +236,22 @@ func cmdPublish(args []string) error {
 		}
 		report(res)
 		out = res.Out
+	}
+	// The same check whichever way a site is published, and no flag to skip
+	// it: a site that means to break a rule says so in site.yaml (check.ignore).
+	cfg, err := site.LoadConfig(*dir)
+	if err != nil {
+		return err
+	}
+	rep, err := check.Run(*dir, out, cfg)
+	if err != nil {
+		return err
+	}
+	for _, p := range rep.Problems {
+		fmt.Println(" ", p)
+	}
+	if n := rep.Errors(); n > 0 {
+		return fmt.Errorf("not published: %d check error(s); fix them, or switch the rule off in site.yaml (check.ignore)", n)
 	}
 	for _, n := range names {
 		if err := publish.Run(n, targets[n], out, os.Stdout); err != nil {

@@ -107,11 +107,24 @@ type OutputsConfig struct {
 	LLMs    bool  `yaml:"llms"`    // llms.txt, default off
 }
 
-// CheckConfig is what `cl-cms check` refuses.
+// CheckConfig tunes `cl-cms check`.
 type CheckConfig struct {
 	// Forbid lists regular expressions that must not appear in the source or
 	// the built site: internal host names, personal addresses, and so on.
 	Forbid []string `yaml:"forbid"`
+	// Ignore turns rules off by id, e.g. [img-alt].
+	Ignore []string `yaml:"ignore"`
+	// AllowThirdParty lists hosts the site means to load from, such as
+	// challenges.cloudflare.com for Turnstile. A tracker on this list is
+	// still reported if it loads before consent.
+	AllowThirdParty []string `yaml:"allow_third_party"`
+	// Cloudflare: the site is served through Cloudflare's proxy, so email
+	// addresses and fediverse handles outside email_off markers get mangled.
+	Cloudflare bool `yaml:"cloudflare"`
+	// CSP "strict" makes inline scripts and styles errors instead of warnings.
+	CSP string `yaml:"csp"`
+	// PrivacyPage is where the privacy notice lives; default /privacy/.
+	PrivacyPage string `yaml:"privacy_page"`
 }
 
 func on(b *bool) bool { return b == nil || *b }

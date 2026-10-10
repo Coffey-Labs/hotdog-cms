@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/check"
 )
 
 // The image serves files and nothing else: an unprivileged web server, the
@@ -102,7 +103,11 @@ func container(t Target, out string, log io.Writer) error {
 	} else if err := os.MkdirAll(ctx, 0o755); err != nil {
 		return err
 	}
-	if err := writeContext(ctx, out, t.Server); err != nil {
+	csp := ""
+	if t.CSP {
+		csp = check.Policy(out)
+	}
+	if err := writeContext(ctx, out, t.Server, csp); err != nil {
 		return err
 	}
 	if t.Image == "" {
@@ -139,7 +144,7 @@ func container(t Target, out string, log io.Writer) error {
 	return nil
 }
 
-func writeContext(ctx, out, server string) error {
+func writeContext(ctx, out, server, csp string) error {
 	site := filepath.Join(ctx, "site")
 	if err := os.RemoveAll(site); err != nil {
 		return err
@@ -160,9 +165,18 @@ func writeContext(ctx, out, server string) error {
 			fmt.Fprintf(&caddyRules, "\tredir %s %s 301\n", from, to)
 		}
 	}
-	files := map[string]string{"Containerfile": nginxContainerfile, "nginx.conf": strings.Replace(nginxConf, "{{REDIRECTS}}", nginxRules.String(), 1)}
+	nconf, cconf := nginxConf, caddyFile
+	if csp != "" {
+		if strings.ContainsAny(csp, "\"\n\r") {
+			return fmt.Errorf("content security policy can't be written into a server config")
+		}
+		h := `add_header Content-Security-Policy "` + csp + `" always;`
+		nconf = strings.ReplaceAll(nconf, `add_header X-Content-Type-Options "nosniff" always;`, `add_header X-Content-Type-Options "nosniff" always;`+"\n        "+h)
+		cconf = strings.Replace(cconf, "\t\tX-Content-Type-Options nosniff", "\t\tX-Content-Type-Options nosniff\n\t\tContent-Security-Policy \""+csp+"\"", 1)
+	}
+	files := map[string]string{"Containerfile": nginxContainerfile, "nginx.conf": strings.Replace(nconf, "{{REDIRECTS}}", nginxRules.String(), 1)}
 	if server == "caddy" {
-		files = map[string]string{"Containerfile": caddyContainerfile, "Caddyfile": strings.Replace(caddyFile, "{{REDIRECTS}}", caddyRules.String(), 1)}
+		files = map[string]string{"Containerfile": caddyContainerfile, "Caddyfile": strings.Replace(cconf, "{{REDIRECTS}}", caddyRules.String(), 1)}
 	}
 	// Dockerfile as well, for tools that look only for that name.
 	files["Dockerfile"] = files["Containerfile"]
