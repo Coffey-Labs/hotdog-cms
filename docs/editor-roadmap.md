@@ -119,6 +119,14 @@ interface first, because the other two are built on its plumbing.
   the build and the pull agent; previews show what will appear when. **No
   data store.**
 
+### Quick posts (wanted, not yet designed)
+
+John, 2026-10-10: a "5 minute" tool for pushing something out in a hurry:
+events, announcements, specials, whatever an operator needs up now. To be
+workshopped; for now it only holds a place on the list. Whatever shape it
+takes, it keeps the rules above: a quick post is still a commit, still checked,
+still previewable, with no faster path to the live site.
+
 ### E2 · Media
 
 - Upload by drag and drop. Every image is re-encoded on the way in:
