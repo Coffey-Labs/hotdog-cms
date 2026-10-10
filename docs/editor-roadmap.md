@@ -1,0 +1,242 @@
+# Editor roadmap
+
+Draft, 2026-10-10. The editor is the part of cl-cms that people who don't
+live in git will use. It should do what people actually use WordPress for,
+without what makes WordPress heavy and dangerous.
+
+## The rules it is built on
+
+These come from John's decisions so far, and every milestone below has to
+keep them.
+
+1. **The editor never lives with the sites.** It is its own deployment, on
+   its own host or on the editor's own machine, like inbuxa-admin. The public
+   host serves files (plus the forms and search endpoint) and nothing else:
+   no `/wp-admin`, no login page, no admin API. Taking over a web server gives
+   an attacker no way to edit content. Taking over the editor gives no way
+   into a web server, because the editor holds no deploy credentials.
+2. **Git is the delivery path for every change, the visual editor included.**
+   - Saving is a commit, made as the person who saved.
+   - A draft is a branch, and its preview is that branch's preview address.
+   - Submitting for review opens a pull request on whichever platform the site
+     lives on (Gitea, GitHub, GitLab, Forgejo, Bitbucket), or on plain git.
+   - Publishing is that change reaching the branch the site builds from.
+   - Undoing is a revert.
+
+   There is no second, faster path to the live site.
+3. **Operators decide how sites are published.** The editor hands a commit to
+   git. What happens next (CI, a deploy script, the pull agent, a container
+   registry) is the operator's choice, on bare metal, a VPS or containers.
+4. **One safety check, three ways in.** Power users get a keyboard-driven,
+   CLI-like environment. Novices get WYSIWYG. Everyone else gets Markdown with
+   a live preview, and forms for structured parts. All three produce the same
+   files and go through the same `cl-cms check`, preview and review. No mode
+   skips a check, and no mode has a shortcut to the live site.
+5. **Security and usability are never traded.** If a feature seems to need
+   that trade, the design is wrong.
+6. **No data store until something truly needs one.** Each milestone says
+   whether it does.
+
+## Milestones
+
+Each milestone is usable on its own. They're in build order: the in-between
+interface first, because the other two are built on its plumbing.
+
+### E0 · Foundations
+
+- `cl-cms editor`: a separate server, by default listening on loopback, with
+  its own strict CSP.
+- **Sign-in through the git platform** (OAuth with Gitea, GitHub, GitLab,
+  Forgejo or Bitbucket), or OIDC (inbuxa). Edits are made with the signed-in
+  person's own platform token, so the platform enforces who may do what.
+  Every commit is attributed to them, and the editor stores no accounts.
+  **No data store:** sessions are signed, short-lived cookies.
+- Open a site: browse its files, its pages by collection, and its open drafts
+  and pull requests.
+- Embedded previews (`cl-cms preview`), with each branch's check results.
+
+### E1 · Write (the in-between interface)
+
+- Markdown with a live preview rendered by the same engine as the build, so
+  what you see is exactly what publishes.
+- Front matter as a form, driven by what the site's layouts use (title,
+  summary, date, tags with suggestions from existing terms, image and alt
+  text). Raw front matter is one click away.
+- Save creates the draft branch (`draft/<slug>`) on first save; later saves
+  add commits to it.
+- Check results appear inline, next to the field or line they're about.
+  Errors block "submit", and the reason is shown in words.
+- **Submit for review** opens a pull request with a preview link (the commit
+  status we already post). **Publish** merges it, for people the platform
+  allows to merge.
+- **Scheduled publishing**, kept in git: front matter `publish_at`, honored by
+  the build and the pull agent; previews show what will appear when. **No
+  data store.**
+
+### E2 · Media
+
+- Upload by drag and drop. Every image is re-encoded on the way in:
+  - EXIF stripped (location included);
+  - resized to sensible widths, with WebP and a fallback;
+  - so a "picture" can't carry anything else.
+- An image can't be inserted without alt text, or an explicit "decorative"
+  choice.
+- A media library, with what's used where and what's unused.
+- **Storage:** committed to the site's repository by default, as today.
+  **Possible data-store point:** sites with a lot of large media may want
+  object storage (S3-compatible) or Git LFS instead. Decide when a real site
+  needs it.
+
+### E3 · Sections and look
+
+- The section library, shown as cards. A section is added from the library,
+  reordered by drag and drop, and its fields edited as a form. This is the
+  cairnobs.org home page, editable without YAML.
+- New section types are template files, so a developer adds one and every
+  editor can use it.
+- Palette, fonts and logo edited through `site.yaml` params with a live
+  preview, inside limits the theme declares (contrast is checked).
+
+### E4 · Power interface
+
+- Keyboard-first throughout, with a command palette (`Ctrl K`): new article,
+  open, preview, check, submit, publish.
+- A command line in the browser that speaks cl-cms (`new article "Title"`,
+  `check`, `publish`), plus git-shaped commands for branches, diffs and
+  history. It doesn't run arbitrary shell commands: the editor host is not a
+  shell.
+- Any file in the site is editable as raw text, with diffs before saving.
+- Everything the editor does is something `cl-cms` on a laptop can do too.
+  The power interface is a convenience, never a requirement.
+
+### E5 · WYSIWYG interface
+
+- A visual editor built on a Markdown-native ProseMirror editor, so the
+  Markdown that comes out is the Markdown a person would have written.
+  Nothing becomes HTML soup.
+- Editing in place on the preview: click a heading on the rendered page to
+  edit it.
+- Only what the site's Markdown settings allow. If raw HTML is off, the
+  toolbar can't produce it.
+
+### E6 · Helpers
+
+- **SEO panel:**
+  - a search-result and social-card preview per page;
+  - the check's SEO findings as a checklist (title and description length,
+    duplicates, missing alt text, canonical, noindex);
+  - redirects managed in a table, with a redirect added automatically when a
+    page moves.
+- **Social:**
+  - a social card generated for every page from a template, like coffeylabs'
+    `cards.py`;
+  - per-platform previews (Mastodon, LinkedIn, Bluesky);
+  - optional share-on-publish, per post, with nothing automatic;
+  - fediverse author tags.
+- **Analytics wizard:**
+  - Google Analytics, Plausible or Matomo, set up consent-gated by default:
+    the script loads only after "Accept";
+  - the privacy page updated to match;
+  - ungated analytics needs an explicit, recorded choice, and `check` still
+    warns about it.
+- **GDPR and cookie helper:**
+  - the consent banner our sites use, as a built-in: in the accessibility tree
+    and not a wall, Decline first and equally prominent, a "Cookie settings"
+    reopen link (Article 7(3)), and declining deletes the cookies;
+  - a privacy page generator that lists what the site actually loads, the
+    lawful basis for each, the controller contact and the date, regenerated
+    when that list changes.
+- **Search consoles:**
+  - Google Search Console, Bing Webmaster Tools and Yandex: guided
+    verification by meta tag, file or DNS TXT record (shown, not changed);
+  - sitemap submission;
+  - IndexNow pings on publish.
+- **The gotchas:** every `check` rule shown where it applies, with its fix.
+  Examples: an address Cloudflare will mangle, an image missing alt text, a
+  third-party script with no consent, a `security.txt` about to expire.
+
+### E7 · Forms
+
+- A form builder over the YAML (fields, validation, recipient, success
+  page), with a live preview of the form in the site's styling.
+- **Submissions viewer**, reading the endpoint's JSON-lines files over an
+  authenticated, editor-only channel. It never goes through the public
+  endpoint, which stays write-only.
+  **Possible data-store point:** searching or filtering many submissions.
+  The files are fine for reading recent ones.
+
+### E8 · People and workflow
+
+- Roles (writer, editor, publisher) mapped to the platform's own
+  permissions: who can push to drafts, who can merge. One source of truth,
+  and the editor stores none of it.
+- Notifications for review requests and published changes, sent by the
+  platform's own notifications or email.
+- History is `git log`. An audit trail can't be edited by whoever it
+  records.
+- Passkeys and two-factor sign-in, provided by the platform or the OIDC
+  provider.
+
+### E9 · Importers
+
+- **WordPress** (`cl-cms import wordpress`):
+  - connects to a live site with an Application Password (read-only, over the
+    REST API), or reads a WXR export file;
+  - posts and pages become Markdown, with `format: html` kept where
+    conversion would lose something;
+  - authors, dates, slugs, tags and categories are kept;
+  - media is downloaded and re-encoded;
+  - every old permalink becomes a redirect;
+  - a report lists what didn't convert cleanly (shortcodes, embeds,
+    page-builder markup).
+
+  Credentials are used for the import and never stored.
+- **Hugo, Jekyll, Eleventy:** mostly a front matter mapping. **Ghost:** its
+  JSON export.
+
+### E10 · Extensions without the plugin problem
+
+- Sections, templates and build-time steps that run in a sandbox (WASI, no
+  network, no filesystem outside the site), never in the page path or the
+  editor's process.
+- An extension declares what it reads and writes, and the editor shows that
+  before it's enabled.
+- To be designed carefully before it's built. This is where WordPress's
+  security problems came from.
+
+## Decisions needed
+
+| Question | Recommendation | Why |
+|---|---|---|
+| How people sign in | Through the git platform (OAuth) or OIDC (inbuxa); no local accounts at first | No user store to secure; the platform's permissions and attribution come for free |
+| The editor's front end | React + TypeScript | The stack inbuxa-admin and the webmail already use, so one set of skills and patterns |
+| The visual editor | A Markdown-native ProseMirror editor | Markdown in, Markdown out, with no lossy HTML step |
+| Media storage | In the repository, re-encoded; object storage as an option later | No new service until a site needs one |
+| Editor for hosting customers (coffeylabs.net) | One editor per customer at first; multi-tenant later | Multi-tenant hosting is where a real data store (a tenant registry) first becomes necessary |
+
+## Where a data store comes in
+
+Nothing up to E5 needs one: auth is delegated, drafts and schedules live in
+git, and sessions are signed cookies. The first real candidates are, in
+order:
+
+1. **Multi-tenant hosting.** Knowing which customer owns which sites, across
+   many editors.
+2. **Large media.** Object storage rather than git, for sites with a lot of
+   video or images.
+3. **Searching form submissions.** Past what reading files comfortably does.
+4. **A shared rate limit across endpoints.** From the forms work.
+
+Each will be raised when a feature reaches it, not before.
+
+## What exists already
+
+Everything the editor builds on is done and tested:
+- the build, with sections, collections, data files and forms;
+- previews per branch;
+- the platform layer (webhooks, commit statuses, CI);
+- publishing to any target;
+- the endpoint;
+- the check that gates every route.
+
+The editor is a new front end over these, not a new system.
