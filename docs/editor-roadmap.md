@@ -1,6 +1,6 @@
 # Editor roadmap
 
-Draft, 2026-10-10. The editor is the part of cl-cms that people who don't
+Draft, 2026-10-10; decisions taken the same day. The editor is the part of cl-cms that people who don't
 live in git will use. It should do what people actually use WordPress for,
 without what makes WordPress heavy and dangerous.
 
@@ -47,7 +47,7 @@ interface first, because the other two are built on its plumbing.
 - `cl-cms editor`: a separate server, by default listening on loopback, with
   its own strict CSP.
 - **Sign-in through the git platform** (OAuth with Gitea, GitHub, GitLab,
-  Forgejo or Bitbucket), or OIDC (inbuxa). Edits are made with the signed-in
+  Forgejo or Bitbucket). Edits are made with the signed-in
   person's own platform token, so the platform enforces who may do what.
   Every commit is attributed to them, and the editor stores no accounts.
   **No data store:** sessions are signed, short-lived cookies.
@@ -204,15 +204,15 @@ interface first, because the other two are built on its plumbing.
 - To be designed carefully before it's built. This is where WordPress's
   security problems came from.
 
-## Decisions needed
+## Decisions (John, 2026-10-10)
 
-| Question | Recommendation | Why |
+| Question | Decided | Why |
 |---|---|---|
-| How people sign in | Through the git platform (OAuth) or OIDC (inbuxa); no local accounts at first | No user store to secure; the platform's permissions and attribution come for free |
-| The editor's front end | React + TypeScript | The stack inbuxa-admin and the webmail already use, so one set of skills and patterns |
+| How people sign in | Through the git platform (OAuth with Gitea, GitHub, GitLab, Forgejo, Bitbucket); no local accounts | No user store to secure; the platform's permissions and attribution come for free |
+| The editor's front end | React + TypeScript | The stack inbuxa-admin and the webmail already use |
 | The visual editor | A Markdown-native ProseMirror editor | Markdown in, Markdown out, with no lossy HTML step |
-| Media storage | In the repository, re-encoded; object storage as an option later | No new service until a site needs one |
-| Editor for hosting customers (coffeylabs.net) | One editor per customer at first; multi-tenant later | Multi-tenant hosting is where a real data store (a tenant registry) first becomes necessary |
+| Media storage | In the site's repository, re-encoded; object storage as an option later | No new service until a site needs one |
+| Editor for hosting customers | One editor per customer first; multi-tenant later | Multi-tenant is where a real data store first becomes necessary |
 
 ## Where a data store comes in
 
