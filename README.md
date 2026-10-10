@@ -12,6 +12,7 @@ Websites from Markdown files and templates, with no database.
     cl-cms publish <target>  build, then publish: a folder, a server over SSH, a container image, or your own command
     cl-cms pull -repo URL -out DIR   on the web server: publish from git when the branch moves
     cl-cms preview -repo URL     every branch built as it would be published, at <branch>.localhost:8160
+    cl-cms endpoint -config FILE forms and search, behind your web server (docs/forms.md)
     cl-cms ci <platform>         the CI file for GitHub, GitLab, Gitea, Forgejo, Bitbucket, Woodpecker, or a git hook
 
 A site is a folder:

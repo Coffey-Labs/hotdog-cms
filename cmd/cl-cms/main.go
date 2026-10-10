@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -16,6 +17,7 @@ import (
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/check"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/ci"
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/endpoint"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/gitx"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/preview"
@@ -38,12 +40,16 @@ Usage:
   cl-cms pull -repo URL -out DIR   on a web server: publish from git when the branch moves
   cl-cms preview -repo URL     build every branch as it would be published, each at its own address
   cl-cms ci <platform>         write the CI file for github, gitea, forgejo, gitlab, bitbucket, woodpecker, or a git hook
+  cl-cms endpoint -config FILE the small server for form submissions and search, behind your web server
 
 Platforms: GitHub, GitLab, Gitea, Forgejo/Codeberg, Gogs, Bitbucket, or any git server.
 Secrets come from the environment, never flags:
   CLCMS_GIT_TOKEN, CLCMS_GIT_USER   clone private repositories over HTTPS
   CLCMS_HOOK_SECRET                 verify push webhooks (preview, pull -hook)
   CLCMS_FORGE_TOKEN                 post preview links as commit statuses
+  CLCMS_FORM_SECRET                 sign form tokens (endpoint; same on every endpoint of a site)
+  CLCMS_SMTP_PASSWORD               the endpoint's SMTP password
+  CLCMS_TURNSTILE_SECRET            check Cloudflare Turnstile on forms that use it
   cl-cms version
 
 Run "cl-cms <command> -h" for a command's flags.
@@ -72,6 +78,8 @@ func main() {
 		err = cmdPreview(args)
 	case "ci":
 		err = cmdCI(args)
+	case "endpoint":
+		err = cmdEndpoint(args)
 	case "version", "-v", "--version":
 		fmt.Println("cl-cms", version)
 	case "help", "-h", "--help":
@@ -173,11 +181,13 @@ func cmdServe(args []string) error {
 	dir := fl.String("site", ".", "the site's folder")
 	addr := fl.String("addr", "127.0.0.1:8140", "address to listen on")
 	drafts := fl.Bool("drafts", true, "include pages marked draft: true")
+	ep := fl.String("endpoint", "", "a running cl-cms endpoint to pass /_cl/ requests to, e.g. http://127.0.0.1:8180")
+	reload := fl.Bool("reload", true, "reload the browser on changes (turn off for headless browsers and screenshots)")
 	_ = fl.Parse(args)
 	if _, err := site.LoadConfig(*dir); err != nil {
 		return err
 	}
-	return serve.Run(serve.Options{SiteDir: *dir, Addr: *addr, Drafts: *drafts})
+	return serve.Run(serve.Options{SiteDir: *dir, Addr: *addr, Drafts: *drafts, Endpoint: *ep, NoReload: !*reload})
 }
 
 func cmdPublish(args []string) error {
@@ -349,6 +359,19 @@ func cmdCI(args []string) error {
 	}
 	fmt.Printf("Wrote %s.\n%s\n", t.Path, t.Note)
 	return nil
+}
+
+func cmdEndpoint(args []string) error {
+	fl := flag.NewFlagSet("endpoint", flag.ExitOnError)
+	config := fl.String("config", "endpoint.yaml", "the endpoint's configuration")
+	_ = fl.Parse(args)
+	srv, err := endpoint.New(*config, os.Stdout)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("endpoint listening on %s\n", srv.Listen())
+	hs := &http.Server{Addr: srv.Listen(), Handler: srv, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10}
+	return hs.ListenAndServe()
 }
 
 func report(r *build.Result) {

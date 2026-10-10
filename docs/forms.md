@@ -1,0 +1,125 @@
+# Forms and search: the endpoint
+
+A cl-cms site is static files. Two things need a server to answer them: form
+submissions and, if you want it, search. Both go to `cl-cms endpoint`, a
+small server you run beside your web server, which passes `/_cl/` to it. It
+holds no content, edits nothing, and needs no database.
+
+## A form
+
+`forms/contact.yaml`:
+
+```yaml
+title: Contact
+to: hello@example.org
+subject: "Website message from {{ .name }}"
+reply_to: email
+fields:
+  - { name: name, label: Your name, required: true, max: 120 }
+  - { name: email, type: email, label: Your email, required: true }
+  - { name: topic, type: select, label: About, options: [A question, Feedback] }
+  - { name: message, type: textarea, label: Message, required: true }
+submit: Send message
+success: /contact/thanks/   # optional; otherwise a thank-you appears in place
+mailto: hello@example.org   # shown to visitors without JavaScript
+store: true                 # optional; also append to a file (see below)
+```
+
+Field types are `text`, `email`, `url`, `tel`, `textarea`, `select` and
+`checkbox`. Put a form in a page with `form: contact` in its front matter (the
+starter's page layout renders it), or `{{ form "contact" }}` in any template.
+The build fails on a form that doesn't make sense: no recipient, a select with
+no options, an unknown key.
+
+## What the endpoint checks
+
+In this order, and a submission that fails any of them is not sent:
+
+1. **It came from the site's own page.** The browser's `Origin` must be one
+   of the site's hosts.
+2. **Rate limit,** per visitor address: 5 in 10 minutes by default.
+3. **Text fields only.** No file uploads, and at most 64 KB.
+4. **The trap field is empty.** It's hidden from people; bots fill it in.
+   They're told the message was sent.
+5. **A signed token, 3 seconds to 24 hours old.** The page fetches it when it
+   loads. That rejects instant, scripted posts and replays, and it needs no
+   storage. Every endpoint for a site shares `CLCMS_FORM_SECRET`.
+6. **Turnstile,** if the form sets `turnstile_sitekey`.
+7. **The fields themselves:**
+   - only the declared ones are accepted;
+   - required fields must be filled;
+   - each field has a length limit;
+   - email addresses must parse, and select values must be among the options;
+   - single-line fields may not contain line breaks, so nothing typed can
+     become an email header.
+
+Then it emails the submission (Reply-To is the sender's checked address) and,
+for forms with `store: true`, appends it to `<store>/<form>.jsonl` (mode
+0600). If the email can't go out, a stored submission is kept and the visitor
+is told it worked; otherwise they're told to try again, or to email the
+`mailto` address.
+
+With JavaScript, problems appear next to the fields they're about. Without
+it, the visitor gets a plain page saying what went wrong.
+
+## Search, two ways
+
+Collections with `search: true` get `/<collection>/search.json`. A site can
+use it either way, or both:
+
+- **In the browser:** the page downloads the index when someone searches and
+  scores it there. Works on any host, including a plain CDN; costs the visitor
+  the index (about 1 MB, 330 KB gzipped, for 135 long articles).
+- **From the endpoint:** `GET /_cl/search/<collection>?q=...&page=N` returns
+  one page of results as JSON, scored the same way. The visitor downloads
+  only the results.
+
+The jcoffey.dev prototype picks with `params.search: endpoint` in `site.yaml`.
+
+## Running it
+
+`endpoint.yaml`:
+
+```yaml
+listen: 127.0.0.1:8180
+trusted_proxies: [127.0.0.1/32]      # whose X-Forwarded-For to believe
+smtp:
+  host: smtp.example.org
+  port: 587
+  username: forms@example.org
+  from: "Example <forms@example.org>"
+  tls: starttls                      # or tls (465); none only to localhost
+rate_limit: { count: 5, window: 10m }
+sites:
+  - dir: /srv/sites/example.org      # the site's source: site.yaml, forms/
+    public: /var/www/example.org     # the built site, for search
+    store: /var/lib/cl-cms/forms/example.org
+```
+
+```sh
+CLCMS_FORM_SECRET=$(openssl rand -hex 32) CLCMS_SMTP_PASSWORD=... cl-cms endpoint -config endpoint.yaml
+```
+
+In nginx, pass `/_cl/` to it:
+
+```nginx
+location /_cl/ {
+    proxy_pass http://127.0.0.1:8180;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+For local work, `cl-cms serve -endpoint http://127.0.0.1:8180` does the same.
+
+## Where a data store would come in
+
+Nothing above needs one. If any of these is ever wanted, it's the point to
+decide on one:
+
+- **A rate limit shared across endpoints.** Today each endpoint counts on its
+  own, so three behind a load balancer allow three times the limit.
+- **Single-use form tokens.** Today a token can be reused within its 24
+  hours, from the same page.
+- **Searching or filtering stored submissions,** beyond reading the JSONL
+  file.

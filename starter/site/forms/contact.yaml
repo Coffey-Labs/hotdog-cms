@@ -1,0 +1,14 @@
+# A form. Use it in a page with `form: contact` in the front matter.
+# Submissions go to the endpoint (cl-cms endpoint), which checks them against
+# the fields below and emails them to `to`.
+title: Contact
+to: you@example.org
+subject: "Website message from {{ .name }}"
+reply_to: email
+fields:
+  - { name: name, label: Your name, required: true, max: 120 }
+  - { name: email, type: email, label: Your email, required: true }
+  - { name: topic, type: select, label: About, options: [A question, Feedback, Something else] }
+  - { name: message, type: textarea, label: Message, required: true, max: 5000 }
+submit: Send message
+mailto: you@example.org

@@ -5,12 +5,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"html/template"
 	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forms"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/site"
 )
 
@@ -88,7 +90,30 @@ func Run(opt Options) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	tpl, err := loadTemplates(siteDir, funcs(s, assets, md, icons))
+	siteForms, err := forms.Load(siteDir)
+	if err != nil {
+		return nil, err
+	}
+	if len(siteForms) > 0 {
+		if err := assets.add(work, "cl-forms.js", forms.Script); err != nil {
+			return nil, err
+		}
+		if err := assets.add(work, "cl-forms.css", forms.Style); err != nil {
+			return nil, err
+		}
+	}
+	fm := funcs(s, assets, md, icons)
+	// form "contact" renders forms/contact.yaml.
+	fm["form"] = func(name string) (template.HTML, error) {
+		f, ok := siteForms[name]
+		if !ok {
+			return "", fmt.Errorf("no forms/%s.yaml", name)
+		}
+		js, _ := assets.URL("cl-forms.js")
+		css, _ := assets.URL("cl-forms.css")
+		return f.Render(js, css)
+	}
+	tpl, err := loadTemplates(siteDir, fm)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +222,7 @@ func safeOut(siteDir, out string) error {
 	if err == nil && (rel == "." || !strings.HasPrefix(rel, "..")) {
 		return fmt.Errorf("output %s would contain the site itself; pick another folder", out)
 	}
-	for _, d := range []string{"content", "layouts", "partials", "sections", "assets", "static", "data", "forms"} {
+	for _, d := range []string{"content", "layouts", "partials", "sections", "assets", "static", "data", "forms", "icons"} {
 		if r, err := filepath.Rel(filepath.Join(siteDir, d), out); err == nil && !strings.HasPrefix(r, "..") {
 			return fmt.Errorf("output %s is inside the site's %s/ folder", out, d)
 		}

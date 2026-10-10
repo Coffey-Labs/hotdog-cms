@@ -19,6 +19,7 @@ menus:
     - { name: Home, url: / }
     - { name: Articles, url: /articles/ }
     - { name: About, url: /about/ }
+    - { name: Contact, url: /contact/ }
   footer:
     - { name: Tags, url: /tags/ }
     - { name: Feed, url: /articles/feed.xml }

@@ -2,6 +2,7 @@
 <article class="wrap prose page">
   <h1>{{ .Title }}</h1>
   {{ .Content }}
+  {{ with .Params.form }}{{ form . }}{{ end }}
 </article>
 {{ template "sections" . }}
 {{ end }}

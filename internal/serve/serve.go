@@ -11,6 +11,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,6 +29,13 @@ type Options struct {
 	SiteDir string
 	Addr    string // host:port; loopback by default
 	Drafts  bool
+	// Endpoint, if set, is a running `cl-cms endpoint` that /_cl/ requests
+	// are passed to, so forms and search work in the preview as they will
+	// behind the real web server.
+	Endpoint string
+	// NoReload leaves the live-reload script out of pages. Its open
+	// connection keeps headless browsers (screenshots, tests) waiting forever.
+	NoReload bool
 }
 
 const reloadScript = `<script>(()=>{const s=new EventSource("/_cl/events");` +
@@ -123,10 +132,20 @@ func Run(opt Options) error {
 			}
 		}
 	})
+	if opt.Endpoint != "" {
+		target, err := url.Parse(opt.Endpoint)
+		if err != nil || target.Host == "" {
+			return fmt.Errorf("-endpoint %q is not a URL like http://127.0.0.1:8180", opt.Endpoint)
+		}
+		proxy := httputil.NewSingleHostReverseProxy(target)
+		mux.Handle("/_cl/forms/", proxy)
+		mux.Handle("/_cl/search/", proxy)
+		log.Printf("passing /_cl/forms/ and /_cl/search/ to %s", opt.Endpoint)
+	}
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		mu.RLock()
 		defer mu.RUnlock()
-		servePreview(w, r, out)
+		servePreview(w, r, out, !opt.NoReload)
 	})
 	log.Printf("previewing %s at %s (Ctrl+C to stop)", siteDir, base)
 	return http.Serve(ln, mux)
@@ -134,7 +153,7 @@ func Run(opt Options) error {
 
 // servePreview answers the way the production nginx config does: a folder
 // gets its index.html, a missing path gets 404.html with a 404.
-func servePreview(w http.ResponseWriter, r *http.Request, root string) {
+func servePreview(w http.ResponseWriter, r *http.Request, root string, reload bool) {
 	p := filepath.Join(root, filepath.FromSlash(filepath.Clean("/"+r.URL.Path)))
 	if fi, err := os.Stat(p); err == nil && fi.IsDir() {
 		if !strings.HasSuffix(r.URL.Path, "/") {
@@ -155,7 +174,9 @@ func servePreview(w http.ResponseWriter, r *http.Request, root string) {
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	if strings.HasSuffix(p, ".html") {
-		data = bytes.Replace(data, []byte("</body>"), []byte(reloadScript+"</body>"), 1)
+		if reload {
+			data = bytes.Replace(data, []byte("</body>"), []byte(reloadScript+"</body>"), 1)
+		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(status)
 		_, _ = w.Write(data)

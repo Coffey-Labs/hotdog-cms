@@ -1,0 +1,16 @@
+/* cl-cms forms: the minimum. A site's own stylesheet can restyle all of it. */
+.cl-form { display: grid; gap: 1rem; max-width: 40rem; }
+.cl-field { display: grid; gap: 0.35rem; }
+.cl-field input:not([type="checkbox"]), .cl-field textarea, .cl-field select { font: inherit; padding: 0.55rem 0.7rem; border: 1px solid currentColor; border-radius: 8px; background: transparent; color: inherit; width: 100%; box-sizing: border-box; }
+.cl-field textarea { resize: vertical; }
+.cl-help { margin: 0; font-size: 0.9em; opacity: 0.75; }
+.cl-error { margin: 0; font-size: 0.9em; color: #b42318; }
+.cl-error:empty { display: none; }
+.cl-field [aria-invalid="true"] { border-color: #b42318; }
+.cl-status:empty { display: none; }
+.cl-status { margin: 0; }
+.cl-form button[type="submit"] { justify-self: start; font: inherit; padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; }
+.cl-form button[disabled] { opacity: 0.6; cursor: progress; }
+/* The trap field: off-screen rather than display:none, which some bots skip. */
+.cl-hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+@media (prefers-color-scheme: dark) { .cl-error { color: #f97066; } .cl-field [aria-invalid="true"] { border-color: #f97066; } }
