@@ -1,0 +1,12 @@
+- title: Pages are Markdown
+  text: Write in any editor. Front matter at the top sets the title, date and tags.
+- title: Templates do the rest
+  text: Layouts, partials and sections turn every page into the same, consistent site.
+- title: Nothing runs per visit
+  text: The build writes plain HTML files. There's no database to break into and no code running when someone reads a page.
+- title: Sections, not HTML
+  text: Stack a hero, cards and a closing band in a page's front matter. Adding a section type means adding one file.
+- title: Search-ready
+  text: Sitemap, feeds, canonical links, social cards and structured data, generated from what you already wrote.
+- title: Undo anything
+  text: Keep the site in git and every change is a commit you can roll back.

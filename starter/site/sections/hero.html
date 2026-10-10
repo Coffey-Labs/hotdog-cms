@@ -1,0 +1,9 @@
+{{/* Fields: eyebrow, heading, text (Markdown), buttons: [{text, href, primary}] */}}
+<section class="hero">
+  <div class="wrap">
+    {{ with .Data.eyebrow }}<p class="eyebrow">{{ . }}</p>{{ end }}
+    <h1>{{ .Data.heading }}</h1>
+    {{ with .Data.text }}<div class="lede">{{ markdownify . }}</div>{{ end }}
+    {{ with .Data.buttons }}<p class="actions">{{ range . }}<a class="btn{{ if .primary }} primary{{ end }}" href="{{ .href }}">{{ .text }}</a>{{ end }}</p>{{ end }}
+  </div>
+</section>

@@ -1,0 +1,9 @@
+{{ define "main" }}
+<section class="wrap page">
+  <p class="eyebrow"><a href="/{{ .Taxonomy }}/">{{ .Taxonomy }}</a></p>
+  <h1>{{ .Title }}</h1>
+  <ul class="cards">
+    {{ range .Pages }}{{ template "card" . }}{{ end }}
+  </ul>
+</section>
+{{ end }}

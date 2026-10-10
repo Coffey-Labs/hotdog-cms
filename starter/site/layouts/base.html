@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="{{ .Site.Config.Language }}">
+<head>
+{{ template "head" . }}
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+{{ template "nav" . }}
+<main id="main">
+{{ block "main" . }}{{ end }}
+</main>
+{{ template "footer" . }}
+</body>
+</html>

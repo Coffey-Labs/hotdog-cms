@@ -1,0 +1,8 @@
+{{/* Fields: heading, text (Markdown), button: {text, href} */}}
+<section class="closing">
+  <div class="wrap">
+    <h2>{{ .Data.heading }}</h2>
+    {{ with .Data.text }}<div class="lede">{{ markdownify . }}</div>{{ end }}
+    {{ with .Data.button }}<p class="actions"><a class="btn primary" href="{{ .href }}">{{ .text }}</a></p>{{ end }}
+  </div>
+</section>

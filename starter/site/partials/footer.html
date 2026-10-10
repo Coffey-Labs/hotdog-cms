@@ -1,0 +1,6 @@
+<footer class="foot">
+  <div class="wrap foot-in">
+    <p>© {{ (now).Year }} {{ .Site.Config.Name }}</p>
+    <ul>{{ range menu "footer" }}<li><a href="{{ .URL }}">{{ .Name }}</a></li>{{ end }}</ul>
+  </div>
+</footer>

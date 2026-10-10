@@ -1,0 +1,7 @@
+{{/* Structured data for search engines. Values are written as JSON by the
+     template engine, so nothing in front matter can break out of the tag. */}}
+{{ if .IsHome }}
+<script type="application/ld+json">{{ dict "@context" "https://schema.org" "@type" "WebSite" "name" .Site.Config.Name "url" .Permalink "description" .Site.Config.Description }}</script>
+{{ else if and (eq .Kind "page") .Collection (not .Date.IsZero) }}
+<script type="application/ld+json">{{ dict "@context" "https://schema.org" "@type" "BlogPosting" "headline" .Title "url" .Permalink "datePublished" (date "rfc3339" .Date) "dateModified" (date "rfc3339" .Lastmod) "description" .Summary "author" (dict "@type" "Person" "name" .Site.Config.Author) }}</script>
+{{ end }}

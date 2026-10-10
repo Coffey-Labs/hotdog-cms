@@ -1,0 +1,15 @@
+{{/* Fields: heading, intro (Markdown), and either items: [{title, text, href}]
+     or from: <a file in data/ holding that list>. */}}
+{{ $items := .Data.items }}{{ with .Data.from }}{{ $items = data . }}{{ end }}
+<section class="block">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    <ul class="cards">
+      {{ range $items }}<li class="card">
+        <h3>{{ if .href }}<a href="{{ .href }}">{{ .title }}</a>{{ else }}{{ .title }}{{ end }}</h3>
+        {{ with .text }}{{ markdownify . }}{{ end }}
+      </li>{{ end }}
+    </ul>
+  </div>
+</section>

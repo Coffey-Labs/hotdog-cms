@@ -1,0 +1,4 @@
+{{ define "main" }}
+{{ template "sections" . }}
+{{ with .Content }}<div class="wrap prose">{{ . }}</div>{{ end }}
+{{ end }}

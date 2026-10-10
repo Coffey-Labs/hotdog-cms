@@ -1,0 +1,5 @@
+<li class="card">
+  <h3><a href="{{ .Path }}">{{ .Title }}</a></h3>
+  {{ if not .Date.IsZero }}<time datetime="{{ date "iso" .Date }}">{{ date "2 January 2006" .Date }}</time>{{ end }}
+  {{ with .Summary }}<p>{{ . }}</p>{{ end }}
+</li>

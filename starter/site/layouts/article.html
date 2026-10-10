@@ -1,0 +1,18 @@
+{{ define "main" }}
+<article class="wrap prose page">
+  <header class="article-head">
+    <h1>{{ .Title }}</h1>
+    <p class="meta">
+      {{ if not .Date.IsZero }}<time datetime="{{ date "iso" .Date }}">{{ date "2 January 2006" .Date }}</time> · {{ end }}{{ .ReadingTime }} min read
+    </p>
+    {{ if .Terms.tags }}<ul class="tags">{{ range .Params.tags }}<li><a href="/tags/{{ slugify . }}/">{{ . }}</a></li>{{ end }}</ul>{{ end }}
+  </header>
+  {{ .Content }}
+  {{ if or .Prev .Next }}
+  <nav class="pager" aria-label="More articles">
+    {{ with .Next }}<a class="older" href="{{ .Path }}"><span>Older</span>{{ .Title }}</a>{{ end }}
+    {{ with .Prev }}<a class="newer" href="{{ .Path }}"><span>Newer</span>{{ .Title }}</a>{{ end }}
+  </nav>
+  {{ end }}
+</article>
+{{ end }}

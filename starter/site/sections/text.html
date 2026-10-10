@@ -1,0 +1,7 @@
+{{/* Fields: heading, body (Markdown) */}}
+<section class="block">
+  <div class="wrap prose">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.body }}{{ markdownify . }}{{ end }}
+  </div>
+</section>

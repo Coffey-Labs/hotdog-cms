@@ -1,0 +1,32 @@
+# The site's settings. name and url are required; everything else has a default.
+name: {{SITE_NAME}}
+url: https://example.org
+language: en
+description: A site built with cl-cms.
+author: Your Name
+
+# Every folder in content/ is a collection. Settings here change its defaults.
+collections:
+  articles:
+    layout: article
+    feed: true
+
+# Front matter keys that become browsable pages: /tags/ and /tags/<tag>/.
+taxonomies: [tags]
+
+menus:
+  main:
+    - { name: Home, url: / }
+    - { name: Articles, url: /articles/ }
+    - { name: About, url: /about/ }
+  footer:
+    - { name: Tags, url: /tags/ }
+    - { name: Feed, url: /articles/feed.xml }
+
+outputs:
+  llms: true
+
+# Patterns `cl-cms check` refuses to publish: internal host names, private
+# addresses, anything that must never reach the public site.
+check:
+  forbid: []

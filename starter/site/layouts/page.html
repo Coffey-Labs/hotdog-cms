@@ -1,0 +1,7 @@
+{{ define "main" }}
+<article class="wrap prose page">
+  <h1>{{ .Title }}</h1>
+  {{ .Content }}
+</article>
+{{ template "sections" . }}
+{{ end }}

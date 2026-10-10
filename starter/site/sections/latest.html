@@ -1,0 +1,11 @@
+{{/* Fields: heading, collection (default articles), count (default 3) */}}
+{{ $n := default 3 .Data.count }}{{ $c := default "articles" .Data.collection }}
+<section class="block">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    <ul class="cards">
+      {{ range limit $n (collection $c) }}{{ template "card" . }}{{ end }}
+    </ul>
+    <p><a class="more" href="/{{ $c }}/">All {{ $c }}</a></p>
+  </div>
+</section>

@@ -1,0 +1,16 @@
+<header class="top">
+  <div class="wrap top-in">
+    <a class="brand" href="/">{{ .Site.Config.Name }}</a>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+    <nav id="site-nav" aria-label="Main">
+      <ul>
+        {{ range menu "main" }}<li><a href="{{ .URL }}"{{ if eq $.Path .URL }} aria-current="page"{{ else if $.InSection .URL }} class="active"{{ end }}>{{ .Name }}</a></li>{{ end }}
+      </ul>
+    </nav>
+    <div class="theme" role="group" aria-label="Color theme">
+      <button type="button" data-theme-set="light">Light</button>
+      <button type="button" data-theme-set="auto">Auto</button>
+      <button type="button" data-theme-set="dark">Dark</button>
+    </div>
+  </div>
+</header>

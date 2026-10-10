@@ -1,0 +1,8 @@
+{{ define "main" }}
+<section class="wrap page">
+  <h1>{{ .Title }}</h1>
+  <ul class="terms">
+    {{ range .Pages }}<li><a href="{{ .Path }}">{{ .Title }} <span>{{ len .Pages }}</span></a></li>{{ end }}
+  </ul>
+</section>
+{{ end }}

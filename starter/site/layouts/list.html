@@ -1,0 +1,9 @@
+{{ define "main" }}
+<section class="wrap page">
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  <ul class="cards">
+    {{ range .Pages }}{{ template "card" . }}{{ end }}
+  </ul>
+</section>
+{{ end }}
