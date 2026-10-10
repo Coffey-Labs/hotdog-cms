@@ -33,3 +33,13 @@ container; `docs/publishing.md` covers each, `docs/previews.md` covers
 looking at a change before it's published, and `docs/platforms.md` covers
 GitHub, GitLab, Gitea, Forgejo, Bitbucket and plain git. `DESIGN.md` has the plan and what
 comes next.
+
+## License
+
+Copyright (C) 2026 Coffey Labs LLC.
+
+The engine and the editor are AGPL-3.0-or-later; see [LICENSE](LICENSE).
+The starter site in `starter/` and HotDog themes are MIT; see
+[starter/site/LICENSE-starter.txt](starter/site/LICENSE-starter.txt). A
+site built with HotDog CMS carries no AGPL obligations. The vendored WebP
+encoder in `internal/media/webpenc/` keeps its own MIT and BSD licenses.

@@ -15,3 +15,7 @@
 | `static/` | Files copied as they are: favicon, `.well-known/`, images |
 
 `public/` is the output. Don't edit it; it's replaced on every build.
+
+The starter's templates, styles and scripts are MIT licensed
+(`LICENSE-starter.txt`), so you can change them, keep them private or sell
+sites built on them. Your content is yours.
