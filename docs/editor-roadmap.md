@@ -58,7 +58,10 @@ interface first, because the other two are built on its plumbing.
   that changes state, and page sources confined to `content/`.
 - **Tests:** a fake platform covers the whole sign-in and browsing flow.
 - **Tried against the Coffey Labs Gitea** with an OAuth app, "cl-cms editor
-  (local test)", whose only redirect is loopback.
+  (local test)", whose only redirect is loopback. John authorized it, and
+  every view worked against the real repository. For the page view's preview
+  pane, `cl-cms preview -frame <editor origin>` lets the editor, and only the
+  editor, frame previews.
 
 - `cl-cms editor`: a separate server, by default listening on loopback, with
   its own strict CSP.

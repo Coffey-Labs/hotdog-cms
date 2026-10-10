@@ -44,6 +44,9 @@ type Options struct {
 	Git        gitx.Auth     // for private HTTPS repositories
 	Forge      *forge.Client // posts each preview's address as a commit status; nil for none
 	HookSecret string        // the webhook secret; empty turns the hook off
+	// FrameAncestors are origins allowed to show previews in a frame, such as
+	// the editor (http://127.0.0.1:8190). Anyone else is refused, as before.
+	FrameAncestors []string
 }
 
 // Preview is one built branch.

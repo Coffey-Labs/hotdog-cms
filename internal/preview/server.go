@@ -28,7 +28,11 @@ func (b *Builder) Handler(auth *Auth) http.Handler {
 		// never framed by another site.
 		h.Set("X-Robots-Tag", "noindex, nofollow, noarchive")
 		h.Set("Cache-Control", "no-store")
-		h.Set("X-Frame-Options", "SAMEORIGIN")
+		if len(b.o.FrameAncestors) > 0 {
+			h.Set("Content-Security-Policy", "frame-ancestors 'self' "+strings.Join(b.o.FrameAncestors, " "))
+		} else {
+			h.Set("X-Frame-Options", "SAMEORIGIN")
+		}
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "no-referrer")
 		// The webhook proves itself with the platform's signature instead of

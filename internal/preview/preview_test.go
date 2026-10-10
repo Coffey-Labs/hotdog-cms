@@ -260,3 +260,16 @@ func TestWebhookAndStatus(t *testing.T) {
 		t.Fatalf("statuses posted: %v", statuses)
 	}
 }
+
+func TestFrameAncestors(t *testing.T) {
+	r := newRepo(t)
+	b, _ := NewBuilder(Options{Repo: r.dir, Root: t.TempDir(), FrameAncestors: []string{"http://127.0.0.1:8190"}})
+	res, _ := get(t, b.Handler(nil), "localhost", "/")
+	if res.Header.Get("X-Frame-Options") != "" || res.Header.Get("Content-Security-Policy") != "frame-ancestors 'self' http://127.0.0.1:8190" {
+		t.Errorf("framing headers: %v", res.Header)
+	}
+	b2, _ := NewBuilder(Options{Repo: r.dir, Root: t.TempDir()})
+	if res, _ := get(t, b2.Handler(nil), "localhost", "/"); res.Header.Get("X-Frame-Options") != "SAMEORIGIN" {
+		t.Error("previews frameable by anyone by default")
+	}
+}

@@ -57,3 +57,4 @@ host that serves the public site.
 | `-scheme`, `-port` | `http`, the listening port | What browsers use, behind a proxy |
 | `-every` | `30s` | How often to look for moved branches |
 | `-root` | user cache | Where previews are built |
+| `-frame` | none | Origins allowed to show previews in a frame, such as the editor (`http://127.0.0.1:8190`). Without it, only the preview's own pages may frame it |

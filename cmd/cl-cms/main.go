@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -305,9 +306,21 @@ func cmdPreview(args []string) error {
 	every := fl.Duration("every", 30*time.Second, "how often to look for branches that moved")
 	drafts := fl.Bool("drafts", true, "include draft pages")
 	platform := fl.String("platform", "", "github, gitlab, gitea, forgejo, gogs, bitbucket or git (default: guessed from the repository URL)")
+	frame := fl.String("frame", "", "comma-separated origins allowed to show previews in a frame, e.g. the editor: http://127.0.0.1:8190")
 	_ = fl.Parse(args)
 	if *repo == "" {
 		return errors.New("usage: cl-cms preview -repo URL [-branches main,feature/*] [-addr 127.0.0.1:8160]")
+	}
+	var ancestors []string
+	for _, o := range strings.Split(*frame, ",") {
+		o = strings.TrimRight(strings.TrimSpace(o), "/")
+		if o == "" {
+			continue
+		}
+		if u, err := url.Parse(o); err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.Path != "" {
+			return fmt.Errorf("-frame %q is not an origin like https://editor.example.org", o)
+		}
+		ancestors = append(ancestors, o)
 	}
 	fr, err := forge.Parse(*repo, forge.Kind(*platform))
 	if err != nil {
@@ -345,7 +358,7 @@ func cmdPreview(args []string) error {
 	}
 	b, err := preview.NewBuilder(preview.Options{Repo: *repo, Subdir: *subdir, Refs: refs, Root: *root,
 		Domain: strings.ToLower(*domain), Port: *port, Scheme: *scheme, Drafts: *drafts, Log: os.Stdout,
-		Git: gitx.FromEnv(fr.Kind.TokenUser()), Forge: fc, HookSecret: os.Getenv("CLCMS_HOOK_SECRET")})
+		Git: gitx.FromEnv(fr.Kind.TokenUser()), Forge: fc, HookSecret: os.Getenv("CLCMS_HOOK_SECRET"), FrameAncestors: ancestors})
 	if err != nil {
 		return err
 	}
