@@ -3,6 +3,8 @@ package site
 import (
 	"bytes"
 	"html/template"
+	"regexp"
+	"strings"
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark"
@@ -17,6 +19,7 @@ import (
 type Markdown struct {
 	md       goldmark.Markdown
 	sanitize *bluemonday.Policy
+	emailOff bool
 }
 
 // NewMarkdown builds the renderer for a site's settings.
@@ -25,7 +28,7 @@ func NewMarkdown(c MarkdownConfig) *Markdown {
 		goldmark.WithExtensions(extension.GFM, extension.Footnote),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID(), parser.WithAttribute()),
 	}
-	m := &Markdown{}
+	m := &Markdown{emailOff: c.EmailOff}
 	if c.UnsafeHTML {
 		rendererOpts = append(rendererOpts, goldmark.WithRendererOptions(html.WithUnsafe()))
 		p := bluemonday.UGCPolicy()
@@ -40,6 +43,22 @@ func NewMarkdown(c MarkdownConfig) *Markdown {
 	return m
 }
 
+var mailtoRe = regexp.MustCompile(`<a href="mailto:[^"]*"[^>]*>.*?</a>`)
+
+// Inline renders a short piece of Markdown, such as a subtitle with a code
+// span in it, without the paragraph around it.
+func (m *Markdown) Inline(src []byte) (template.HTML, error) {
+	h, err := m.Render(src)
+	if err != nil {
+		return "", err
+	}
+	s := strings.TrimSpace(string(h))
+	if strings.HasPrefix(s, "<p>") && strings.HasSuffix(s, "</p>") && strings.Count(s, "<p>") == 1 {
+		s = s[3 : len(s)-4]
+	}
+	return template.HTML(s), nil
+}
+
 // Render turns Markdown into HTML that is safe to place in a page.
 func (m *Markdown) Render(src []byte) (template.HTML, error) {
 	var buf bytes.Buffer
@@ -49,6 +68,9 @@ func (m *Markdown) Render(src []byte) (template.HTML, error) {
 	out := buf.Bytes()
 	if m.sanitize != nil {
 		out = m.sanitize.SanitizeBytes(out)
+	}
+	if m.emailOff {
+		out = mailtoRe.ReplaceAll(out, []byte("<!--email_off-->$0<!--/email_off-->"))
 	}
 	// Safe by construction: goldmark escapes text and, without WithUnsafe,
 	// omits raw HTML; with it, the sanitizer above has had the last word.

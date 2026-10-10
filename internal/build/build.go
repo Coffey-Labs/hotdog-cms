@@ -84,7 +84,11 @@ func Run(opt Options) (*Result, error) {
 	}
 
 	md := site.NewMarkdown(s.Config.Markdown)
-	tpl, err := loadTemplates(siteDir, funcs(s, assets, md))
+	icons, err := loadIcons(filepath.Join(siteDir, "icons"))
+	if err != nil {
+		return nil, err
+	}
+	tpl, err := loadTemplates(siteDir, funcs(s, assets, md, icons))
 	if err != nil {
 		return nil, err
 	}

@@ -35,6 +35,12 @@ type MarkdownConfig struct {
 	// default: a site whose pages are written by several people should not
 	// have to trust every one of them with script tags.
 	UnsafeHTML bool `yaml:"unsafe_html"`
+	// EmailOff wraps every mailto link in Cloudflare's <!--email_off-->
+	// markers. Behind Cloudflare's proxy, Email Address Obfuscation otherwise
+	// rewrites the address into a token that only a Cloudflare script turns
+	// back into text, so it reads "[email protected]" with scripts off, to a
+	// text browser and to a crawler. A privacy notice has to show its contact.
+	EmailOff bool `yaml:"email_off"`
 }
 
 // CollectionConfig is the per-folder setting for a collection such as
@@ -50,9 +56,11 @@ type CollectionConfig struct {
 
 // MenuItem is one link in a menu from site.yaml.
 type MenuItem struct {
-	Name string `yaml:"name"`
-	URL  string `yaml:"url"`
-	Icon string `yaml:"icon"`
+	Name     string `yaml:"name"`
+	URL      string `yaml:"url"`
+	Icon     string `yaml:"icon"`
+	Note     string `yaml:"note"`     // a second line under the name
+	External bool   `yaml:"external"` // opens in a new tab
 }
 
 // OutputsConfig switches the generated files.

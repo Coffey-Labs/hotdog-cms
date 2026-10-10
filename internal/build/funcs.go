@@ -15,7 +15,7 @@ import (
 // mark a string as trusted HTML: the only HTML that reaches a page unescaped
 // is what came through the Markdown renderer, which applies the site's raw
 // HTML rule. A template author cannot open a hole by accident.
-func funcs(s *site.Site, a *Assets, md *site.Markdown) template.FuncMap {
+func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.FuncMap {
 	return template.FuncMap{
 		// asset "styles.css" -> /styles.3f9a1c2b07.css; an unknown name fails the build.
 		"asset": a.URL,
@@ -30,6 +30,14 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown) template.FuncMap {
 		"markdownify": func(v any) (template.HTML, error) {
 			return md.Render([]byte(fmt.Sprint(v)))
 		},
+		// inline renders a short Markdown string without a paragraph around it.
+		"inline": func(v any) (template.HTML, error) {
+			return md.Inline([]byte(fmt.Sprint(v)))
+		},
+		// icon "search" "i" inlines icons/search.svg with that class.
+		"icon": icons.render,
+		// split "\n" .Data.heading, for a heading written over two lines.
+		"split": func(sep string, v any) []string { return strings.Split(strings.TrimRight(fmt.Sprint(v), "\n"), sep) },
 		// date "2 January 2006" .Date; "iso" gives 2006-01-02, "rfc3339" the full stamp.
 		"date": func(layout string, t time.Time) string {
 			if t.IsZero() {
@@ -79,12 +87,15 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown) template.FuncMap {
 			}
 			return m, nil
 		},
-		"list":      func(v ...any) []any { return v },
-		"lower":     strings.ToLower,
-		"upper":     strings.ToUpper,
-		"join":      strings.Join,
-		"contains":  strings.Contains,
-		"hasPrefix": strings.HasPrefix,
+		"list":       func(v ...any) []any { return v },
+		"lower":      strings.ToLower,
+		"upper":      strings.ToUpper,
+		"join":       strings.Join,
+		"contains":   strings.Contains,
+		"hasPrefix":  strings.HasPrefix,
+		"trimPrefix": func(prefix, s string) string { return strings.TrimPrefix(s, prefix) },
+		"trimSuffix": func(suffix, s string) string { return strings.TrimSuffix(s, suffix) },
+		"replace":    func(old, new, s string) string { return strings.ReplaceAll(s, old, new) },
 		"default": func(def, v any) any {
 			if v == nil || v == "" {
 				return def
@@ -92,6 +103,7 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown) template.FuncMap {
 			return v
 		},
 		"now": func() time.Time { return s.BuildTime },
+		"add": func(a, b int) int { return a + b },
 		"sectionContext": func(p *site.Page, sec site.Section) SectionContext {
 			return SectionContext{Type: sec.Type, Data: sec.Data, Page: p, Site: s}
 		},

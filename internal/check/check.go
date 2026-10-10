@@ -41,7 +41,8 @@ func Run(siteDir, out string, cfg *site.Config) ([]Problem, error) {
 
 	// Forbidden strings, in what people write as well as in what gets built:
 	// a template or data file can leak a host name as easily as a page.
-	for _, d := range []string{"content", "data", "layouts", "partials", "sections", "assets", "static", "forms", "site.yaml"} {
+	// site.yaml is left out because it is where the patterns are written.
+	for _, d := range []string{"content", "data", "layouts", "partials", "sections", "icons", "assets", "static", "forms"} {
 		_ = filepath.WalkDir(filepath.Join(siteDir, d), func(p string, e fs.DirEntry, err error) error {
 			if err != nil || e.IsDir() || !textFile(p) {
 				return nil
