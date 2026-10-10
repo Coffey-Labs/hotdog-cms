@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
 import logoDark from '../../brand/svg/logo-header-dark.svg'
 import logoLight from '../../brand/svg/logo-header-light.svg'
-import { api, signInURL, SignedOut, type SessionInfo, type SiteDetail, type SiteSummary } from './api'
+import { AccountsMenu, label } from './Accounts'
+import { api, chooseAccount, signInURL, SignedOut, type SessionInfo, type SiteDetail, type SiteSummary } from './api'
 import { go, href, useRoute, type Route } from './route'
 import { MediaLibrary } from './Media'
 import { PageEditor } from './PageEditor'
@@ -35,7 +36,7 @@ export function App() {
   const s = session.data!
   if (!s.signedIn) return <SignIn session={s} />
   return (
-    <Shell session={s} onSignOut={() => api.logout().then(() => session.reload())}>
+    <Shell session={s} onAccountsChanged={session.reload}>
       {route.view === 'sites' && <Sites />}
       {route.view === 'site' && <SiteView id={route.id} branch={route.branch} />}
       {route.view === 'page' && <PageRoute id={route.id} source={route.source} branch={route.branch} />}
@@ -45,7 +46,7 @@ export function App() {
   )
 }
 
-function Shell({ children, session, onSignOut }: { children: ReactNode; session?: SessionInfo; onSignOut?: () => void }) {
+function Shell({ children, session, onAccountsChanged }: { children: ReactNode; session?: SessionInfo; onAccountsChanged?: () => void }) {
   return (
     <div className="app">
       <header className="top">
@@ -56,12 +57,7 @@ function Shell({ children, session, onSignOut }: { children: ReactNode; session?
         </Link>
         <div className="who">
           <ThemePicker />
-        {session?.user && (
-          <>
-            <span title={`Signed in with ${session.user.forge}`}>{session.user.name} <span className="muted">@{session.user.login}</span></span>
-            <button type="button" className="ghost" onClick={onSignOut}>Sign out</button>
-          </>
-        )}
+        {session?.signedIn && onAccountsChanged && <AccountsMenu session={session} onChanged={onAccountsChanged} />}
         </div>
       </header>
       <main id="main">{children}</main>
@@ -101,9 +97,6 @@ function SignIn({ session }: { session: SessionInfo }) {
   )
 }
 
-function label(kind: string) {
-  return ({ gitea: 'Gitea', forgejo: 'Forgejo', github: 'GitHub', gitlab: 'GitLab', bitbucket: 'Bitbucket' } as Record<string, string>)[kind] || kind
-}
 
 function Sites() {
   const sites = useLoad(api.sites, [])
@@ -119,7 +112,11 @@ function Sites() {
             <Link to={{ view: 'site', id: s.id }} className="tile">
               <strong>{s.name}</strong>
               <span className="muted mono">{s.repo.replace(/^https?:\/\//, '').replace(/\.git$/, '')}</span>
-              <span className="pill">{s.canWrite ? 'You can edit' : 'Read only'}</span>
+              <span className="tile-accounts">
+                {s.accounts.map((a) => (
+                  <span key={a.id} className="pill" title={`${a.login} on ${a.forge}`}>@{a.login} · {a.canWrite ? 'can edit' : 'read only'}</span>
+                ))}
+              </span>
             </Link>
           </li>
         ))}
@@ -144,6 +141,22 @@ function SiteView({ id, branch }: { id: string; branch?: string }) {
           <Link to={{ view: 'sites' }} className="back">← Sites</Link>
           <h1>{d.name}</h1>
           <p className="muted mono small">{d.branch === d.publishBranch ? `${d.branch} · published branch` : `${d.branch} · draft`}</p>
+          {d.accounts.length > 1 && (
+            <label className="working-as">
+              Working as
+              <select
+                value={d.as}
+                onChange={(e) => {
+                  chooseAccount(id, e.target.value)
+                  site.reload()
+                }}
+              >
+                {d.accounts.map((a) => (
+                  <option key={a.id} value={a.id}>@{a.login} · {a.forge}{a.canWrite ? '' : ' (read only)'}</option>
+                ))}
+              </select>
+            </label>
+          )}
         </div>
         <nav aria-label="Pages">
           <h2 className="side-label">Pages</h2>

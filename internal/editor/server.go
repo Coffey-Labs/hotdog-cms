@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -36,6 +37,9 @@ type Server struct {
 	// cloneURL is where a site is cloned from; the site's repo, except in tests.
 	cloneURL func(*SiteConfig) string
 	live     *liveServer
+
+	accessMu   sync.Mutex
+	accessSeen map[string]accessHit
 }
 
 // New builds the editor from editor.yaml. HOTDOG_EDITOR_SECRET seals sessions.
@@ -104,7 +108,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
-		clearCookie(w, r, sessionCookie)
+		// One account (?account=platform/login), or all of them.
+		which := r.URL.Query().Get("account")
+		for _, a := range s.seal.accounts(r) {
+			if which == "" || a.ID() == which {
+				clearCookie(w, r, accountCookie(a.slot))
+			}
+		}
 		w.WriteHeader(http.StatusNoContent)
 	case strings.HasPrefix(r.URL.Path, "/api/"):
 		h.Set("Cache-Control", "no-store")
@@ -162,17 +172,32 @@ func (s *Server) apiRoute(w http.ResponseWriter, r *http.Request) {
 		s.apiSession(w, r)
 		return
 	}
-	sess := s.seal.session(r)
-	if sess == nil {
-		apiError(w, http.StatusUnauthorized, "Sign in to continue.")
-		return
-	}
-	f := s.cfg.forge(sess.Forge)
-	if f == nil {
+	accts := s.seal.accounts(r)
+	if len(accts) == 0 {
 		apiError(w, http.StatusUnauthorized, "Sign in to continue.")
 		return
 	}
 	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) == 1 && parts[0] == "sites" && r.Method == http.MethodGet {
+		s.apiSites(w, r, accts)
+		return
+	}
+	// Everything else is about one site, worked on as one account.
+	if len(parts) < 2 || parts[0] != "sites" {
+		apiError(w, http.StatusNotFound, "no such thing")
+		return
+	}
+	sess := s.accountFor(r, accts, s.cfg.site(parts[1]))
+	if sess == nil {
+		apiError(w, http.StatusNotFound, "No such site, or you can't open it.")
+		return
+	}
+	f := s.cfg.forge(sess.Forge)
+	if f == nil {
+		apiError(w, http.StatusNotFound, "No such site, or you can't open it.")
+		return
+	}
+	r = r.WithContext(context.WithValue(r.Context(), reqKey{}, &reqInfo{sess: sess, accts: accts}))
 	if r.Method == http.MethodPost {
 		if !s.sameOrigin(r) {
 			apiError(w, http.StatusForbidden, "That request didn't come from the editor.")
@@ -190,8 +215,6 @@ func (s *Server) apiRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch {
-	case len(parts) == 1 && parts[0] == "sites":
-		s.apiSites(w, r, sess, f)
 	case len(parts) == 2 && parts[0] == "sites":
 		s.apiSite(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "page":
@@ -214,81 +237,168 @@ func (s *Server) apiSession(w http.ResponseWriter, r *http.Request) {
 	for _, f := range s.cfg.Forges {
 		forges = append(forges, forgeInfo{f.Host, f.Kind})
 	}
-	out := map[string]any{"signedIn": false, "forges": forges}
-	if sess := s.seal.session(r); sess != nil {
-		out["signedIn"] = true
-		out["user"] = map[string]string{"login": sess.Login, "name": sess.Name, "forge": sess.Forge}
+	accounts := []map[string]string{}
+	for _, a := range s.seal.accounts(r) {
+		accounts = append(accounts, map[string]string{"id": a.ID(), "login": a.Login, "name": a.Name, "forge": a.Forge})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"signedIn": len(accounts) > 0, "accounts": accounts, "forges": forges})
+}
+
+// reqInfo is the account a request works as, and every account signed in.
+type reqKey struct{}
+
+type reqInfo struct {
+	sess  *Session
+	accts []*Session
+}
+
+func infoFrom(r *http.Request) *reqInfo {
+	i, _ := r.Context().Value(reqKey{}).(*reqInfo)
+	return i
+}
+
+// candidates are the signed-in accounts on a site's platform.
+func candidates(accts []*Session, st *SiteConfig) []*Session {
+	u, err := url.Parse(st.Repo)
+	if err != nil {
+		return nil
+	}
+	var out []*Session
+	for _, a := range accts {
+		if strings.EqualFold(a.Forge, u.Hostname()) {
+			out = append(out, a)
+		}
+	}
+	return out
+}
+
+// accountFor picks the account a request about a site works as: the one
+// named by ?as=platform/login if it's signed in, otherwise the first that
+// can write to the site, otherwise the first that can read it.
+func (s *Server) accountFor(r *http.Request, accts []*Session, st *SiteConfig) *Session {
+	if st == nil {
+		return nil
+	}
+	cands := candidates(accts, st)
+	if len(cands) == 0 {
+		return nil
+	}
+	if want := r.URL.Query().Get("as"); want != "" {
+		for _, c := range cands {
+			if c.ID() == want {
+				return c
+			}
+		}
+	}
+	if len(cands) == 1 {
+		return cands[0]
+	}
+	var reader, gone *Session
+	for _, c := range cands {
+		f := s.cfg.forge(c.Forge)
+		if f == nil {
+			continue
+		}
+		acc, err := s.accessCached(r.Context(), f, c.Token, st)
+		if errors.Is(err, errSignedOut) && gone == nil {
+			gone = c
+		}
+		if err != nil {
+			continue
+		}
+		if acc.Write {
+			return c
+		}
+		if acc.Read && reader == nil {
+			reader = c
+		}
+	}
+	if reader != nil {
+		return reader
+	}
+	if gone != nil {
+		return gone // so the person hears that this sign-in ended
+	}
+	return cands[0]
+}
+
+// siteAccount is an account that can open a site, as the interface lists it.
+type siteAccount struct {
+	ID       string `json:"id"`
+	Login    string `json:"login"`
+	Forge    string `json:"forge"`
+	CanWrite bool   `json:"canWrite"`
+}
+
+// accountsFor lists the signed-in accounts that can open a site. An account
+// whose token the platform no longer takes is signed out on the way.
+func (s *Server) accountsFor(w http.ResponseWriter, r *http.Request, accts []*Session, st *SiteConfig) []siteAccount {
+	out := []siteAccount{}
+	for _, c := range candidates(accts, st) {
+		f := s.cfg.forge(c.Forge)
+		if f == nil {
+			continue
+		}
+		acc, err := s.accessCached(r.Context(), f, c.Token, st)
+		if errors.Is(err, errSignedOut) {
+			clearCookie(w, r, accountCookie(c.slot))
+			continue
+		}
+		if err == nil && acc.Read {
+			out = append(out, siteAccount{ID: c.ID(), Login: c.Login, Forge: c.Forge, CanWrite: acc.Write})
+		}
+	}
+	return out
+}
+
+// apiSites lists the configured sites any signed-in account can open, and
+// which accounts can.
+func (s *Server) apiSites(w http.ResponseWriter, r *http.Request, accts []*Session) {
+	out := []map[string]any{}
+	for i := range s.cfg.Sites {
+		st := &s.cfg.Sites[i]
+		who := s.accountsFor(w, r, accts, st)
+		if len(who) == 0 {
+			continue
+		}
+		canWrite := false
+		for _, a := range who {
+			canWrite = canWrite || a.CanWrite
+		}
+		out = append(out, map[string]any{"id": st.ID, "name": st.Name, "repo": st.Repo, "branch": st.Branch, "canWrite": canWrite, "accounts": who})
 	}
 	writeJSON(w, http.StatusOK, out)
 }
 
-// sitesFor lists the configured sites on the person's platform that the
-// platform lets them read.
-func (s *Server) sitesFor(ctx context.Context, sess *Session, f *ForgeConfig) ([]map[string]any, error) {
-	var out []map[string]any
-	for i := range s.cfg.Sites {
-		st := &s.cfg.Sites[i]
-		u, _ := url.Parse(st.Repo)
-		if !strings.EqualFold(u.Hostname(), f.Host) {
-			continue
-		}
-		acc, err := s.access(ctx, f, sess.Token, st)
-		if err != nil {
-			return nil, err
-		}
-		if !acc.Read {
-			continue
-		}
-		out = append(out, map[string]any{"id": st.ID, "name": st.Name, "repo": st.Repo, "branch": st.Branch, "canWrite": acc.Write})
-	}
-	return out, nil
-}
-
-func (s *Server) apiSites(w http.ResponseWriter, r *http.Request, sess *Session, f *ForgeConfig) {
-	sites, err := s.sitesFor(r.Context(), sess, f)
-	if s.signedOut(w, r, err) {
-		return
-	}
-	if err != nil {
-		apiError(w, http.StatusBadGateway, "Couldn't ask the platform which sites you can open.")
-		return
-	}
-	if sites == nil {
-		sites = []map[string]any{}
-	}
-	writeJSON(w, http.StatusOK, sites)
-}
-
-// signedOut ends the session when the platform has stopped accepting its token.
+// signedOut signs out the account in use when the platform has stopped
+// accepting its token. Other accounts stay signed in.
 func (s *Server) signedOut(w http.ResponseWriter, r *http.Request, err error) bool {
 	if errors.Is(err, errSignedOut) {
-		clearCookie(w, r, sessionCookie)
-		apiError(w, http.StatusUnauthorized, "Your sign-in has ended. Sign in again.")
+		who := "Your sign-in"
+		if i := infoFrom(r); i != nil {
+			clearCookie(w, r, accountCookie(i.sess.slot))
+			who = "The sign-in for @" + i.sess.Login + " on " + i.sess.Forge
+		}
+		apiError(w, http.StatusUnauthorized, who+" has ended. Sign in again.")
 		return true
 	}
 	return false
 }
 
 func (s *Server) siteByID(ctx context.Context, sess *Session, f *ForgeConfig, id string) (*SiteConfig, Access, error) {
-	for i := range s.cfg.Sites {
-		st := &s.cfg.Sites[i]
-		if st.ID != id {
-			continue
-		}
-		u, _ := url.Parse(st.Repo)
-		if !strings.EqualFold(u.Hostname(), f.Host) {
-			break
-		}
-		acc, err := s.access(ctx, f, sess.Token, st)
-		if err != nil {
-			return nil, Access{}, err
-		}
-		if !acc.Read {
-			break
-		}
-		return st, acc, nil
+	st := s.cfg.site(id)
+	if st == nil {
+		return nil, Access{}, nil
 	}
-	return nil, Access{}, nil
+	u, _ := url.Parse(st.Repo)
+	if !strings.EqualFold(u.Hostname(), f.Host) {
+		return nil, Access{}, nil
+	}
+	acc, err := s.accessCached(ctx, f, sess.Token, st)
+	if err != nil || !acc.Read {
+		return nil, Access{}, err
+	}
+	return st, acc, nil
 }
 
 func (s *Server) apiSite(w http.ResponseWriter, r *http.Request, sess *Session, f *ForgeConfig, id string) {
@@ -340,6 +450,7 @@ func (s *Server) apiSite(w http.ResponseWriter, r *http.Request, sess *Session, 
 		"commit": commit, "canWrite": acc.Write, "siteName": loaded.Config.Name, "siteURL": loaded.Config.URL,
 		"collections": cols, "pages": pages, "drafts": drafts, "reviews": reviews, "build": result,
 		"preview": st.Preview.url(preview.Slug(branch)), "notYet": notYet,
+		"as": sess.ID(), "accounts": s.accountsFor(w, r, infoFrom(r).accts, st),
 	})
 }
 

@@ -240,7 +240,10 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
       <section className="editor-pane">
         <div className="pane-head">
           <a className="back" href={`/sites/${encodeURIComponent(id)}${branch ? `?branch=${encodeURIComponent(branch)}` : ''}`} onClick={(e) => { e.preventDefault(); go({ view: 'site', id, branch }) }}>← {site?.name || 'Site'}</a>
-          <span className={`pill ${onDraft ? 'warn' : ''}`}>{onDraft ? `draft: ${cur}` : `${cur} · published`}</span>
+          <span className="pane-pills">
+            {site && site.accounts.length > 1 && <span className="pill" title="Change it in the site view">as @{site.as.split('/').pop()}</span>}
+            <span className={`pill ${onDraft ? 'warn' : ''}`}>{onDraft ? `draft: ${cur}` : `${cur} · published`}</span>
+          </span>
         </div>
         <h1>{fields.title || source}</h1>
         <p className="muted mono small">{source}{pagePath ? ` → ${pagePath}` : ''}</p>

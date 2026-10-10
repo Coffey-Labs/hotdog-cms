@@ -3,6 +3,8 @@ package editor
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
 )
@@ -85,6 +88,38 @@ func (s *Server) access(ctx context.Context, f *ForgeConfig, token string, site 
 		return Access{}, nil // not found or not allowed: no access
 	}
 	return Access{Read: d.Permissions.Pull, Write: d.Permissions.Push, Admin: d.Permissions.Admin}, nil
+}
+
+// accessCached is access, remembered for a minute per token and repository:
+// with several accounts, one page load would otherwise ask the platform the
+// same question many times. Failures aren't remembered.
+func (s *Server) accessCached(ctx context.Context, f *ForgeConfig, token string, site *SiteConfig) (Access, error) {
+	sum := sha256.Sum256([]byte(token + "\x00" + site.Repo))
+	key := hex.EncodeToString(sum[:])
+	s.accessMu.Lock()
+	if hit, ok := s.accessSeen[key]; ok && time.Since(hit.at) < accessTTL {
+		s.accessMu.Unlock()
+		return hit.acc, nil
+	}
+	s.accessMu.Unlock()
+	acc, err := s.access(ctx, f, token, site)
+	if err != nil {
+		return acc, err
+	}
+	s.accessMu.Lock()
+	if s.accessSeen == nil || len(s.accessSeen) > 4096 {
+		s.accessSeen = map[string]accessHit{}
+	}
+	s.accessSeen[key] = accessHit{acc: acc, at: time.Now()}
+	s.accessMu.Unlock()
+	return acc, nil
+}
+
+const accessTTL = time.Minute
+
+type accessHit struct {
+	acc Access
+	at  time.Time
 }
 
 func (s *Server) branches(ctx context.Context, f *ForgeConfig, token string, site *SiteConfig) ([]Branch, error) {

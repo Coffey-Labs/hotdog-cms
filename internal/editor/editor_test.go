@@ -24,6 +24,7 @@ type fakeForge struct {
 	srv       *httptest.Server
 	opened    []map[string]string // pull requests opened
 	merged    []string            // merge calls
+	bobGone   bool                // the platform stops taking bob's token
 }
 
 func newFakeForge(t *testing.T) *fakeForge {
@@ -34,17 +35,27 @@ func newFakeForge(t *testing.T) *fakeForge {
 		case r.URL.Path == "/login/oauth/access_token":
 			r.ParseForm()
 			sum := sha256.Sum256([]byte(r.PostForm.Get("code_verifier")))
-			if base64.RawURLEncoding.EncodeToString(sum[:]) != ff.challenge || r.PostForm.Get("code") != "the-code" || r.PostForm.Get("client_secret") != "shh" {
+			code := r.PostForm.Get("code")
+			if base64.RawURLEncoding.EncodeToString(sum[:]) != ff.challenge || (code != "the-code" && code != "bob-code") || r.PostForm.Get("client_secret") != "shh" {
 				w.WriteHeader(400)
 				json.NewEncoder(w).Encode(map[string]string{"error": "invalid_grant"})
 				return
 			}
-			json.NewEncoder(w).Encode(map[string]string{"access_token": "user-token"})
-		case auth != "Bearer user-token":
+			tok := "user-token"
+			if code == "bob-code" {
+				tok = "bob-token"
+			}
+			json.NewEncoder(w).Encode(map[string]string{"access_token": tok})
+		case auth != "Bearer user-token" && (auth != "Bearer bob-token" || ff.bobGone):
 			w.WriteHeader(401)
+		case r.URL.Path == "/api/v1/user" && auth == "Bearer bob-token":
+			json.NewEncoder(w).Encode(map[string]string{"login": "bob", "full_name": "Bob"})
 		case r.URL.Path == "/api/v1/user":
 			json.NewEncoder(w).Encode(map[string]string{"login": "ada", "full_name": "Ada Lovelace"})
 		case r.URL.Path == "/api/v1/repos/owner/site":
+			// Ada can write; Bob can only read.
+			json.NewEncoder(w).Encode(map[string]any{"permissions": map[string]bool{"pull": true, "push": auth == "Bearer user-token"}})
+		case r.URL.Path == "/api/v1/repos/owner/secret" && auth == "Bearer bob-token":
 			json.NewEncoder(w).Encode(map[string]any{"permissions": map[string]bool{"pull": true, "push": true}})
 		case r.URL.Path == "/api/v1/repos/owner/secret":
 			w.WriteHeader(404)
@@ -171,7 +182,7 @@ func signIn(t *testing.T, s *Server, ff *fakeForge) *http.Cookie {
 	if rec.Code != 302 || rec.Header().Get("Location") != "/sites/site" {
 		t.Fatalf("callback: %d %s %s", rec.Code, rec.Header().Get("Location"), rec.Body)
 	}
-	sess := cookie(rec, sessionCookie)
+	sess := cookie(rec, accountCookie(0))
 	if sess == nil || !sess.HttpOnly || sess.SameSite != http.SameSiteLaxMode || strings.Contains(sess.Value, "user-token") {
 		t.Fatalf("session cookie wrong: %+v", sess)
 	}
@@ -242,7 +253,7 @@ func TestSessionAndCSRF(t *testing.T) {
 	// The sealed state cookie can't stand in for a session.
 	rec := do(s, "GET", "/auth/login?forge=forge.test", nil, nil)
 	st := cookie(rec, stateCookie)
-	st.Name = sessionCookie
+	st.Name = accountCookie(0)
 	if rec := do(s, "GET", "/api/sites", []*http.Cookie{st}, nil); rec.Code != 401 {
 		t.Errorf("state cookie worked as a session: %d", rec.Code)
 	}
@@ -408,3 +419,121 @@ func TestCompose(t *testing.T) {
 }
 
 func strPtr(s string) *string { return &s }
+
+// addAccount signs in as another user while already signed in, the way
+// "Add an account" does, and returns the cookies the browser then holds.
+func addAccount(t *testing.T, s *Server, ff *fakeForge, jar []*http.Cookie, code string) []*http.Cookie {
+	t.Helper()
+	rec := do(s, "GET", "/auth/login?forge=forge.test&select=1&return=/", jar, nil)
+	loc, _ := url.Parse(rec.Header().Get("Location"))
+	ff.challenge = loc.Query().Get("code_challenge")
+	rec = do(s, "GET", "/auth/callback?code="+code+"&state="+loc.Query().Get("state"), append(jar, cookie(rec, stateCookie)), nil)
+	if rec.Code != 302 {
+		t.Fatalf("second sign-in: %d %s", rec.Code, rec.Body)
+	}
+	out := map[string]*http.Cookie{}
+	for _, c := range jar {
+		out[c.Name] = c
+	}
+	for _, c := range rec.Result().Cookies() {
+		if strings.HasPrefix(c.Name, accountPrefix) {
+			out[c.Name] = c
+		}
+	}
+	var res []*http.Cookie
+	for _, c := range out {
+		res = append(res, c)
+	}
+	return res
+}
+
+func TestMultiAccount(t *testing.T) {
+	s, ff := newTestServer(t)
+	ada := signIn(t, s, ff)
+	jar := addAccount(t, s, ff, []*http.Cookie{ada}, "bob-code")
+	if len(jar) != 2 {
+		t.Fatalf("expected ada in slot 0 and bob in slot 1, got %d cookies", len(jar))
+	}
+
+	var sess struct {
+		Accounts []map[string]string
+	}
+	json.NewDecoder(do(s, "GET", "/api/session", jar, nil).Body).Decode(&sess)
+	if len(sess.Accounts) != 2 || sess.Accounts[0]["id"] != "forge.test/ada" || sess.Accounts[1]["id"] != "forge.test/bob" {
+		t.Fatalf("session: %+v", sess)
+	}
+
+	// Each site, with the accounts that can open it.
+	var sites []struct {
+		ID       string
+		CanWrite bool
+		Accounts []siteAccount
+	}
+	json.NewDecoder(do(s, "GET", "/api/sites", jar, nil).Body).Decode(&sites)
+	if len(sites) != 2 || sites[0].ID != "site" || len(sites[0].Accounts) != 2 || !sites[0].Accounts[0].CanWrite || sites[0].Accounts[1].CanWrite ||
+		sites[1].ID != "secret" || len(sites[1].Accounts) != 1 || sites[1].Accounts[0].Login != "bob" {
+		t.Fatalf("sites: %+v", sites)
+	}
+
+	// The default is the account that can write; ?as= picks another.
+	asOf := func(path string) (string, bool) {
+		var d struct {
+			As       string
+			CanWrite bool
+		}
+		json.NewDecoder(do(s, "GET", path, jar, nil).Body).Decode(&d)
+		return d.As, d.CanWrite
+	}
+	if as, w := asOf("/api/sites/site"); as != "forge.test/ada" || !w {
+		t.Errorf("default account: %s %v", as, w)
+	}
+	if as, w := asOf("/api/sites/site?as=forge.test/bob"); as != "forge.test/bob" || w {
+		t.Errorf("as bob: %s %v", as, w)
+	}
+	if as, _ := asOf("/api/sites/site?as=forge.test/nobody"); as != "forge.test/ada" {
+		t.Errorf("an account that isn't signed in falls back: %s", as)
+	}
+	if as, w := asOf("/api/sites/secret"); as != "forge.test/bob" || !w {
+		t.Errorf("secret: %s %v", as, w)
+	}
+	// Writing as the read-only account is refused by the platform's answer.
+	if rec := post(s, "/api/sites/site/save?as=forge.test/bob", jar, map[string]any{"source": "content/about.md", "edit": map[string]any{"body": "x"}}); rec.Code != 403 {
+		t.Errorf("save as a reader: %d", rec.Code)
+	}
+
+	// Signing in as Ada again refreshes her slot instead of taking a third.
+	again := addAccount(t, s, ff, jar, "the-code")
+	if len(again) != 2 {
+		t.Errorf("re-sign-in took a new slot: %d cookies", len(again))
+	}
+
+	// When the platform stops taking Bob's token, only Bob is signed out.
+	ff.bobGone = true
+	s.accessSeen = nil
+	rec := do(s, "GET", "/api/sites/secret", jar, nil)
+	if rec.Code != 401 || !strings.Contains(rec.Body.String(), "@bob") {
+		t.Fatalf("expired account: %d %s", rec.Code, rec.Body)
+	}
+	if c := cookie(rec, accountCookie(1)); c == nil || c.MaxAge >= 0 {
+		t.Errorf("bob's cookie wasn't cleared: %+v", c)
+	}
+	if c := cookie(rec, accountCookie(0)); c != nil {
+		t.Errorf("ada's cookie was touched: %+v", c)
+	}
+	ff.bobGone = false
+
+	// Signing out one account leaves the other.
+	rec = do(s, "POST", "/auth/logout?account=forge.test/bob", jar, map[string]string{"Origin": "http://editor.test", "X-HotDog": "1"})
+	if rec.Code != 204 || cookie(rec, accountCookie(1)) == nil || cookie(rec, accountCookie(0)) != nil {
+		t.Errorf("sign out one: %d %v", rec.Code, rec.Result().Cookies())
+	}
+	rec = do(s, "POST", "/auth/logout", jar, map[string]string{"Origin": "http://editor.test", "X-HotDog": "1"})
+	if rec.Code != 204 || cookie(rec, accountCookie(0)) == nil || cookie(rec, accountCookie(1)) == nil {
+		t.Errorf("sign out all: %d %v", rec.Code, rec.Result().Cookies())
+	}
+
+	// GitHub is asked to let the person choose; other platforms aren't.
+	if loc := do(s, "GET", "/auth/login?forge=forge.test&select=1", nil, nil).Header().Get("Location"); strings.Contains(loc, "prompt=") {
+		t.Errorf("Gitea got a prompt: %s", loc)
+	}
+}

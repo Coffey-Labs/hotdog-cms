@@ -153,6 +153,15 @@ func slug(s string) string {
 	return strings.Trim(b.String(), "-")
 }
 
+func (c *Config) site(id string) *SiteConfig {
+	for i := range c.Sites {
+		if c.Sites[i].ID == id {
+			return &c.Sites[i]
+		}
+	}
+	return nil
+}
+
 func (c *Config) forge(host string) *ForgeConfig {
 	for i := range c.Forges {
 		if strings.EqualFold(c.Forges[i].Host, host) {

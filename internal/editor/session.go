@@ -9,23 +9,31 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 )
 
-// Sessions live in the browser, sealed: an AES-GCM-encrypted cookie holding
+// Sessions live in the browser, sealed: AES-GCM-encrypted cookies holding
 // who signed in, on which platform, and their token for it. Nothing is kept
 // server-side, so there's nothing to leak from the editor's disk and nothing
 // to clean up; a session ends when the cookie expires or the person signs
 // out. The key comes from HOTDOG_EDITOR_SECRET, shared by every editor
 // instance that serves the same people.
+//
+// A person can be signed in to several accounts at once, on one platform or
+// several: each account is its own cookie (hotdog_a0 … hotdog_a7), since one
+// platform token alone can fill much of a cookie.
 
 const (
-	sessionCookie = "hotdog_session"
+	accountPrefix = "hotdog_a"
+	maxAccounts   = 8
 	stateCookie   = "hotdog_oauth"
 	sessionTTL    = 8 * time.Hour
 )
 
-// Session is a signed-in person.
+func accountCookie(slot int) string { return accountPrefix + strconv.Itoa(slot) }
+
+// Session is one signed-in account.
 type Session struct {
 	Forge   string    `json:"f"` // platform host
 	Login   string    `json:"l"`
@@ -33,7 +41,11 @@ type Session struct {
 	Email   string    `json:"m"` // commits are attributed to this address
 	Token   string    `json:"t"`
 	Expires time.Time `json:"e"`
+	slot    int       // which cookie holds it
 }
+
+// ID names the account in the interface and in requests: platform/login.
+func (s *Session) ID() string { return s.Forge + "/" + s.Login }
 
 type sealer struct{ aead cipher.AEAD }
 
@@ -99,14 +111,20 @@ func isHTTPS(r *http.Request) bool {
 	return r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
 }
 
-func (s *sealer) session(r *http.Request) *Session {
-	c, err := r.Cookie(sessionCookie)
-	if err != nil {
-		return nil
+// accounts returns every account the browser is signed in to, in slot order.
+func (s *sealer) accounts(r *http.Request) []*Session {
+	var out []*Session
+	for i := 0; i < maxAccounts; i++ {
+		c, err := r.Cookie(accountCookie(i))
+		if err != nil {
+			continue
+		}
+		var sess Session
+		if s.open(accountCookie(i), c.Value, &sess) != nil || time.Now().After(sess.Expires) || sess.Token == "" {
+			continue
+		}
+		sess.slot = i
+		out = append(out, &sess)
 	}
-	var sess Session
-	if s.open(sessionCookie, c.Value, &sess) != nil || time.Now().After(sess.Expires) || sess.Token == "" {
-		return nil
-	}
-	return &sess
+	return out
 }

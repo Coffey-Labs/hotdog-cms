@@ -198,3 +198,21 @@ button.small, .small.ghost { font-size: .8rem; padding: .2rem .55rem; }
 
 /* ---- Theme switch (Theme.tsx) ------------------------------------------- */
 .theme-pick button { font-size: .78rem; padding: .2rem .55rem; }
+
+/* ---- Accounts (Accounts.tsx) -------------------------------------------- */
+.accounts { position: relative; }
+.accounts > summary { list-style: none; cursor: pointer; padding: .3rem .6rem; border: 1px solid var(--line); border-radius: 8px; font-size: .9rem; }
+.accounts > summary::-webkit-details-marker { display: none; }
+.accounts > summary::after { content: " ▾"; color: var(--muted); }
+.accounts-panel { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(360px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 12px 32px rgba(0,0,0,.25); padding: .8rem; display: grid; gap: .6rem; }
+.accounts-panel ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
+.accounts-panel li { display: flex; justify-content: space-between; align-items: center; gap: .6rem; }
+.accounts-panel h3 { margin: .3rem 0 0; }
+.add-account { display: grid; gap: .25rem; }
+.add-account .button { justify-self: start; }
+.signout-all { justify-self: start; }
+.tile-accounts { display: flex; flex-wrap: wrap; gap: .3rem; }
+.working-as { display: grid; gap: .25rem; font-size: .85rem; font-weight: 600; margin-top: .5rem; }
+.working-as select { font: inherit; font-weight: 400; padding: .3rem .4rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); }
+.pane-pills { display: inline-flex; gap: .35rem; flex-wrap: wrap; justify-content: flex-end; }
+.accounts-panel li button { white-space: nowrap; flex: none; }

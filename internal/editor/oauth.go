@@ -81,6 +81,11 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	if sc := f.endpoints().scope; sc != "" {
 		q.Set("scope", sc)
 	}
+	// Adding a second account on a platform: GitHub can ask which account to
+	// use. Elsewhere the platform signs in whoever is signed in there.
+	if r.URL.Query().Get("select") == "1" && f.Kind == forge.GitHub {
+		q.Set("prompt", "select_account")
+	}
 	http.Redirect(w, r, f.endpoints().authorize+"?"+q.Encode(), http.StatusFound)
 }
 
@@ -129,7 +134,25 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sess := Session{Forge: f.Host, Login: login, Name: name, Email: email, Token: token, Expires: time.Now().Add(sessionTTL)}
-	if err := s.seal.setCookie(w, r, sessionCookie, sess, sessionTTL); err != nil {
+	// The same account again refreshes its cookie; a new one takes a free slot.
+	slot := -1
+	used := map[int]bool{}
+	for _, a := range s.seal.accounts(r) {
+		used[a.slot] = true
+		if a.Forge == sess.Forge && a.Login == sess.Login {
+			slot = a.slot
+		}
+	}
+	for i := 0; i < maxAccounts && slot < 0; i++ {
+		if !used[i] {
+			slot = i
+		}
+	}
+	if slot < 0 {
+		http.Error(w, fmt.Sprintf("You're signed in to %d accounts, the most the editor holds. Sign one out, then add this one.", maxAccounts), http.StatusConflict)
+		return
+	}
+	if err := s.seal.setCookie(w, r, accountCookie(slot), sess, sessionTTL); err != nil {
 		http.Error(w, "couldn't start the session", http.StatusInternalServerError)
 		return
 	}

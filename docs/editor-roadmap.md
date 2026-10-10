@@ -129,26 +129,26 @@ workshopped; for now it only holds a place on the list. Whatever shape it
 takes, it keeps the rules above: a quick post is still a commit, still checked,
 still previewable, with no faster path to the live site.
 
-### Several accounts and repositories (wanted, not yet built)
+### Several accounts and repositories
 
-John, 2026-10-10: operators may have several accounts, on one git platform or
-on several (a GitHub account and two on their own Gitea, say), and sites
-spread across them. The editor already serves many sites across several
-platforms. What's missing is being signed in to more than one account at
-once. The plan:
-- **Accounts, plural.** Each account is its own sealed cookie (a Gitea token
-  alone can be most of a cookie's 4 KB), up to eight. Signing in again adds an
-  account instead of replacing one. Each can be signed out separately, or all
-  at once. **Still no data store:** the browser holds the accounts.
-- **A second account on the same platform:** the platform decides who's
-  signing in. GitHub's `prompt=select_account` lets the person pick; on
-  platforms without it, the editor says to switch accounts there first.
-- **Sites from every account:** each site is checked against every account on
-  its platform. When more than one account can open a site, the site view
-  shows "Working as" with a picker, remembered per browser. The default is the
-  first account that can write.
-- **Commits and workspaces belong to the account in use:** checkouts are kept
-  by platform and login, and the live preview is separated the same way.
+*Built 2026-10-10* (John: operators may have several accounts, on one git
+platform or several, with sites spread across them):
+- **Several accounts at once:** each account is its own sealed cookie, up to
+  eight, because a Gitea token alone can be much of a cookie's 4 KB.
+  - Signing in again adds an account; the same account again just refreshes.
+  - The header menu signs out one account or all of them.
+  - **Still no data store:** the browser holds the accounts.
+- **A second account on the same platform:** "Add an account" asks GitHub to
+  let the person pick (`prompt=select_account`). Other platforms sign in
+  whoever is signed in there, and the menu says so.
+- **Sites from every account:** each configured site is checked against
+  every signed-in account on its platform (answers cached for a minute). The
+  sites list shows which accounts can edit and which can only read.
+- **Working as:** when several accounts can open a site, the site view has a
+  picker, remembered per browser and sent with every request about that site.
+  The default is the first account that can write.
+- **Separate per account:** commits, checkouts and the live preview. When a
+  platform stops taking one account's token, only that account is signed out.
 - **Later, maybe:** finding sites in an account's repositories (a repository
   with a `site.yaml`) instead of listing each one in `editor.yaml`.
 

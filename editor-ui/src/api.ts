@@ -3,9 +3,10 @@
 // matching Origin, so another site can't make the browser act for you.
 
 export type Forge = { host: string; kind: string }
-export type User = { login: string; name: string; forge: string }
-export type SessionInfo = { signedIn: boolean; user?: User; forges: Forge[] }
-export type SiteSummary = { id: string; name: string; repo: string; branch: string; canWrite: boolean }
+export type Account = { id: string; login: string; name: string; forge: string }
+export type SessionInfo = { signedIn: boolean; accounts: Account[]; forges: Forge[] }
+export type SiteAccount = { id: string; login: string; forge: string; canWrite: boolean }
+export type SiteSummary = { id: string; name: string; repo: string; branch: string; canWrite: boolean; accounts: SiteAccount[] }
 export type PageInfo = { path: string; title: string; source?: string; collection?: string; kind: string; date?: string; draft?: boolean; redirect?: string }
 export type CollectionInfo = { name: string; title: string; count: number }
 export type Problem = { Level: 'error' | 'warning'; Rule: string; File: string; What: string }
@@ -16,6 +17,7 @@ export type SiteDetail = {
   id: string; name: string; repo: string; branch: string; publishBranch: string; commit: string; canWrite: boolean
   siteName: string; siteURL: string; collections: CollectionInfo[] | null; pages: PageInfo[] | null
   drafts: Draft[] | null; reviews: Review[] | null; build: BuildResult; preview?: string; notYet?: string
+  as: string; accounts: SiteAccount[]
 }
 export type PageDetail = { source: string; frontMatter: Record<string, unknown>; frontMatterRaw: string; body: string; branch: string; commit: string }
 export type Edit = { set?: Record<string, unknown>; frontMatter?: string; body: string }
@@ -60,7 +62,7 @@ async function upload(id: string, file: File, fields: Record<string, string>): P
   const form = new FormData()
   for (const [k, v] of Object.entries(fields)) form.set(k, v)
   form.set('file', file)
-  const res = await fetch(site(id, 'media'), { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'X-HotDog': '1' }, body: form })
+  const res = await fetch(siteURL(id, 'media'), { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json', 'X-HotDog': '1' }, body: form })
   if (res.status === 401) throw new SignedOut('Your sign-in has ended. Sign in again.')
   const data = await res.json().catch(() => ({}))
   if (res.status === 409) throw new Conflict((data as { error?: string }).error || 'This changed since you opened it.')
@@ -68,7 +70,35 @@ async function upload(id: string, file: File, fields: Record<string, string>): P
   return data as Uploaded
 }
 
-const site = (id: string, action: string) => `/api/sites/${encodeURIComponent(id)}/${action}`
+// Which account a site is worked on as, when more than one can open it:
+// chosen in the site view, remembered per browser, sent with every request
+// about that site. Without a choice the editor uses the first account that
+// can write.
+export function chosenAccount(id: string): string | undefined {
+  try {
+    return localStorage.getItem(`hotdog-as:${id}`) || undefined
+  } catch {
+    return undefined
+  }
+}
+
+export function chooseAccount(id: string, account: string) {
+  try {
+    localStorage.setItem(`hotdog-as:${id}`, account)
+  } catch {
+    /* not remembered; the default applies next time */
+  }
+}
+
+function siteURL(id: string, action = '', params: Record<string, string | undefined> = {}) {
+  const q = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) if (v) q.set(k, v)
+  const as = chosenAccount(id)
+  if (as) q.set('as', as)
+  return `/api/sites/${encodeURIComponent(id)}${action ? `/${action}` : ''}${q.size ? `?${q}` : ''}`
+}
+
+const site = (id: string, action: string) => siteURL(id, action)
 
 export const api = {
   save: (id: string, b: { source: string; branch: string; baseCommit: string; edit: Edit; message?: string }) =>
@@ -78,16 +108,19 @@ export const api = {
   review: (id: string, b: { branch: string; title: string; description: string }) => post<Review>(site(id, 'review'), b),
   publish: (id: string, b: { branch: string }) => post<{ published: boolean; number: number }>(site(id, 'publish'), b),
   upload: (id: string, file: File, b: { branch: string; baseCommit: string; source: string }) => upload(id, file, b),
-  media: (id: string, branch?: string) => get<MediaItem[]>(`${site(id, 'media')}${branch ? `?branch=${encodeURIComponent(branch)}` : ''}`),
-  mediaFile: (id: string, url: string, branch?: string) => `${site(id, 'media-file')}?url=${encodeURIComponent(url)}${branch ? `&branch=${encodeURIComponent(branch)}` : ''}`,
+  media: (id: string, branch?: string) => get<MediaItem[]>(siteURL(id, 'media', { branch })),
+  mediaFile: (id: string, url: string, branch?: string) => siteURL(id, 'media-file', { url, branch }),
   session: () => get<SessionInfo>('/api/session'),
   sites: () => get<SiteSummary[]>('/api/sites'),
-  site: (id: string, branch?: string) => get<SiteDetail>(`/api/sites/${encodeURIComponent(id)}${branch ? `?branch=${encodeURIComponent(branch)}` : ''}`),
-  page: (id: string, source: string, branch?: string) =>
-    get<PageDetail>(`/api/sites/${encodeURIComponent(id)}/page?source=${encodeURIComponent(source)}${branch ? `&branch=${encodeURIComponent(branch)}` : ''}`),
-  logout: () => fetch('/auth/logout', { method: 'POST', credentials: 'same-origin', headers: { 'X-HotDog': '1' } }),
+  site: (id: string, branch?: string) => get<SiteDetail>(siteURL(id, '', { branch })),
+  page: (id: string, source: string, branch?: string) => get<PageDetail>(siteURL(id, 'page', { source, branch })),
+  // One account, or every account when none is named.
+  logout: (account?: string) =>
+    fetch(`/auth/logout${account ? `?account=${encodeURIComponent(account)}` : ''}`, { method: 'POST', credentials: 'same-origin', headers: { 'X-HotDog': '1' } }),
 }
 
-export function signInURL(forge: string, returnTo: string) {
-  return `/auth/login?forge=${encodeURIComponent(forge)}&return=${encodeURIComponent(returnTo)}`
+// select asks the platform to let the person pick an account (GitHub), for
+// adding a second account there.
+export function signInURL(forge: string, returnTo: string, select = false) {
+  return `/auth/login?forge=${encodeURIComponent(forge)}&return=${encodeURIComponent(returnTo)}${select ? '&select=1' : ''}`
 }
