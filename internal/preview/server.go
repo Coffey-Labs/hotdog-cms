@@ -2,14 +2,18 @@ package preview
 
 import (
 	"crypto/subtle"
+	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
 )
 
 // Auth is the one set of credentials a preview server asks for.
@@ -27,6 +31,12 @@ func (b *Builder) Handler(auth *Auth) http.Handler {
 		h.Set("X-Frame-Options", "SAMEORIGIN")
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("Referrer-Policy", "no-referrer")
+		// The webhook proves itself with the platform's signature instead of
+		// the preview credentials, which a platform can't send.
+		if r.URL.Path == "/_cl/hook" {
+			b.hook(w, r)
+			return
+		}
 		if auth != nil {
 			u, p, ok := r.BasicAuth()
 			if !ok || subtle.ConstantTimeCompare([]byte(u), []byte(auth.User)) != 1 ||
@@ -135,16 +145,61 @@ func (b *Builder) Serve(addr string, auth *Auth, every time.Duration) error {
 		return fmt.Errorf("previews show unpublished work: to listen on %s, set credentials (CLCMS_PREVIEW_AUTH=user:password) and put TLS in front", addr)
 	}
 	go func() {
+		t := time.NewTicker(every)
+		defer t.Stop()
 		for {
 			if err := b.Sync(); err != nil {
 				fmt.Fprintf(b.o.Log, "previews: %v\n", err)
 			}
-			time.Sleep(every)
+			select {
+			case <-t.C:
+			case <-b.kick:
+			}
 		}
 	}()
 	srv := &http.Server{Addr: addr, Handler: b.Handler(auth), ReadHeaderTimeout: 10 * time.Second}
 	fmt.Fprintf(b.o.Log, "previews of %s at %s://%s%s/\n", b.o.Repo, b.o.Scheme, b.o.Domain, portSuffix(b.o.Port))
 	return srv.ListenAndServe()
+}
+
+// hook takes a platform's push webhook and syncs at once.
+func (b *Builder) hook(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+		return
+	}
+	if b.o.HookSecret == "" {
+		http.Error(w, "No webhook is set up here.", http.StatusNotFound)
+		return
+	}
+	body, err := io.ReadAll(io.LimitReader(r.Body, 5<<20))
+	if err != nil {
+		http.Error(w, "unreadable body", http.StatusBadRequest)
+		return
+	}
+	kind := forge.Git
+	if b.o.Forge != nil {
+		kind = b.o.Forge.Repo.Kind
+	}
+	if err := forge.Verify(kind, r.Header, body, b.o.HookSecret); err != nil {
+		fmt.Fprintf(b.o.Log, "webhook refused: %v\n", err)
+		http.Error(w, "signature check failed", http.StatusUnauthorized)
+		return
+	}
+	push, err := forge.ParsePush(kind, r.Header, body)
+	if errors.Is(err, forge.ErrNotPush) {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if err != nil {
+		http.Error(w, "unreadable push event", http.StatusBadRequest)
+		return
+	}
+	if b.wanted(push.Branch) {
+		fmt.Fprintf(b.o.Log, "webhook: %s moved to %s\n", push.Branch, short(push.Commit))
+		b.Kick()
+	}
+	w.WriteHeader(http.StatusAccepted)
 }
 
 func portSuffix(p string) string {

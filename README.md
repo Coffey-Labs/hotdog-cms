@@ -12,6 +12,7 @@ Websites from Markdown files and templates, with no database.
     cl-cms publish <target>  build, then publish: a folder, a server over SSH, a container image, or your own command
     cl-cms pull -repo URL -out DIR   on the web server: publish from git when the branch moves
     cl-cms preview -repo URL     every branch built as it would be published, at <branch>.localhost:8160
+    cl-cms ci <platform>         the CI file for GitHub, GitLab, Gitea, Forgejo, Bitbucket, Woodpecker, or a git hook
 
 A site is a folder:
 
@@ -27,6 +28,7 @@ A site is a folder:
 | `static/` | Files copied as they are |
 
 The output is plain files for any web server, on bare metal, a VPS or in a
-container; `docs/publishing.md` covers each, and `docs/previews.md` covers
-looking at a change before it's published. `DESIGN.md` has the plan and what
+container; `docs/publishing.md` covers each, `docs/previews.md` covers
+looking at a change before it's published, and `docs/platforms.md` covers
+GitHub, GitLab, Gitea, Forgejo, Bitbucket and plain git. `DESIGN.md` has the plan and what
 comes next.

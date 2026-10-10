@@ -9,13 +9,12 @@
 package preview
 
 import (
-	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -25,6 +24,8 @@ import (
 	"time"
 
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/gitx"
 )
 
 // Options configure the preview builder.
@@ -38,6 +39,10 @@ type Options struct {
 	Scheme string   // http or https
 	Drafts bool     // include draft pages
 	Log    io.Writer
+
+	Git        gitx.Auth     // for private HTTPS repositories
+	Forge      *forge.Client // posts each preview's address as a commit status; nil for none
+	HookSecret string        // the webhook secret; empty turns the hook off
 }
 
 // Preview is one built branch.
@@ -58,12 +63,14 @@ type Builder struct {
 	o        Options
 	mu       sync.RWMutex
 	previews map[string]*Preview // by slug
+	syncMu   sync.Mutex          // one sync at a time
+	kick     chan struct{}       // a webhook asking for a sync now
 }
 
 // NewBuilder prepares a builder; call Sync to build.
 func NewBuilder(o Options) (*Builder, error) {
-	if _, err := exec.LookPath("git"); err != nil {
-		return nil, fmt.Errorf("previews need git installed")
+	if err := gitx.Available(); err != nil {
+		return nil, fmt.Errorf("previews need git: %w", err)
 	}
 	if o.Domain == "" {
 		o.Domain = "localhost"
@@ -77,7 +84,7 @@ func NewBuilder(o Options) (*Builder, error) {
 	if err := os.MkdirAll(o.Root, 0o755); err != nil {
 		return nil, err
 	}
-	return &Builder{o: o, previews: map[string]*Preview{}}, nil
+	return &Builder{o: o, previews: map[string]*Preview{}, kick: make(chan struct{}, 1)}, nil
 }
 
 var slugRe = regexp.MustCompile(`[^a-z0-9]+`)
@@ -96,35 +103,16 @@ func Slug(branch string) string {
 	return s + "-" + hex.EncodeToString(sum[:])[:6]
 }
 
-func (b *Builder) git(dir string, args ...string) (string, error) {
-	var out, errb bytes.Buffer
-	if dir != "" {
-		args = append([]string{"-C", dir}, args...)
-	}
-	cmd := exec.Command("git", args...)
-	cmd.Stdout, cmd.Stderr = &out, &errb
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("git %s: %v: %s", args[0], err, strings.TrimSpace(errb.String()))
-	}
-	return strings.TrimSpace(out.String()), nil
-}
-
-// heads lists the repository's branches and their commits.
+// heads lists the wanted branches and their commits.
 func (b *Builder) heads() (map[string]string, error) {
-	out, err := b.git("", "ls-remote", "--heads", b.o.Repo)
+	all, err := gitx.Heads(b.o.Git, b.o.Repo)
 	if err != nil {
 		return nil, err
 	}
 	heads := map[string]string{}
-	for _, line := range strings.Split(out, "\n") {
-		f := strings.Fields(line)
-		if len(f) != 2 || !strings.HasPrefix(f[1], "refs/heads/") {
-			continue
-		}
-		branch := strings.TrimPrefix(f[1], "refs/heads/")
-		if b.wanted(branch) {
-			heads[branch] = f[0]
+	for br, c := range all {
+		if b.wanted(br) {
+			heads[br] = c
 		}
 	}
 	return heads, nil
@@ -145,6 +133,8 @@ func (b *Builder) wanted(branch string) bool {
 // Sync builds every wanted branch whose commit has moved and removes the
 // previews of branches that are gone.
 func (b *Builder) Sync() error {
+	b.syncMu.Lock()
+	defer b.syncMu.Unlock()
 	heads, err := b.heads()
 	if err != nil {
 		return err
@@ -188,6 +178,7 @@ func (b *Builder) buildBranch(branch, slug, commit string) {
 	}
 	url := b.o.Scheme + "://" + host
 
+	b.status(commit, forge.Pending, url+"/", "Building the preview")
 	err := b.checkout(src, branch)
 	var res *build.Result
 	if err == nil {
@@ -203,27 +194,41 @@ func (b *Builder) buildBranch(branch, slug, commit string) {
 	if err != nil {
 		p.Error, p.pending = err.Error(), commit
 		fmt.Fprintf(b.o.Log, "preview %s (%s @ %s) failed: %v\n", slug, branch, short(commit), err)
+		go b.status(commit, forge.Failure, "", "Preview build failed: "+err.Error())
 		return
 	}
 	p.Commit, p.Built, p.Pages, p.Error, p.pending = commit, time.Now(), res.Pages, "", ""
 	fmt.Fprintf(b.o.Log, "preview %s (%s @ %s): %d pages at %s/\n", slug, branch, short(commit), res.Pages, url)
+	go b.status(commit, forge.Success, url+"/", fmt.Sprintf("Preview ready, %d pages", res.Pages))
+}
+
+// status tells the platform how a commit's preview went, so the pull request
+// shows it with a link. Failures to post are logged, never fatal.
+func (b *Builder) status(commit string, st forge.State, url, desc string) {
+	if b.o.Forge == nil || !b.o.Forge.Supported() || commit == "" {
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	if err := b.o.Forge.SetStatus(ctx, commit, forge.Status{State: st, URL: url, Description: desc}); err != nil {
+		fmt.Fprintf(b.o.Log, "commit status for %s: %v\n", short(commit), err)
+	}
+}
+
+// Kick asks for a sync as soon as possible; extra kicks while one is
+// pending fold into it.
+func (b *Builder) Kick() {
+	select {
+	case b.kick <- struct{}{}:
+	default:
+	}
 }
 
 func (b *Builder) checkout(src, branch string) error {
-	if _, err := os.Stat(filepath.Join(src, ".git")); err != nil {
-		if err := os.MkdirAll(filepath.Dir(src), 0o755); err != nil {
-			return err
-		}
-		_, err := b.git("", "clone", "--quiet", "--depth", "1", "--branch", branch, "--single-branch", b.o.Repo, src)
+	if err := os.MkdirAll(filepath.Dir(src), 0o755); err != nil {
 		return err
 	}
-	if _, err := b.git(src, "fetch", "--quiet", "--depth", "1", "origin", branch); err != nil {
-		return err
-	}
-	if _, err := b.git(src, "reset", "--quiet", "--hard", "FETCH_HEAD"); err != nil {
-		return err
-	}
-	_, err := b.git(src, "clean", "-qfdx")
+	_, err := gitx.Checkout(b.o.Git, b.o.Repo, branch, src)
 	return err
 }
 

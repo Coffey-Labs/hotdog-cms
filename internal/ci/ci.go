@@ -1,0 +1,235 @@
+// Package ci writes the pipeline file each platform runs: check a site on
+// every pull request, publish it when its branch moves. For plain git there is
+// no CI, so it writes a post-receive hook that tells cl-cms a branch moved.
+//
+// Published targets come from publish.yaml; the values it reads from the
+// environment (${DEPLOY_HOST} and the like) are the pipeline's secrets. For an
+// rsync target the pipeline loads a deploy key and checks the server against a
+// known_hosts entry kept as a secret, never with host key checking turned off.
+package ci
+
+import (
+	"fmt"
+	"sort"
+	"strings"
+)
+
+// Template is one pipeline file.
+type Template struct {
+	Path string // where it goes, relative to the repository root
+	Body string
+	Note string // what to set up on the platform
+}
+
+const install = `go install git.coffeylabs.org/coffey-labs/cl-cms/cmd/cl-cms@latest`
+
+// sshSetup loads a deploy key for rsync targets; a no-op without one.
+const sshSetup = `if [ -n "${DEPLOY_KEY:-}" ]; then
+  install -d -m 700 ~/.ssh
+  printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+  eval "$(ssh-agent -s)"
+  printf '%s\n' "$DEPLOY_KEY" | ssh-add -
+fi`
+
+func indent(s string, n int) string {
+	pad := strings.Repeat(" ", n)
+	return pad + strings.ReplaceAll(s, "\n", "\n"+pad)
+}
+
+// GitHub-syntax workflows (GitHub, Gitea and Forgejo Actions). Actions are
+// pinned to commits; tags can be moved, commits can't.
+func actions(platform, checkout, setupGo string) string {
+	return `# Written by ` + "`cl-cms ci " + platform + "`" + `. Checks the site on every pull request and
+# publishes it to the targets in publish.yaml when {{BRANCH}} moves.
+name: site
+on:
+  pull_request:
+  push:
+    branches: [{{BRANCH}}]
+permissions:
+  contents: read
+jobs:
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ` + checkout + `
+      - uses: ` + setupGo + `
+        with:
+          go-version: stable
+      - name: Install cl-cms
+        run: ` + install + `
+      - name: Check
+        run: cl-cms check -site {{SITE}}
+      - name: Publish
+        if: github.event_name == 'push' && github.ref == 'refs/heads/{{BRANCH}}'
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+` + indent(sshSetup, 10) + `
+          cl-cms publish -site {{SITE}} -no-build -all
+`
+}
+
+const ghCheckout = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1"
+const ghSetupGo = "actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0"
+
+var templates = map[string]Template{
+	"github": {
+		Path: ".github/workflows/site.yml",
+		Body: actions("github", ghCheckout, ghSetupGo),
+		Note: "Add the secrets publish.yaml reads (DEPLOY_HOST, and DEPLOY_KEY + DEPLOY_KNOWN_HOSTS for rsync) under Settings › Secrets and variables › Actions.",
+	},
+	"gitea": {
+		Path: ".gitea/workflows/site.yml",
+		Body: actions("gitea", "https://github.com/"+ghCheckout, "https://github.com/"+ghSetupGo),
+		Note: "Needs Actions enabled on the repository and a runner with the ubuntu-latest label. Add the secrets under Settings › Actions › Secrets.",
+	},
+	"forgejo": {
+		Path: ".forgejo/workflows/site.yml",
+		Body: actions("forgejo", "https://github.com/"+ghCheckout, "https://github.com/"+ghSetupGo),
+		Note: "Needs Actions enabled on the repository and a runner with the ubuntu-latest label (on Codeberg, request access to its runners). Add the secrets under Settings › Actions › Secrets.",
+	},
+	"gitlab": {
+		Path: ".gitlab-ci.yml",
+		Body: `# Written by ` + "`cl-cms ci gitlab`" + `. Checks the site on every merge request and
+# publishes it to the targets in publish.yaml when {{BRANCH}} moves.
+default:
+  image: golang:1.26-alpine
+  before_script:
+    - apk add --no-cache git rsync openssh-client
+    - ` + install + `
+
+site:check:
+  stage: test
+  script:
+    - cl-cms check -site {{SITE}}
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "{{BRANCH}}"
+
+site:publish:
+  stage: deploy
+  needs: [site:check]
+  script:
+    - |
+` + indent(sshSetup, 6) + `
+    - cl-cms publish -site {{SITE}} -all
+  rules:
+    - if: $CI_COMMIT_BRANCH == "{{BRANCH}}"
+`,
+		Note: "Add DEPLOY_HOST (and DEPLOY_KEY + DEPLOY_KNOWN_HOSTS for rsync) as masked, protected variables under Settings › CI/CD › Variables.",
+	},
+	"bitbucket": {
+		Path: "bitbucket-pipelines.yml",
+		Body: `# Written by ` + "`cl-cms ci bitbucket`" + `. Checks the site on every pull request and
+# publishes it to the targets in publish.yaml when {{BRANCH}} moves.
+image: golang:1.26
+definitions:
+  steps:
+    - step: &check
+        name: Check
+        script:
+          - apt-get update -qq && apt-get install -y -qq rsync openssh-client >/dev/null
+          - ` + install + `
+          - cl-cms check -site {{SITE}}
+pipelines:
+  pull-requests:
+    '**':
+      - step: *check
+  branches:
+    {{BRANCH}}:
+      - step:
+          name: Publish
+          deployment: production
+          script:
+            - apt-get update -qq && apt-get install -y -qq rsync openssh-client >/dev/null
+            - ` + install + `
+            - cl-cms check -site {{SITE}}
+            - cl-cms publish -site {{SITE}} -no-build -all
+`,
+		Note: "Enable Pipelines, add DEPLOY_HOST as a secured deployment variable, and for rsync use Repository settings › SSH keys (Pipelines loads that key and its known hosts itself).",
+	},
+	"woodpecker": {
+		Path: ".woodpecker/site.yaml",
+		Body: `# Written by ` + "`cl-cms ci woodpecker`" + `. Checks the site on every pull request and
+# publishes it to the targets in publish.yaml when {{BRANCH}} moves.
+when:
+  - event: pull_request
+  - event: push
+    branch: {{BRANCH}}
+steps:
+  - name: check
+    image: golang:1.26-alpine
+    commands:
+      - apk add --no-cache git
+      - ` + install + `
+      - cl-cms check -site {{SITE}}
+  - name: publish
+    image: golang:1.26-alpine
+    when:
+      - event: push
+        branch: {{BRANCH}}
+    environment:
+      DEPLOY_HOST: { from_secret: deploy_host }
+      DEPLOY_KEY: { from_secret: deploy_key }
+      DEPLOY_KNOWN_HOSTS: { from_secret: deploy_known_hosts }
+    commands:
+      - apk add --no-cache git rsync openssh-client
+      - ` + install + `
+      - |
+` + indent(sshSetup, 8) + `
+      - cl-cms publish -site {{SITE}} -all
+`,
+		Note: "Add deploy_host (and deploy_key + deploy_known_hosts for rsync) as repository secrets in Woodpecker.",
+	},
+	"git": {
+		Path: "post-receive",
+		Body: `#!/bin/sh
+# Written by ` + "`cl-cms ci git`" + `. Install it as hooks/post-receive in the bare repository
+# (chmod +x). On every push it tells cl-cms which branch moved, so previews
+# (or a pull agent) rebuild at once instead of at their next check.
+#
+# The token is read from a header file, not passed on the command line, so it
+# never appears in the process list. Create it once, readable only by git:
+#   printf 'X-CLCMS-Token: %s\n' "$(openssl rand -hex 32)" > /etc/cl-cms/hook-header
+# and give cl-cms the same token as CLCMS_HOOK_SECRET.
+URL="${CLCMS_HOOK_URL:-https://preview.example.org/_cl/hook}"
+HEADER=/etc/cl-cms/hook-header
+while read -r old new ref; do
+  curl -fsS --max-time 10 -X POST -H "@$HEADER" \
+    --data-urlencode "ref=$ref" --data-urlencode "after=$new" "$URL" >/dev/null ||
+    echo "cl-cms: could not reach $URL; the next scheduled check will catch up" >&2
+done
+`,
+		Note: "Copy it to <repo>.git/hooks/post-receive on the git server and make it executable. Previews and pull agents keep their scheduled check as well, so a missed hook only delays a rebuild.",
+	},
+}
+
+// Platforms lists what Get knows.
+func Platforms() []string {
+	out := make([]string, 0, len(templates))
+	for k := range templates {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// Get returns a platform's file for a site folder and branch.
+func Get(platform, site, branch string) (Template, error) {
+	t, ok := templates[platform]
+	if !ok {
+		return Template{}, fmt.Errorf("no template for %q (one of %s)", platform, strings.Join(Platforms(), ", "))
+	}
+	if site == "" {
+		site = "."
+	}
+	if branch == "" {
+		branch = "main"
+	}
+	r := strings.NewReplacer("{{SITE}}", site, "{{BRANCH}}", branch)
+	t.Body = r.Replace(t.Body)
+	return t, nil
+}

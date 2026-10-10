@@ -9,11 +9,15 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/build"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/check"
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/ci"
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/gitx"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/preview"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/publish"
 	"git.coffeylabs.org/coffey-labs/cl-cms/internal/serve"
@@ -33,6 +37,13 @@ Usage:
   cl-cms publish [target...]   build, then publish to targets in publish.yaml
   cl-cms pull -repo URL -out DIR   on a web server: publish from git when the branch moves
   cl-cms preview -repo URL     build every branch as it would be published, each at its own address
+  cl-cms ci <platform>         write the CI file for github, gitea, forgejo, gitlab, bitbucket, woodpecker, or a git hook
+
+Platforms: GitHub, GitLab, Gitea, Forgejo/Codeberg, Gogs, Bitbucket, or any git server.
+Secrets come from the environment, never flags:
+  CLCMS_GIT_TOKEN, CLCMS_GIT_USER   clone private repositories over HTTPS
+  CLCMS_HOOK_SECRET                 verify push webhooks (preview, pull -hook)
+  CLCMS_FORGE_TOKEN                 post preview links as commit statuses
   cl-cms version
 
 Run "cl-cms <command> -h" for a command's flags.
@@ -59,6 +70,8 @@ func main() {
 		err = cmdPull(args)
 	case "preview":
 		err = cmdPreview(args)
+	case "ci":
+		err = cmdCI(args)
 	case "version", "-v", "--version":
 		fmt.Println("cl-cms", version)
 	case "help", "-h", "--help":
@@ -221,14 +234,22 @@ func cmdPull(args []string) error {
 	out := fl.String("out", "", "the web root to publish into (required)")
 	cache := fl.String("cache", "", "where to keep the clone (default under the user cache folder)")
 	every := fl.Duration("every", 0, "keep checking at this interval (e.g. 1m); 0 checks once and exits")
+	platform := fl.String("platform", "", "github, gitlab, gitea, forgejo, gogs, bitbucket or git (default: guessed from the repository URL)")
+	hook := fl.String("hook", "", "also listen here for push webhooks, e.g. 127.0.0.1:8170 behind a proxy (needs CLCMS_HOOK_SECRET)")
 	_ = fl.Parse(args)
 	if *repo == "" || *out == "" {
-		return errors.New("usage: cl-cms pull -repo URL -out DIR [-branch main] [-every 1m]")
+		return errors.New("usage: cl-cms pull -repo URL -out DIR [-branch main] [-every 1m] [-hook ADDR]")
+	}
+	fr, err := forge.Parse(*repo, forge.Kind(*platform))
+	if err != nil {
+		return err
 	}
 	if *subdir != "" && (filepath.IsAbs(*subdir) || strings.Contains(*subdir, "..")) {
 		return errors.New("-subdir must be a relative path inside the repository")
 	}
-	return publish.Pull(publish.PullOptions{Repo: *repo, Branch: *branch, Subdir: *subdir, Out: *out, Cache: *cache, Every: *every, Log: os.Stdout})
+	return publish.Pull(publish.PullOptions{Repo: *repo, Branch: *branch, Subdir: *subdir, Out: *out, Cache: *cache, Every: *every,
+		Git: gitx.FromEnv(fr.Kind.TokenUser()), Log: os.Stdout,
+		HookAddr: *hook, HookSecret: os.Getenv("CLCMS_HOOK_SECRET"), HookKind: fr.Kind})
 }
 
 func cmdPreview(args []string) error {
@@ -243,10 +264,16 @@ func cmdPreview(args []string) error {
 	port := fl.String("port", "", "the port browsers use, if not the listening port on localhost or 80/443 elsewhere")
 	every := fl.Duration("every", 30*time.Second, "how often to look for branches that moved")
 	drafts := fl.Bool("drafts", true, "include draft pages")
+	platform := fl.String("platform", "", "github, gitlab, gitea, forgejo, gogs, bitbucket or git (default: guessed from the repository URL)")
 	_ = fl.Parse(args)
 	if *repo == "" {
 		return errors.New("usage: cl-cms preview -repo URL [-branches main,feature/*] [-addr 127.0.0.1:8160]")
 	}
+	fr, err := forge.Parse(*repo, forge.Kind(*platform))
+	if err != nil {
+		return err
+	}
+	fc := &forge.Client{Repo: fr, Token: os.Getenv("CLCMS_FORGE_TOKEN")}
 	if *subdir != "" && (filepath.IsAbs(*subdir) || strings.Contains(*subdir, "..")) {
 		return errors.New("-subdir must be a relative path inside the repository")
 	}
@@ -277,11 +304,51 @@ func cmdPreview(args []string) error {
 		}
 	}
 	b, err := preview.NewBuilder(preview.Options{Repo: *repo, Subdir: *subdir, Refs: refs, Root: *root,
-		Domain: strings.ToLower(*domain), Port: *port, Scheme: *scheme, Drafts: *drafts, Log: os.Stdout})
+		Domain: strings.ToLower(*domain), Port: *port, Scheme: *scheme, Drafts: *drafts, Log: os.Stdout,
+		Git: gitx.FromEnv(fr.Kind.TokenUser()), Forge: fc, HookSecret: os.Getenv("CLCMS_HOOK_SECRET")})
 	if err != nil {
 		return err
 	}
 	return b.Serve(*addr, auth, *every)
+}
+
+var safeArgRe = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
+
+func cmdCI(args []string) error {
+	fl := flag.NewFlagSet("ci", flag.ExitOnError)
+	dir := fl.String("site", ".", "the site's folder, relative to the repository root")
+	branch := fl.String("branch", "main", "the branch that publishes")
+	write := fl.Bool("write", false, "write the file into the repository (the current folder) instead of printing it")
+	_ = fl.Parse(args)
+	if fl.NArg() != 1 {
+		return fmt.Errorf("usage: cl-cms ci <%s> [-site .] [-branch main] [-write]", strings.Join(ci.Platforms(), "|"))
+	}
+	if !safeArgRe.MatchString(*dir) || !safeArgRe.MatchString(*branch) || strings.Contains(*dir, "..") {
+		return errors.New("-site and -branch may only use letters, digits, ., _, / and -")
+	}
+	t, err := ci.Get(fl.Arg(0), *dir, *branch)
+	if err != nil {
+		return err
+	}
+	if !*write {
+		fmt.Printf("# %s\n%s\n# %s\n", t.Path, t.Body, t.Note)
+		return nil
+	}
+	if _, err := os.Stat(t.Path); err == nil {
+		return fmt.Errorf("%s already exists; not replacing it", t.Path)
+	}
+	if err := os.MkdirAll(filepath.Dir(t.Path), 0o755); err != nil {
+		return err
+	}
+	mode := os.FileMode(0o644)
+	if t.Path == "post-receive" {
+		mode = 0o755
+	}
+	if err := os.WriteFile(t.Path, []byte(t.Body), mode); err != nil {
+		return err
+	}
+	fmt.Printf("Wrote %s.\n%s\n", t.Path, t.Note)
+	return nil
 }
 
 func report(r *build.Result) {

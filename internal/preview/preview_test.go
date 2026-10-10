@@ -1,6 +1,11 @@
 package preview
 
 import (
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"io"
 	"io/fs"
 	"net/http"
@@ -9,9 +14,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"git.coffeylabs.org/coffey-labs/cl-cms/internal/forge"
 	"git.coffeylabs.org/coffey-labs/cl-cms/starter"
 )
 
@@ -174,5 +181,82 @@ func TestSlug(t *testing.T) {
 	long := Slug(strings.Repeat("very-long-branch-name-", 10))
 	if len(long) > 63 {
 		t.Errorf("slug %q is longer than a DNS label", long)
+	}
+}
+
+func TestWebhookAndStatus(t *testing.T) {
+	r := newRepo(t)
+	var mu sync.Mutex
+	var statuses []map[string]string
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		var body map[string]string
+		_ = json.NewDecoder(req.Body).Decode(&body)
+		body["path"] = req.URL.Path
+		mu.Lock()
+		statuses = append(statuses, body)
+		mu.Unlock()
+		w.WriteHeader(201)
+	}))
+	defer api.Close()
+	fc := &forge.Client{Repo: forge.Repo{Kind: forge.GitHub, Path: "acme/site", API: api.URL}, Token: "tok"}
+	b, err := NewBuilder(Options{Repo: r.dir, Root: t.TempDir(), Port: "8160", Forge: fc, HookSecret: "hook-secret"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := b.Handler(&Auth{User: "editor", Pass: "a long preview password"})
+
+	body := []byte(`{"ref":"refs/heads/main","after":"` + strings.Repeat("b", 40) + `"}`)
+	mac := hmac.New(sha256.New, []byte("hook-secret"))
+	mac.Write(body)
+	send := func(sig string) int {
+		req := httptest.NewRequest("POST", "http://localhost:8160/_cl/hook", bytes.NewReader(body))
+		req.Header.Set("X-GitHub-Event", "push")
+		req.Header.Set("X-Hub-Signature-256", sig)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	if code := send("sha256=" + strings.Repeat("0", 64)); code != 401 {
+		t.Fatalf("forged webhook: %d", code)
+	}
+	// The hook gets past the preview sign-in: platforms can't send it, and
+	// the signature is the proof instead.
+	if code := send("sha256=" + hex.EncodeToString(mac.Sum(nil))); code != 202 {
+		t.Fatalf("signed webhook: %d", code)
+	}
+	select {
+	case <-b.kick:
+	default:
+		t.Fatal("a signed push did not ask for a sync")
+	}
+	if err := b.Sync(); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		mu.Lock()
+		n := len(statuses)
+		mu.Unlock()
+		if n >= 2 || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	var sawPending, sawSuccess bool
+	for _, s := range statuses {
+		if !strings.HasPrefix(s["path"], "/repos/acme/site/statuses/") {
+			t.Errorf("status went to %s", s["path"])
+		}
+		switch s["state"] {
+		case "pending":
+			sawPending = true
+		case "success":
+			sawSuccess = strings.HasPrefix(s["target_url"], "http://"+Slug("main")+".localhost:8160")
+		}
+	}
+	if !sawPending || !sawSuccess {
+		t.Fatalf("statuses posted: %v", statuses)
 	}
 }
