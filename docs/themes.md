@@ -187,6 +187,6 @@ with the starter under the SIL Open Font License), corners and the logo.
 ## The footer
 
 `site.yaml`'s `copyright:` names who holds the copyright the footer shows
-(the site's name if it's left out), and `credit: true` puts "Built with
+(the site's name if it's left out), `copyright_url:` links that name, and `credit: true` puts "Built with
 HotDog CMS" in the middle of the footer, linking to hotdogcms.org. New sites
 start with the credit on; set `credit: false` to take it off.

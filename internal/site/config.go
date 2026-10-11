@@ -29,6 +29,8 @@ type Config struct {
 	// Copyright is who holds the copyright the footer shows; default the
 	// site's name.
 	Copyright string `yaml:"copyright"`
+	// CopyrightURL, if set, links the copyright holder's name.
+	CopyrightURL string `yaml:"copyright_url"`
 	// Credit shows "Built with HotDog CMS" in the footer, linking to
 	// hotdogcms.org.
 	Credit bool `yaml:"credit"`
@@ -227,6 +229,9 @@ func LoadConfig(dir string) (*Config, error) {
 	}
 	if c.Copyright == "" {
 		c.Copyright = c.Name
+	}
+	if c.CopyrightURL != "" && !strings.HasPrefix(c.CopyrightURL, "https://") && !strings.HasPrefix(c.CopyrightURL, "http://") && !strings.HasPrefix(c.CopyrightURL, "/") {
+		return nil, fmt.Errorf("site.yaml: copyright_url %q should be a web address", c.CopyrightURL)
 	}
 	if c.Collections == nil {
 		c.Collections = map[string]CollectionConfig{}

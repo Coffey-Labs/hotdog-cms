@@ -1,6 +1,6 @@
 <footer class="foot">
   <div class="wrap foot-in">
-    <p>© {{ (now).Year }} {{ .Site.Config.Copyright }}</p>
+    <p>© {{ (now).Year }} {{ with .Site.Config.CopyrightURL }}<a href="{{ . }}">{{ $.Site.Config.Copyright }}</a>{{ else }}{{ .Site.Config.Copyright }}{{ end }}</p>
     {{ if .Site.Config.Credit }}<p class="credit">Built with <a href="https://hotdogcms.org/">HotDog CMS</a></p>{{ end }}
     <ul>
       {{ range menu "footer" }}<li><a href="{{ .URL }}">{{ .Name }}</a></li>{{ end }}

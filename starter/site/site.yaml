@@ -7,6 +7,7 @@ author: Your Name
 # Who holds the copyright the footer shows (default: the site's name), and
 # whether the footer says "Built with HotDog CMS".
 # copyright: Your Name
+# copyright_url: https://example.org/   # links the name
 credit: true
 # Where the site's events happen; event and banner times are read in it.
 # timezone: America/Phoenix
