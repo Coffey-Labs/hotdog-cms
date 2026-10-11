@@ -1,0 +1,86 @@
+# A v* tag is a release: hotdog-cms for Linux, macOS and Windows, with
+# SHA256SUMS, attached to a Gitea Release, then announced.
+#
+# The tag must be annotated and on main, and named v<year>.<month>.<day>[.<n>]
+# (scripts/build-release.sh checks the name). Its annotation is the release
+# notes. The Release is a draft until every file is attached, so it is never
+# visible half-filled; a draft this run made is deleted if an upload fails.
+#
+# The job image is pinned by digest, and the only actions are coffey-labs/actions
+# ones pinned by SHA.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    runs-on: light
+    container:
+      image: golang:1.26-bookworm@sha256:a688600ca24f8a4d3ca77f95b0dd40704a9fc787c826660eb7ba0b641b8b175d # 1.26-bookworm
+    env:
+      TAG: ${{ github.ref_name }}
+      TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: coffey-labs/actions/checkout@fab0c4d45e0162963965f1555df27b7bed5e20ec
+        with:
+          fetch-depth: 0
+      - name: The tag is annotated and on main
+        run: |
+          set -eu
+          git merge-base --is-ancestor "$(git rev-parse "$TAG^{commit}")" origin/main \
+            || { echo "$TAG is not on main" >&2; exit 1; }
+          [ "$(git cat-file -t "refs/tags/$TAG")" = tag ] \
+            || { echo "$TAG is a lightweight tag; its annotation is the release notes" >&2; exit 1; }
+      - run: go test -count=1 ./...
+      - run: scripts/build-release.sh "$TAG" dist
+      - name: Release on Gitea
+        run: |
+          set -euo pipefail
+          apt-get -qq update >/dev/null && apt-get -qq install -y --no-install-recommends jq >/dev/null
+          API="$CI_SERVER_INTERNAL/api/v1/repos/$GITHUB_REPOSITORY"
+          auth=(-H "Authorization: token $TOKEN")
+          notes="$(git for-each-ref "refs/tags/$TAG" --format='%(contents)' | sed -e '/-----BEGIN SSH SIGNATURE-----/,$d' -e '/-----BEGIN PGP SIGNATURE-----/,$d')"
+          notes="$notes"$'\n\n'"Binaries for Linux, macOS and Windows; verify them with SHA256SUMS. hotdog-cms needs git installed to run the editor, previews and the pull agent."
+          created=0
+          id="$(curl -fsS "${auth[@]}" "$API/releases/tags/$TAG" 2>/dev/null | jq -r '.id // empty' || true)"
+          if [ -z "$id" ]; then
+            id="$(curl -fsS "${auth[@]}" -H 'Content-Type: application/json' \
+                  -d "$(jq -n --arg t "$TAG" --arg b "$notes" '{tag_name:$t, name:$t, draft:true, body:$b}')" \
+                  "$API/releases" | jq -r '.id // empty')"
+            [ -n "$id" ] || { echo "could not create the release" >&2; exit 1; }
+            created=1
+          fi
+          have="$(curl -fsS "${auth[@]}" "$API/releases/$id/assets" | jq -r '.[].name')"
+          for f in dist/*; do
+            n="$(basename "$f")"
+            if grep -qxF "$n" <<<"$have"; then echo "already attached: $n"; continue; fi
+            echo "uploading $n"
+            curl -fsS --retry 3 --retry-all-errors -o /dev/null "${auth[@]}" --form "attachment=@$f" "$API/releases/$id/assets?name=$n" || {
+              [ "$created" = 1 ] && curl -sS -o /dev/null "${auth[@]}" -X DELETE "$API/releases/$id"
+              exit 1
+            }
+          done
+          if [ "$created" = 1 ]; then
+            curl -fsS -o /dev/null "${auth[@]}" -H 'Content-Type: application/json' -X PATCH \
+              -d '{"draft":false}' "$API/releases/$id"
+          fi
+          echo "released $TAG"
+
+  # The Release above is made with the job's own token, and Gitea starts no
+  # workflow for what the Actions bot does, so the announcement is a job here.
+  # The action makes one topic per tag, so a re-run cannot post twice.
+  announce:
+    needs: [release]
+    runs-on: light
+    steps:
+      - uses: coffey-labs/actions/discourse-release@9282c6f27303f4eb9d61d6aee6daa444c11d7268
+        with:
+          api-key: ${{ secrets.DISCOURSE_RELEASE_KEY }}
+          discord-webhook: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          tag: ${{ github.ref_name }}

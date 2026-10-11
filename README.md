@@ -1,8 +1,19 @@
 # HotDog CMS
 
-Websites from Markdown files and templates, with no database.
+Websites from Markdown files and templates, with no database. Write in
+Markdown, see it live, publish from git. [hotdogcms.org](https://hotdogcms.org)
 
-    go build -o bin/hotdog-cms ./cmd/hotdog-cms
+## Install
+
+Download `hotdog-cms` for Linux, macOS or Windows from the
+[releases](https://git.coffeylabs.org/coffey-labs/hotdog-cms/releases) and check it
+against `SHA256SUMS`. Or, with Go 1.26 or newer:
+
+    go install git.coffeylabs.org/coffey-labs/hotdog-cms/cmd/hotdog-cms@latest
+
+The editor, previews and the pull agent also need `git`.
+
+## Use
 
     hotdog-cms new mysite        start a site from the starter
     cd mysite
@@ -35,7 +46,8 @@ container; `docs/publishing.md` covers each, `docs/previews.md` covers
 looking at a change before it's published, and `docs/platforms.md` covers
 GitHub, GitLab, Gitea, Forgejo, Bitbucket and plain git. The editor is in
 `docs/editor.md`, quick posts in `docs/quick-posts.md`, events and calendar
-feeds in `docs/events.md`. `DESIGN.md` has the plan and what comes next.
+feeds in `docs/events.md`. `docs/editor-roadmap.md` has what's built and what comes next, and
+`docs/security.md` how it's kept safe.
 
 ## Contributing
 
