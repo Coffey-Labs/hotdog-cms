@@ -323,7 +323,7 @@ function NewPage({ id, collections, branch }: { id: string; collections: SiteDet
       </label>
       <label>Title<input value={title} autoFocus onChange={(e) => setTitle(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && title.trim() && create()} /></label>
       <div className="actions">
-        <button type="button" className="button primary" disabled={busy || !title.trim()} onClick={create}>Start a draft</button>
+        <button type="button" className="button primary" disabled={busy || !title.trim()} onClick={create}>{branch ? "Add the page" : "Start a draft"}</button>
         <button type="button" className="ghost" onClick={() => setOpen(false)}>Cancel</button>
       </div>
       {err && <p className="notice bad">{err}</p>}
