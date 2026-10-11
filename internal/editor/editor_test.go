@@ -14,6 +14,10 @@ import (
 	"strings"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
+
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/starter"
 )
 
@@ -440,7 +444,7 @@ func TestWriting(t *testing.T) {
 
 func TestCompose(t *testing.T) {
 	orig := []byte("---\n# kept comment\ntitle: Old\ntags: [a, b]\nweight: 3\n---\nBody.\n")
-	got, err := compose(orig, Edit{Set: map[string]any{"title": "New", "weight": nil, "summary": "Line one"}, Body: "New body."})
+	got, err := compose(orig, Edit{Set: rawSet(map[string]any{"title": "New", "weight": nil, "summary": "Line one"}), Body: "New body."})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -627,5 +631,68 @@ func TestDiscoverSetting(t *testing.T) {
 		if got := s.cfg.Forges[0].Discover.on(); got != c.on {
 			t.Errorf("%q: on = %v", c.yaml, got)
 		}
+	}
+}
+
+func TestSectionsKeepOrder(t *testing.T) {
+	orig := []byte("---\ntitle: Home\nsections:\n  - hero:\n      heading: Hi\n      eyebrow: Hello\n---\n")
+	var doc yaml.Node
+	yaml.Unmarshal([]byte("title: Home\nsections:\n  - hero:\n      heading: Hi\n      eyebrow: Hello\n"), &doc)
+	j, err := orderedJSON(&doc)
+	if err != nil || string(j) != `{"title":"Home","sections":[{"hero":{"heading":"Hi","eyebrow":"Hello"}}]}` {
+		t.Fatalf("ordered JSON: %s %v", j, err)
+	}
+	// A new section, reordered fields, a multi-line field and a date-looking string.
+	set := map[string]json.RawMessage{"sections": json.RawMessage(`[{"text":{"heading":"Next","body":"One\nTwo"}},{"hero":{"heading":"Hi","eyebrow":"Hello","when":"2026-10-10"}}]`)}
+	got, err := compose(orig, Edit{Set: set})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "---\ntitle: Home\nsections:\n  - text:\n      heading: Next\n      body: |-\n        One\n        Two\n  - hero:\n      heading: Hi\n      eyebrow: Hello\n      when: \"2026-10-10\"\n---\n"
+	if string(got) != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestEditsKeepUnchangedStyle(t *testing.T) {
+	orig := []byte("---\ntitle: Home\nsections:\n  # the opening\n  - hero:\n      heading: Hi\n      buttons:\n        - { text: Go, href: /go/ }\n        - { text: Stay, href: /stay/ }\n  - closing:\n      heading: Bye\n      button: { text: Back, href: / }\n---\n")
+	// The hero's heading changes and the two sections swap places.
+	set := map[string]json.RawMessage{"sections": json.RawMessage(`[{"closing":{"heading":"Bye","button":{"text":"Back","href":"/"}}},{"hero":{"heading":"Hello","buttons":[{"text":"Go","href":"/go/"},{"text":"Stay","href":"/stay/"}]}}]`)}
+	got, err := compose(orig, Edit{Set: set})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"button: {text: Back, href: /}", "- {text: Go, href: /go/}", "- {text: Stay, href: /stay/}", "heading: Hello", "# the opening"} {
+		if !strings.Contains(string(got), want) {
+			t.Errorf("missing %q in:\n%s", want, got)
+		}
+	}
+	if i, j := strings.Index(string(got), "closing:"), strings.Index(string(got), "hero:"); i > j {
+		t.Errorf("order not applied:\n%s", got)
+	}
+}
+
+func TestSectionsAPI(t *testing.T) {
+	s, ff := newTestServer(t)
+	jar := []*http.Cookie{signIn(t, s, ff)}
+	var lib struct {
+		Sections    []build.SectionInfo
+		Data        []string
+		Collections []string
+	}
+	rec := do(s, "GET", "/api/sites/site/sections", jar, nil)
+	json.NewDecoder(rec.Body).Decode(&lib)
+	names := []string{}
+	for _, x := range lib.Sections {
+		names = append(names, x.Name)
+	}
+	if rec.Code != 200 || len(lib.Sections) != 5 || strings.Join(lib.Data, ",") != "features" || strings.Join(lib.Collections, ",") != "articles" {
+		t.Fatalf("sections: %d %v %v %v", rec.Code, names, lib.Data, lib.Collections)
+	}
+	// The page API keeps the file's key order, so sections come back as written.
+	rec = do(s, "GET", "/api/sites/site/page?source=content/index.md", jar, nil)
+	body := rec.Body.String()
+	if i, j := strings.Index(body, `"hero"`), strings.Index(body, `"closing"`); i < 0 || j < i || !strings.Contains(body, `"eyebrow":"Built with HotDog CMS","heading"`) {
+		t.Errorf("front matter order: %s", body)
 	}
 }

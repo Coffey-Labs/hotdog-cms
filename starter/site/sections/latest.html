@@ -1,4 +1,11 @@
-{{/* Fields: heading, collection (default articles), count (default 3) */}}
+{{/* section
+label: Latest
+about: The newest pages of a collection, as cards.
+fields:
+  - { name: heading, type: text }
+  - { name: collection, type: collection, default: articles }
+  - { name: count, type: number, default: 3, label: How many }
+*/}}
 {{ $n := default 3 .Data.count }}{{ $c := default "articles" .Data.collection }}
 <section class="block">
   <div class="wrap">

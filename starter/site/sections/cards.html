@@ -1,5 +1,18 @@
-{{/* Fields: heading, intro (Markdown), and either items: [{title, text, href}]
-     or from: <a file in data/ holding that list>. */}}
+{{/* section
+label: Cards
+about: A grid of cards, written here or taken from a file in data/.
+fields:
+  - { name: heading, type: text }
+  - { name: intro, type: markdown }
+  - name: items
+    type: list
+    help: The cards. Leave empty to use a data file instead.
+    fields:
+      - { name: title, type: text, required: true }
+      - { name: text, type: markdown }
+      - { name: href, type: link, label: Links to }
+  - { name: from, type: data, label: Cards from, help: A file in data/ that holds the cards. }
+*/}}
 {{ $items := .Data.items }}{{ with .Data.from }}{{ $items = data . }}{{ end }}
 <section class="block">
   <div class="wrap">

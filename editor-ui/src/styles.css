@@ -216,3 +216,31 @@ button.small, .small.ghost { font-size: .8rem; padding: .2rem .55rem; }
 .working-as select { font: inherit; font-weight: 400; padding: .3rem .4rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); }
 .pane-pills { display: inline-flex; gap: .35rem; flex-wrap: wrap; justify-content: flex-end; }
 .accounts-panel li button { white-space: nowrap; flex: none; }
+
+/* ---- Sections (Sections.tsx) -------------------------------------------- */
+.sections { display: grid; gap: .5rem; margin-bottom: .8rem; }
+.section-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .45rem; }
+.section-card { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.section-card.dragging { opacity: .5; }
+.section-head { display: flex; align-items: center; gap: .4rem; padding: .35rem .5rem; }
+.grip { cursor: grab; color: var(--muted); user-select: none; padding: 0 .2rem; }
+.section-title { flex: 1; min-width: 0; text-align: left; background: none; border: 0; color: var(--text); padding: .25rem; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font: inherit; }
+.section-tools { display: inline-flex; gap: .25rem; flex: none; }
+.section-body { border-top: 1px solid var(--line); padding: .7rem .8rem; display: grid; gap: .6rem; }
+.fields { display: grid; gap: .6rem; }
+.field { display: grid; gap: .25rem; font-size: .88rem; }
+.field-label { font-weight: 600; }
+.field .req, .field-warn { color: var(--bad); }
+.field.group { border: 1px solid var(--line); border-radius: 8px; padding: .5rem .7rem .7rem; margin: 0; }
+.field.group legend { font-weight: 600; padding: 0 .3rem; }
+.list-items { list-style: none; margin: 0; padding: 0; display: grid; gap: .5rem; }
+.list-item { border-left: 3px solid var(--accent-soft); padding-left: .6rem; display: grid; gap: .35rem; }
+.list-tools { display: inline-flex; gap: .25rem; }
+.image-row { display: flex; gap: .4rem; }
+.image-row input { flex: 1; }
+.section-library { border: 1px dashed var(--line); border-radius: var(--radius); padding: .7rem; display: grid; gap: .5rem; }
+.library-head { display: flex; justify-content: space-between; align-items: center; }
+.section-library ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.library-card { width: 100%; text-align: left; display: grid; gap: .2rem; padding: .55rem .65rem; border: 1px solid var(--line); border-radius: 8px; background: var(--raised); color: var(--text); cursor: pointer; font: inherit; }
+.library-card:hover, .library-card:focus-visible { border-color: var(--accent); }
+.form .field input:not([type="checkbox"]), .form .field textarea, .form .field select { width: 100%; }

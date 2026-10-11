@@ -1,4 +1,15 @@
-{{/* Fields: heading, text (Markdown), button: {text, href} */}}
+{{/* section
+label: Closing band
+about: A last word and one button, across the page.
+fields:
+  - { name: heading, type: text, required: true }
+  - { name: text, type: markdown }
+  - name: button
+    type: group
+    fields:
+      - { name: text, type: text }
+      - { name: href, type: link, label: Goes to }
+*/}}
 <section class="closing">
   <div class="wrap">
     <h2>{{ .Data.heading }}</h2>

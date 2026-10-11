@@ -21,6 +21,9 @@ export type SiteDetail = {
 }
 export type PageDetail = { source: string; frontMatter: Record<string, unknown>; frontMatterRaw: string; body: string; branch: string; commit: string }
 export type Edit = { set?: Record<string, unknown>; frontMatter?: string; body: string }
+export type Field = { name: string; label?: string; type: string; help?: string; required?: boolean; default?: unknown; options?: string[]; fields?: Field[] }
+export type SectionInfo = { name: string; label: string; about?: string; fields: Field[]; declared: boolean; problem?: string }
+export type SectionLib = { sections: SectionInfo[]; data: string[]; collections: string[] }
 export type MediaItem = { url: string; width: number; height: number; thumb: string; bytes: number; files: number; usedBy: string[]; alt: string }
 export type Uploaded = { branch: string; commit: string; created: boolean; url: string; width: number; height: number; notes: string[] | null; files: string[] }
 
@@ -108,6 +111,7 @@ export const api = {
   review: (id: string, b: { branch: string; title: string; description: string }) => post<Review>(site(id, 'review'), b),
   publish: (id: string, b: { branch: string }) => post<{ published: boolean; number: number }>(site(id, 'publish'), b),
   upload: (id: string, file: File, b: { branch: string; baseCommit: string; source: string }) => upload(id, file, b),
+  sections: (id: string, branch?: string) => get<SectionLib>(siteURL(id, 'sections', { branch })),
   media: (id: string, branch?: string) => get<MediaItem[]>(siteURL(id, 'media', { branch })),
   mediaFile: (id: string, url: string, branch?: string) => siteURL(id, 'media-file', { url, branch }),
   session: () => get<SessionInfo>('/api/session'),

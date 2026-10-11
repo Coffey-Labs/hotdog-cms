@@ -1,4 +1,10 @@
-{{/* Fields: heading, body (Markdown) */}}
+{{/* section
+label: Text
+about: A heading and some writing.
+fields:
+  - { name: heading, type: text }
+  - { name: body, type: markdown }
+*/}}
 <section class="block">
   <div class="wrap prose">
     {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}

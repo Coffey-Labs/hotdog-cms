@@ -3,6 +3,7 @@ import { api, CheckFailed, Conflict, type Edit, type PageDetail, type Problem, t
 import { go, href } from './route'
 import { ACCEPT, InsertPicture } from './Media'
 import { liveChannel } from './Present'
+import { fromFrontMatter, SectionsEditor, toFrontMatter, type Sec } from './Sections'
 import { Split } from './Split'
 import { DevicePicker, PreviewFrame, useDevice } from './Viewport'
 
@@ -81,10 +82,11 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
   const [reviewOpen, setReviewOpen] = useState(false)
   const [problems, setProblems] = useState<Problem[]>()
   const [picture, setPicture] = useState<{ file?: File }>()
+  const [secs, setSecs] = useState<Sec[]>()
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   // Edits carried across a branch change that the editor made itself (an
   // upload that started a draft), so nothing typed is lost.
-  const carry = useRef<{ fields: Fields; body: string; yaml: string; yamlMode: boolean }>(undefined)
+  const carry = useRef<{ fields: Fields; body: string; yaml: string; yamlMode: boolean; secs?: Sec[] }>(undefined)
   const uploaded = useRef<Uploaded>(undefined)
   const cur = branch || site?.publishBranch || ''
 
@@ -99,6 +101,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
         setBody(c ? c.body : p.body)
         setYaml(c ? c.yaml : p.frontMatterRaw)
         setYamlMode(c ? c.yamlMode : false)
+        setSecs(c ? c.secs : fromFrontMatter(p.frontMatter.sections))
       },
       (e: Error) => setLoadError(e.message),
     )
@@ -109,8 +112,12 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
     if (!page || !fields || !orig) return null
     if (yamlMode) return yaml === page.frontMatterRaw && body === page.body ? null : { frontMatter: yaml, body }
     const set = changes(orig, fields, page.frontMatter)
+    if (secs) {
+      const next = toFrontMatter(secs)
+      if (JSON.stringify(next) !== JSON.stringify(page.frontMatter.sections ?? null)) set.sections = next.length ? next : null
+    }
     return Object.keys(set).length === 0 && body === page.body ? null : { set, body }
-  }, [page, fields, orig, body, yaml, yamlMode])
+  }, [page, fields, orig, body, yaml, yamlMode, secs])
   const dirty = edit !== null
 
   // The live preview follows the edit, a moment after typing stops, here and
@@ -177,6 +184,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
         setFields(fieldsFrom(p.frontMatter))
         setBody(p.body)
         setYaml(p.frontMatterRaw)
+        setSecs(fromFrontMatter(p.frontMatter.sections))
       }
     } catch (e) {
       setStatus({ kind: 'bad', text: e instanceof Conflict ? e.message : `Not saved: ${(e as Error).message}` })
@@ -203,7 +211,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
     setStatus({ kind: 'good', text: `Added ${r.url}${r.created ? ` on a new draft, ${r.branch}` : ''}. ${notes} Save to keep it in the page.`.trim() })
     onSiteChanged()
     if (r.created || r.branch !== cur) {
-      if (fields) carry.current = { fields, body: next, yaml, yamlMode }
+      if (fields) carry.current = { fields, body: next, yaml, yamlMode, secs }
       go({ view: 'page', id, source, branch: r.branch })
     } else if (page) {
       setPage({ ...page, commit: r.commit })
@@ -231,6 +239,8 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
 
   if (loadError) return <div className="pad notice bad" role="alert">{loadError}</div>
   if (!page || !fields) return <p className="pad muted">Loading the page…</p>
+  // Front matter the form doesn't show; sections have their own cards.
+  const otherKeys = Object.keys(page.frontMatter).filter((k) => !KNOWN.includes(k as keyof Fields) && !(k === 'sections' && secs))
   const set = (k: keyof Fields) => (e: { target: { value: string; checked?: boolean; type?: string } }) =>
     setFields({ ...fields, [k]: e.target.type === 'checkbox' ? !!e.target.checked : e.target.value })
 
@@ -289,10 +299,14 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
               <label>Image alt text<input value={fields.image_alt} onChange={set('image_alt')} /></label>
             </div>
             <label className="check"><input type="checkbox" checked={fields.draft} onChange={set('draft')} /> Keep out of the published site (draft)</label>
-            {Object.keys(page.frontMatter).some((k) => !KNOWN.includes(k as keyof Fields)) && (
-              <p className="muted small">Other fields ({Object.keys(page.frontMatter).filter((k) => !KNOWN.includes(k as keyof Fields)).join(', ')}) are kept as they are; edit them as YAML.</p>
-            )}
+            {otherKeys.length > 0 && <p className="muted small">Other fields ({otherKeys.join(', ')}) are kept as they are; edit them as YAML.</p>}
           </div>
+        )}
+        {secs && !yamlMode && (
+          <>
+            <h2 className="side-label">Sections <span className="muted small">the page, top to bottom</span></h2>
+            <SectionsEditor id={id} branch={cur} value={secs} onChange={setSecs} disabled={!canWrite} />
+          </>
         )}
         <div className="body-head">
           <h2 className="side-label">Body <span className="muted small">Markdown</span></h2>

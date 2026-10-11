@@ -221,6 +221,8 @@ func (s *Server) apiRoute(w http.ResponseWriter, r *http.Request) {
 		s.apiSite(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "page":
 		s.apiPage(w, r, sess, f, parts[1])
+	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "sections":
+		s.apiSections(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "media":
 		s.apiMedia(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "media-file":
@@ -482,8 +484,16 @@ func (s *Server) apiPage(w http.ResponseWriter, r *http.Request, sess *Session, 
 		apiError(w, http.StatusNotFound, "No such page.")
 		return
 	}
-	fm, _ := splitFrontMatter(raw)
 	fmRaw, body := splitSource(raw)
+	var fm any = map[string]any{}
+	var doc yaml.Node
+	if yaml.Unmarshal([]byte(fmRaw), &doc) == nil && len(doc.Content) == 1 && doc.Content[0].Kind == yaml.MappingNode {
+		if j, err := orderedJSON(&doc); err == nil {
+			fm = j // keys in the file's order
+		}
+	} else {
+		fm, _ = splitFrontMatter(raw)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"source": r.URL.Query().Get("source"), "frontMatter": fm, "frontMatterRaw": fmRaw, "body": body, "branch": branch, "commit": commit})
 }
 

@@ -1,4 +1,17 @@
-{{/* Fields: eyebrow, heading, text (Markdown), buttons: [{text, href, primary}] */}}
+{{/* section
+label: Hero
+about: The big opening at the top of a page, with buttons.
+fields:
+  - { name: eyebrow, type: text, help: A short line above the heading. }
+  - { name: heading, type: text, required: true }
+  - { name: text, type: markdown }
+  - name: buttons
+    type: list
+    fields:
+      - { name: text, type: text, required: true }
+      - { name: href, type: link, label: Goes to, required: true }
+      - { name: primary, type: bool, label: Main button }
+*/}}
 <section class="hero">
   <div class="wrap">
     {{ with .Data.eyebrow }}<p class="eyebrow">{{ . }}</p>{{ end }}

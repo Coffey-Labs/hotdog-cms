@@ -2,7 +2,9 @@ package editor
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -33,8 +35,9 @@ func splitSource(raw []byte) (string, string) {
 // Edit is what the editor sends to save or preview a page.
 type Edit struct {
 	// Set changes front matter fields: a value replaces the field (or adds
-	// it), null removes it.
-	Set map[string]any `json:"set,omitempty"`
+	// it), null removes it. Values stay raw JSON until they're written, so an
+	// object's keys keep the order they came in (a section's fields, say).
+	Set map[string]json.RawMessage `json:"set,omitempty"`
 	// FrontMatter, if not nil, replaces the whole front matter with this
 	// YAML (the "edit as YAML" view). Set is then ignored.
 	FrontMatter *string `json:"frontMatter,omitempty"`
@@ -76,7 +79,7 @@ func compose(original []byte, e Edit) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func applySet(fmText string, set map[string]any) (string, error) {
+func applySet(fmText string, set map[string]json.RawMessage) (string, error) {
 	var doc yaml.Node
 	if strings.TrimSpace(fmText) != "" {
 		if err := yaml.Unmarshal([]byte(fmText), &doc); err != nil {
@@ -96,7 +99,7 @@ func applySet(fmText string, set map[string]any) (string, error) {
 		return "", fmt.Errorf("front matter isn't a list of fields")
 	}
 	for _, key := range sortedKeys(set) {
-		val := set[key]
+		raw := bytes.TrimSpace(set[key])
 		idx := -1
 		for i := 0; i+1 < len(m.Content); i += 2 {
 			if m.Content[i].Value == key {
@@ -104,24 +107,24 @@ func applySet(fmText string, set map[string]any) (string, error) {
 				break
 			}
 		}
-		if val == nil {
+		if len(raw) == 0 || string(raw) == "null" {
 			if idx >= 0 {
 				m.Content = append(m.Content[:idx], m.Content[idx+2:]...)
 			}
 			continue
 		}
-		var vn yaml.Node
-		if err := vn.Encode(val); err != nil {
+		dec := json.NewDecoder(bytes.NewReader(raw))
+		dec.UseNumber()
+		vn, err := jsonNode(dec)
+		if err != nil {
 			return "", fmt.Errorf("field %s: %w", key, err)
 		}
-		if s, ok := val.(string); ok && strings.Contains(s, "\n") {
-			vn.Style = yaml.LiteralStyle
-		}
 		if idx >= 0 {
+			vn = keep(m.Content[idx+1], vn)
 			vn.HeadComment, vn.LineComment = m.Content[idx+1].HeadComment, m.Content[idx+1].LineComment
-			m.Content[idx+1] = &vn
+			m.Content[idx+1] = vn
 		} else {
-			m.Content = append(m.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: key}, &vn)
+			m.Content = append(m.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: key}, vn)
 		}
 	}
 	var buf bytes.Buffer
@@ -137,7 +140,181 @@ func applySet(fmText string, set map[string]any) (string, error) {
 	return out, nil
 }
 
-func sortedKeys(m map[string]any) []string {
+// jsonNode turns JSON into YAML nodes, keeping objects' key order. Scalars
+// are encoded by the YAML library itself, so a string that looks like a date
+// or a number is quoted exactly as it would be anywhere else.
+func jsonNode(dec *json.Decoder) (*yaml.Node, error) {
+	tok, err := dec.Token()
+	if err != nil {
+		return nil, err
+	}
+	scalar := func(v any) (*yaml.Node, error) {
+		var n yaml.Node
+		if err := n.Encode(v); err != nil {
+			return nil, err
+		}
+		if s, ok := v.(string); ok && strings.Contains(s, "\n") {
+			n.Style = yaml.LiteralStyle
+		}
+		return &n, nil
+	}
+	switch t := tok.(type) {
+	case json.Delim:
+		n := &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
+		if t == '{' {
+			n = &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+		}
+		for dec.More() {
+			if t == '{' {
+				kt, err := dec.Token()
+				if err != nil {
+					return nil, err
+				}
+				key, _ := kt.(string)
+				kn, err := scalar(key)
+				if err != nil {
+					return nil, err
+				}
+				n.Content = append(n.Content, kn)
+			}
+			v, err := jsonNode(dec)
+			if err != nil {
+				return nil, err
+			}
+			n.Content = append(n.Content, v)
+		}
+		if _, err := dec.Token(); err != nil { // the closing } or ]
+			return nil, err
+		}
+		return n, nil
+	case json.Number:
+		if i, err := strconv.ParseInt(string(t), 10, 64); err == nil {
+			return scalar(i)
+		}
+		f, err := t.Float64()
+		if err != nil {
+			return nil, err
+		}
+		return scalar(f)
+	case nil:
+		return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!null", Value: "null"}, nil
+	default: // string, bool
+		return scalar(t)
+	}
+}
+
+// keep returns the new value, reusing the original's nodes wherever they say
+// the same thing, so what didn't change keeps its style (a one-line
+// { text: …, href: … }) and its comments, and a diff shows only the change.
+// Items of a list are matched by content, so moving one doesn't rewrite it.
+func keep(orig, nw *yaml.Node) *yaml.Node {
+	if orig == nil || nw == nil {
+		return nw
+	}
+	same := func(a, b *yaml.Node) bool {
+		x, err1 := orderedJSON(a)
+		y, err2 := orderedJSON(b)
+		return err1 == nil && err2 == nil && bytes.Equal(x, y)
+	}
+	if same(orig, nw) {
+		return orig
+	}
+	switch {
+	case orig.Kind == yaml.MappingNode && nw.Kind == yaml.MappingNode:
+		for i := 0; i+1 < len(nw.Content); i += 2 {
+			for j := 0; j+1 < len(orig.Content); j += 2 {
+				if orig.Content[j].Value == nw.Content[i].Value {
+					nw.Content[i] = orig.Content[j] // the key, with its comments
+					nw.Content[i+1] = keep(orig.Content[j+1], nw.Content[i+1])
+					break
+				}
+			}
+		}
+		nw.Style = orig.Style
+		nw.HeadComment, nw.LineComment, nw.FootComment = orig.HeadComment, orig.LineComment, orig.FootComment
+	case orig.Kind == yaml.SequenceNode && nw.Kind == yaml.SequenceNode:
+		used := map[int]bool{}
+		for i, item := range nw.Content {
+			found := false
+			for j, o := range orig.Content {
+				if !used[j] && same(o, item) {
+					nw.Content[i], used[j], found = o, true, true
+					break
+				}
+			}
+			if found || item.Kind != yaml.MappingNode || len(item.Content) < 2 {
+				continue
+			}
+			// An item that changed, and perhaps moved: the original with the
+			// same first key (a section's type) keeps what's unchanged inside.
+			for j, o := range orig.Content {
+				if !used[j] && o.Kind == yaml.MappingNode && len(o.Content) >= 2 && o.Content[0].Value == item.Content[0].Value {
+					nw.Content[i], used[j] = keep(o, item), true
+					break
+				}
+			}
+		}
+		nw.Style = orig.Style
+		nw.HeadComment, nw.LineComment, nw.FootComment = orig.HeadComment, orig.LineComment, orig.FootComment
+	}
+	return nw
+}
+
+// orderedJSON writes YAML as JSON with every mapping's keys in the order the
+// file has them, so the editor shows and returns fields as they were written.
+func orderedJSON(n *yaml.Node) (json.RawMessage, error) {
+	for n.Kind == yaml.DocumentNode && len(n.Content) == 1 {
+		n = n.Content[0]
+	}
+	if n.Kind == yaml.AliasNode && n.Alias != nil {
+		return orderedJSON(n.Alias)
+	}
+	var b bytes.Buffer
+	switch n.Kind {
+	case yaml.MappingNode:
+		b.WriteByte('{')
+		for i := 0; i+1 < len(n.Content); i += 2 {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			k, _ := json.Marshal(n.Content[i].Value)
+			b.Write(k)
+			b.WriteByte(':')
+			v, err := orderedJSON(n.Content[i+1])
+			if err != nil {
+				return nil, err
+			}
+			b.Write(v)
+		}
+		b.WriteByte('}')
+	case yaml.SequenceNode:
+		b.WriteByte('[')
+		for i, c := range n.Content {
+			if i > 0 {
+				b.WriteByte(',')
+			}
+			v, err := orderedJSON(c)
+			if err != nil {
+				return nil, err
+			}
+			b.Write(v)
+		}
+		b.WriteByte(']')
+	default:
+		var v any
+		if err := n.Decode(&v); err != nil {
+			return nil, err
+		}
+		out, err := json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+		b.Write(out)
+	}
+	return b.Bytes(), nil
+}
+
+func sortedKeys(m map[string]json.RawMessage) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
@@ -149,4 +326,14 @@ func sortedKeys(m map[string]any) []string {
 		}
 	}
 	return keys
+}
+
+// rawSet turns Go values into an edit's Set.
+func rawSet(m map[string]any) map[string]json.RawMessage {
+	out := map[string]json.RawMessage{}
+	for k, v := range m {
+		b, _ := json.Marshal(v)
+		out[k] = b
+	}
+	return out
 }

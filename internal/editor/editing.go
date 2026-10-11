@@ -76,6 +76,9 @@ func (s *Server) draftName(r *http.Request, sess *Session, f *ForgeConfig, st *S
 	base := "draft/" + slug(strings.TrimSuffix(path.Base(source), ".md"))
 	if strings.HasSuffix(source, "/index.md") || strings.HasSuffix(source, "/_index.md") {
 		base = "draft/" + slug(path.Base(path.Dir(source)))
+		if path.Dir(source) == "content" { // the site's front page
+			base = "draft/home"
+		}
 	}
 	if base == "draft/" || base == "draft/index" {
 		base = "draft/home"
@@ -197,7 +200,7 @@ func (s *Server) newPage(w http.ResponseWriter, r *http.Request, sess *Session, 
 	if req.Collection != "" {
 		set["date"] = time.Now().Format("2006-01-02")
 	}
-	content, err := compose(nil, Edit{Set: set})
+	content, err := compose(nil, Edit{Set: rawSet(set)})
 	if err != nil {
 		apiError(w, http.StatusBadRequest, err.Error())
 		return
