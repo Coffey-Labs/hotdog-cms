@@ -336,7 +336,7 @@ func (s *Server) review(w http.ResponseWriter, r *http.Request, sess *Session, f
 		return
 	}
 	s.log.Printf("%s opened review #%d for %s@%s", sess.Login, rv.Number, st.ID, req.Branch)
-	out := map[string]any{"number": rv.Number, "title": rv.Title, "branch": rv.Branch, "url": rv.URL}
+	out := map[string]any{"number": rv.Number, "title": rv.Title, "branch": rv.Branch, "url": rv.URL, "preview": st.Preview.url(preview.Slug(req.Branch))}
 	if len(req.Reviewers) > 0 {
 		if err := s.requestReviewers(r.Context(), f, sess.Token, st, rv.Number, req.Reviewers); err != nil {
 			out["reviewersError"] = "The review is open, but asking for reviewers didn't work: " + trimErr(err)

@@ -396,7 +396,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
         {problems && problems.length > 0 && (
           <ul className="problems">{problems.filter((p) => p.Level === 'error').map((p, i) => <li key={i} className="error"><span className="pill">{p.Rule}</span> <span className="mono small">{p.File}</span> {p.What}</li>)}</ul>
         )}
-        {sharing && canShare && <SharePanel title={fields.title} summary={fields.summary} url={liveURL} onClose={() => setSharing(false)} />}
+        {sharing && canShare && <SharePanel title={source === 'content/index.md' ? site?.siteName || fields.title : fields.title} summary={fields.summary} url={liveURL} onClose={() => setSharing(false)} />}
         {reviewOpen && <ReviewForm id={id} branch={cur} title={fields.title} onDone={(msg) => { setReviewOpen(false); setStatus({ kind: 'good', text: msg }); onSiteChanged() }} onError={(m) => setStatus({ kind: 'bad', text: m })} />}
 
         {pageProblems.length > 0 && (
@@ -520,7 +520,7 @@ export function ReviewForm({ id, branch, title, onDone, onError }: { id: string;
     try {
       const r = await api.review(id, { branch, title: t, description: d, reviewers: ask })
       const who = r.reviewers?.length ? ` ${r.reviewers.map((x) => '@' + x).join(', ')} ${r.reviewers.length === 1 ? 'was' : 'were'} asked to review; the platform lets them know.` : ''
-      onDone(`Submitted for review as #${r.number}. The review links to this draft's preview.${who}${r.reviewersError ? ' ' + r.reviewersError : ''}`)
+      onDone(`Submitted for review as #${r.number}.${r.preview ? " The review links to this draft's preview." : ''}${who}${r.reviewersError ? ' ' + r.reviewersError : ''}`)
     } catch (e) {
       onError((e as Error).message)
     } finally {
