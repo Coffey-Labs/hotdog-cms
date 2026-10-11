@@ -42,6 +42,16 @@ type conv struct {
 	images []string
 }
 
+// captionWidth reports a WordPress caption's own width (style="width: 1600px"
+// on a wp-caption figure or div): WordPress sizes the box to its picture, and
+// the Markdown figure doesn't need it.
+func captionWidth(n *html.Node, style string) bool {
+	return (n.Data == "figure" || n.Data == "div") && strings.Contains(attr(n, "class"), "wp-caption") &&
+		captionWidthRe.MatchString(style)
+}
+
+var captionWidthRe = regexp.MustCompile(`^\s*(max-)?width:\s*\d+px;?\s*$`)
+
 func dedupe(xs []string) []string {
 	seen := map[string]bool{}
 	var out []string
@@ -93,7 +103,7 @@ func (c *conv) block(b *strings.Builder, n *html.Node, indent string) {
 	if cls := attr(n, "class"); layoutClass.MatchString(cls) {
 		c.lossy = append(c.lossy, "a layout block ("+strings.Fields(layoutClass.FindString(cls))[0]+")")
 	}
-	if attr(n, "style") != "" {
+	if st := attr(n, "style"); st != "" && !captionWidth(n, st) {
 		c.lossy = append(c.lossy, "inline styles")
 	}
 	switch n.Data {

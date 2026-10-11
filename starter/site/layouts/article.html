@@ -5,7 +5,7 @@
     <p class="meta">
       {{ if not .Date.IsZero }}<time datetime="{{ date "iso" .Date }}">{{ date "2 January 2006" .Date }}</time> · {{ end }}{{ .ReadingTime }} min read
     </p>
-    {{ if .Terms.tags }}<ul class="tags">{{ range .Params.tags }}<li><a href="/tags/{{ slugify . }}/">{{ . }}</a></li>{{ end }}</ul>{{ end }}
+    {{ if .Terms.tags }}<ul class="tags">{{ range .Params.tags }}{{ $t := . }}{{ with termURL "tags" $t }}<li><a href="{{ . }}">{{ $t }}</a></li>{{ end }}{{ end }}</ul>{{ end }}
   </header>
   {{ .Content }}
   {{ if or .Prev .Next }}

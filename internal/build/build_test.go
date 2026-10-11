@@ -57,6 +57,31 @@ func TestStarterBuilds(t *testing.T) {
 	}
 }
 
+// A tag with punctuation links to its own page: "LINUX.com" lives at
+// /tags/linuxcom/, not /tags/linux-com/.
+func TestStarterTagLinks(t *testing.T) {
+	dir := writeStarter(t)
+	page := "---\ntitle: News\ndate: 2026-08-10\ntags: [LINUX.com, Open Source]\n---\n\nHello.\n"
+	if err := os.WriteFile(filepath.Join(dir, "content", "articles", "news.md"), []byte(page), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	res, err := Run(Options{SiteDir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, _ := os.ReadFile(filepath.Join(res.Out, "articles", "news", "index.html"))
+	for _, want := range []string{`href="/tags/linuxcom/"`, `href="/tags/open-source/"`} {
+		if !strings.Contains(string(out), want) {
+			t.Errorf("article doesn't link %s", want)
+		}
+	}
+	for _, p := range []string{"tags/linuxcom/index.html", "tags/open-source/index.html"} {
+		if _, err := os.Stat(filepath.Join(res.Out, p)); err != nil {
+			t.Errorf("missing %s", p)
+		}
+	}
+}
+
 func TestTemplatesEscape(t *testing.T) {
 	dir := writeStarter(t)
 	page := "---\ntitle: \"<script>alert(1)</script>\"\nsummary: '\"><img src=x onerror=alert(1)>'\n---\n\n<script>alert(2)</script>\n\n[x](javascript:alert(3))\n"
