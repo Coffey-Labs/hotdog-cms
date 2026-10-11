@@ -418,8 +418,23 @@ func cmdEndpoint(args []string) error {
 		return err
 	}
 	fmt.Printf("endpoint listening on %s\n", srv.Listen())
-	hs := &http.Server{Addr: srv.Listen(), Handler: srv, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10}
-	return hs.ListenAndServe()
+	viewer, viewerAddr, err := srv.Viewer()
+	if err != nil {
+		return err
+	}
+	errc := make(chan error, 2)
+	if viewer != nil {
+		fmt.Printf("submissions viewer on %s\n", viewerAddr)
+		go func() {
+			vs := &http.Server{Addr: viewerAddr, Handler: viewer, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10}
+			errc <- vs.ListenAndServe()
+		}()
+	}
+	go func() {
+		hs := &http.Server{Addr: srv.Listen(), Handler: srv, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10}
+		errc <- hs.ListenAndServe()
+	}()
+	return <-errc
 }
 
 func cmdEditor(args []string) error {

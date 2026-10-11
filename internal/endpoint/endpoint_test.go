@@ -298,3 +298,72 @@ func TestSMTPDelivery(t *testing.T) {
 		t.Fatal("no mail arrived")
 	}
 }
+
+func TestSubmissionsViewer(t *testing.T) {
+	t.Setenv("VIEWER_TOKEN", strings.Repeat("v", 40))
+	s, _, _ := setup(t, "viewer: { listen: 127.0.0.1:8182, token_env: VIEWER_TOKEN }\n")
+	start := time.Now()
+	s.now = func() time.Time { return start }
+	for i, name := range []string{"Ada", "Grace"} {
+		s.now = func() time.Time { return start }
+		tok := token(t, s)
+		s.now = func() time.Time { return start.Add(time.Duration(5+i) * time.Second) }
+		v := url.Values{"name": {name}, "email": {strings.ToLower(name) + "@example.net"}, "message": {"Hello from " + name}, "_t": {tok}, "_website": {""}}
+		if rec := post(s, v, "https://example.org", "application/json", "203.0.113.9"); rec.Code != 200 {
+			t.Fatalf("submit %s: %d %s", name, rec.Code, rec.Body)
+		}
+	}
+	h, addr, err := s.Viewer()
+	if err != nil || h == nil || addr != "127.0.0.1:8182" {
+		t.Fatalf("viewer: %v %v %s", h, err, addr)
+	}
+	get := func(path, tok string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("GET", "http://"+addr+path, nil)
+		if tok != "" {
+			req.Header.Set("Authorization", "Bearer "+tok)
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec
+	}
+	if rec := get("/sites/example.org/forms/contact", ""); rec.Code != 401 {
+		t.Errorf("no token: %d", rec.Code)
+	}
+	if rec := get("/sites/example.org/forms/contact", strings.Repeat("x", 40)); rec.Code != 401 {
+		t.Errorf("wrong token: %d", rec.Code)
+	}
+	rec := get("/sites/example.org/forms/contact", strings.Repeat("v", 40))
+	var d struct {
+		Total       int
+		Fields      []map[string]string
+		Submissions []struct {
+			Time   string
+			Values map[string]string
+		}
+	}
+	json.NewDecoder(rec.Body).Decode(&d)
+	if rec.Code != 200 || d.Total != 2 || len(d.Submissions) != 2 || d.Submissions[0].Values["name"] != "Grace" || len(d.Fields) != 3 {
+		t.Fatalf("read: %d %+v", rec.Code, d)
+	}
+	if rec := get("/sites/example.org/forms/contact?limit=1&offset=1", strings.Repeat("v", 40)); !strings.Contains(rec.Body.String(), `"Ada"`) || strings.Contains(rec.Body.String(), `"Grace"`) {
+		t.Errorf("paging: %s", rec.Body)
+	}
+	// The public endpoint knows nothing of it.
+	req := httptest.NewRequest("GET", "http://example.org/sites/example.org/forms/contact", nil)
+	req.Header.Set("Authorization", "Bearer "+strings.Repeat("v", 40))
+	pub := httptest.NewRecorder()
+	s.ServeHTTP(pub, req)
+	if pub.Code == 200 {
+		t.Error("the public endpoint served submissions")
+	}
+	// A public address is refused.
+	if err := (ViewerConfig{Listen: "0.0.0.0:8182", TokenEnv: "X"}).check(); err == nil {
+		t.Error("viewer on 0.0.0.0 accepted")
+	}
+	if err := (ViewerConfig{Listen: "203.0.113.5:8182", TokenEnv: "X"}).check(); err == nil {
+		t.Error("viewer on a public address accepted")
+	}
+	if err := (ViewerConfig{Listen: "10.0.0.5:8182", TokenEnv: "X"}).check(); err != nil {
+		t.Errorf("private address refused: %v", err)
+	}
+}

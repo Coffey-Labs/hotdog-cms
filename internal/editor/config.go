@@ -49,8 +49,18 @@ type SiteConfig struct {
 	Branch  string        `yaml:"branch"` // the branch the site publishes from; default main
 	Subdir  string        `yaml:"subdir"`
 	Preview PreviewConfig `yaml:"preview"`
+	// Submissions is where stored form submissions are read: the endpoint's
+	// viewer listener, never its public address.
+	Submissions SubmissionsConfig `yaml:"submissions"`
 
 	discovered bool // found in an account's repositories, not listed here
+}
+
+// SubmissionsConfig points the editor at an endpoint's submissions viewer.
+type SubmissionsConfig struct {
+	URL      string `yaml:"url"`       // e.g. http://10.0.0.5:8182, on a private network
+	TokenEnv string `yaml:"token_env"` // the variable holding the viewer's token
+	Site     string `yaml:"site"`      // the site's host as the endpoint knows it; default from site.yaml's url
 }
 
 // PreviewConfig says where `hotdog-cms preview` serves this repository's branches.
@@ -135,6 +145,9 @@ func LoadConfig(file string) (*Config, error) {
 		u, err := url.Parse(s.Repo)
 		if err != nil || u.Scheme != "https" && u.Scheme != "http" {
 			return nil, fmt.Errorf("%s: sites[%d]: repo must be an https clone URL", file, i)
+		}
+		if s.Submissions.URL != "" && s.Submissions.TokenEnv == "" {
+			return nil, fmt.Errorf("%s: sites[%d]: submissions needs token_env, the variable holding the viewer's token", file, i)
 		}
 		if !hosts[strings.ToLower(u.Hostname())] {
 			return nil, fmt.Errorf("%s: sites[%d]: no forge configured for %s, so nobody could sign in to it", file, i, u.Hostname())

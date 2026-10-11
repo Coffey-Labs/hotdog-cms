@@ -24,37 +24,37 @@ import (
 
 // Form is one forms/<name>.yaml.
 type Form struct {
-	Name    string  `yaml:"-"`
-	Title   string  `yaml:"title"`
-	To      string  `yaml:"to"`       // where submissions are emailed
-	Subject string  `yaml:"subject"`  // a template over the fields: "Contact: {{ .topic }}"
-	ReplyTo string  `yaml:"reply_to"` // the email field to reply to, if any
-	Fields  []Field `yaml:"fields"`
-	Submit  string  `yaml:"submit"`  // the button's text
-	Success string  `yaml:"success"` // where to send the visitor after a good submission
+	Name    string  `yaml:"-" json:"name"`
+	Title   string  `yaml:"title" json:"title,omitempty"`
+	To      string  `yaml:"to" json:"to,omitempty"`             // where submissions are emailed
+	Subject string  `yaml:"subject" json:"subject,omitempty"`   // a template over the fields: "Contact: {{ .topic }}"
+	ReplyTo string  `yaml:"reply_to" json:"reply_to,omitempty"` // the email field to reply to, if any
+	Fields  []Field `yaml:"fields" json:"fields,omitempty"`
+	Submit  string  `yaml:"submit" json:"submit,omitempty"`   // the button's text
+	Success string  `yaml:"success" json:"success,omitempty"` // where to send the visitor after a good submission
 	// Turnstile adds Cloudflare Turnstile with this site key; the endpoint
 	// checks it with HOTDOG_TURNSTILE_SECRET.
-	Turnstile string `yaml:"turnstile_sitekey"`
+	Turnstile string `yaml:"turnstile_sitekey" json:"turnstile_sitekey,omitempty"`
 	// Store appends each submission to a JSON-lines file as well as emailing it.
-	Store bool `yaml:"store"`
+	Store bool `yaml:"store" json:"store,omitempty"`
 	// Mailto is shown to visitors without JavaScript, who can't fetch the
 	// form's anti-spam token, as another way to get in touch.
-	Mailto string `yaml:"mailto"`
+	Mailto string `yaml:"mailto" json:"mailto,omitempty"`
 
 	subject *template.Template
 }
 
 // Field is one input.
 type Field struct {
-	Name     string   `yaml:"name"`
-	Type     string   `yaml:"type"` // text, email, url, tel, textarea, select, checkbox
-	Label    string   `yaml:"label"`
-	Help     string   `yaml:"help"`
-	Required bool     `yaml:"required"`
-	Max      int      `yaml:"max"` // characters; defaults per type
-	Options  []string `yaml:"options"`
+	Name     string   `yaml:"name" json:"name,omitempty"`
+	Type     string   `yaml:"type" json:"type,omitempty"` // text, email, url, tel, textarea, select, checkbox
+	Label    string   `yaml:"label" json:"label,omitempty"`
+	Help     string   `yaml:"help" json:"help,omitempty"`
+	Required bool     `yaml:"required" json:"required,omitempty"`
+	Max      int      `yaml:"max" json:"max,omitempty"` // characters; defaults per type
+	Options  []string `yaml:"options" json:"options,omitempty"`
 	// Placeholder is shown inside an empty field.
-	Placeholder string `yaml:"placeholder"`
+	Placeholder string `yaml:"placeholder" json:"placeholder,omitempty"`
 }
 
 var nameRe = regexp.MustCompile(`^[a-z][a-z0-9_]{0,39}$`)
@@ -96,20 +96,32 @@ func Load(siteDir string) (map[string]*Form, error) {
 		if err != nil {
 			return nil, err
 		}
-		var f Form
-		dec := yaml.NewDecoder(bytes.NewReader(raw))
-		dec.KnownFields(true)
-		if err := dec.Decode(&f); err != nil {
+		f, err := Parse(name, raw)
+		if err != nil {
 			return nil, fmt.Errorf("forms/%s: %w", e.Name(), err)
 		}
-		f.Name = name
-		if err := f.check(); err != nil {
-			return nil, fmt.Errorf("forms/%s: %w", e.Name(), err)
-		}
-		out[name] = &f
+		out[name] = f
 	}
 	return out, nil
 }
+
+// Parse reads one form's YAML, as Load does for each file.
+func Parse(name string, raw []byte) (*Form, error) {
+	var f Form
+	dec := yaml.NewDecoder(bytes.NewReader(raw))
+	dec.KnownFields(true)
+	if err := dec.Decode(&f); err != nil {
+		return nil, err
+	}
+	f.Name = name
+	if err := f.check(); err != nil {
+		return nil, err
+	}
+	return &f, nil
+}
+
+// ValidName reports whether name can be a form's name (its file and field).
+func ValidName(name string) bool { return nameRe.MatchString(name) }
 
 func (f *Form) check() error {
 	if !nameRe.MatchString(f.Name) {

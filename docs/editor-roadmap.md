@@ -405,13 +405,29 @@ below):
 
 ### E7 · Forms
 
-- A form builder over the YAML (fields, validation, recipient, success
-  page), with a live preview of the form in the site's styling.
-- **Submissions viewer**, reading the endpoint's JSON-lines files over an
-  authenticated, editor-only channel. It never goes through the public
-  endpoint, which stays write-only.
-  **Possible data-store point:** searching or filtering many submissions.
-  The files are fine for reading recent ones.
+*Built 2026-10-10* (see [forms.md](forms.md)):
+- **Form builder** over `forms/*.yaml`:
+  - recipient, subject, reply-to (from the form's email fields), button,
+    success page, mailto fallback, Turnstile and storage;
+  - fields with label, name, kind, choices, placeholder, help, required and
+    length, added, moved and removed;
+  - new forms and deleting them.
+
+  A live preview shows the form on the page that uses it, in the site's
+  styling. Saves go to drafts, keep the file's opening comments and write
+  only what's set.
+- **Submissions viewer** for forms with `store: true`:
+  - the endpoint opens a separate listener (`viewer:`), never its public
+    address, which stays write-only;
+  - it refuses non-private addresses and needs a 32-character token;
+  - the editor reads through it (`submissions:` per site) and shows
+    submissions newest first, with paging, only to people who can edit the
+    site, logging each read.
+- **No data store:** the JSON-lines files are still the record. Searching
+  many submissions remains the data-store point noted below, and the mail
+  server plan (submissions filed into a mailbox) is another way out.
+- **Tried** on a throwaway repository on the Coffey Labs Gitea (since
+  deleted).
 
 ### E8 · People and workflow
 

@@ -27,8 +27,9 @@ type Options struct {
 	Drafts  bool
 	URL     string // replace site.yaml's url (local preview)
 	Dev     bool
-	Now     time.Time      // judge scheduled pages against this time; default now
-	Look    map[string]any // replace site.yaml's look: (the editor's Look preview)
+	Now     time.Time         // judge scheduled pages against this time; default now
+	Look    map[string]any    // replace site.yaml's look: (the editor's Look preview)
+	Forms   map[string][]byte // replace forms/<name>.yaml (the editor's form preview)
 }
 
 // Result says what a build produced.
@@ -203,6 +204,10 @@ func Run(opt Options) (*Result, error) {
 // prepare fingerprints the assets (writing them into out, unless out is
 // empty) and loads the templates with everything they can call.
 func prepare(siteDir string, s *site.Site, out string) (*Templates, error) {
+	return prepareWith(siteDir, s, out, nil)
+}
+
+func prepareWith(siteDir string, s *site.Site, out string, formOverrides map[string][]byte) (*Templates, error) {
 	assets, err := writeAssets(filepath.Join(siteDir, "assets"), out)
 	if err != nil {
 		return nil, fmt.Errorf("assets: %w", err)
@@ -214,6 +219,13 @@ func prepare(siteDir string, s *site.Site, out string) (*Templates, error) {
 	siteForms, err := forms.Load(siteDir)
 	if err != nil {
 		return nil, err
+	}
+	for name, raw := range formOverrides {
+		f, err := forms.Parse(name, raw)
+		if err != nil {
+			return nil, fmt.Errorf("forms/%s.yaml: %w", name, err)
+		}
+		siteForms[name] = f
 	}
 	if len(siteForms) > 0 {
 		if err := assets.add(out, "hotdog-forms.js", forms.Script); err != nil {
@@ -290,7 +302,7 @@ func RenderPage(siteDir, source string, content []byte, opt Options) ([]byte, st
 		return nil, "", err
 	}
 	assignCards(s)
-	tpl, err := prepare(siteDir, s, "")
+	tpl, err := prepareWith(siteDir, s, "", opt.Forms)
 	if err != nil {
 		return nil, "", err
 	}

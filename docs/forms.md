@@ -123,3 +123,49 @@ decide on one:
   hours, from the same page.
 - **Searching or filtering stored submissions,** beyond reading the JSONL
   file.
+
+## Reading stored submissions in the editor
+
+Forms with `store: true` keep each submission in a JSON-lines file on the
+endpoint's server. The editor can show them, without the public endpoint
+ever serving them. The endpoint opens a second listener for that, the
+**submissions viewer**, only when asked:
+
+```yaml
+# endpoint.yaml
+viewer:
+  listen: 10.0.0.5:8182            # a loopback or private address only
+  token_env: HOTDOG_VIEWER_TOKEN   # at least 32 characters
+```
+
+- **Private addresses only:** the endpoint refuses to start the viewer on a
+  public address, since submissions are people's personal data. Put it on
+  the private network or VPN the editor reaches.
+- **Token:** it answers only with the token, compared in constant time.
+- **Read-only:** it only reads.
+
+Then, in the editor's configuration:
+
+```yaml
+# editor.yaml
+sites:
+  - name: Example
+    repo: https://git.example.org/me/example.git
+    submissions:
+      url: http://10.0.0.5:8182
+      token_env: HOTDOG_VIEWER_TOKEN   # the same token, in the editor's environment
+```
+
+The editor's **Forms** page shows the submissions, newest first, only to
+people the platform lets edit the site. Each read is logged.
+
+## Building forms in the editor
+
+The **Forms** page edits `forms/*.yaml` as forms:
+- the recipient, subject, reply-to field, button text, success page, mailto
+  fallback, Turnstile and storage;
+- the fields, with labels, kinds, choices, help, required and length.
+
+A preview shows the form on the page that uses it, in the site's own
+styling. Saving goes to a draft. The file's opening comments are kept, and
+only the settings that are set are written.

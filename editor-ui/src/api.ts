@@ -32,6 +32,9 @@ export type LookInfo = { look: LookFile | null; values: Record<string, LookValue
 export type FileInfo = { path: string; size: number; text: boolean }
 export type Commit = { sha: string; author: string; when: string; subject: string }
 export type Analytics = { provider: 'plausible' | 'matomo' | 'ga4'; domain?: string; src?: string; url?: string; siteId?: string; id?: string; gated?: boolean }
+export type FormField = { name: string; type?: string; label?: string; help?: string; placeholder?: string; required?: boolean; max?: number; options?: string[] }
+export type FormDef = { name?: string; title?: string; to?: string; subject?: string; reply_to?: string; submit?: string; success?: string; mailto?: string; turnstile_sitekey?: string; store?: boolean; fields: FormField[] }
+export type Submissions = { form: string; total: number; fields?: { name: string; label: string }[]; submissions: { time: string; values: Record<string, string> }[] }
 export type MediaItem = { url: string; width: number; height: number; thumb: string; bytes: number; files: number; usedBy: string[]; alt: string }
 export type Uploaded = { branch: string; commit: string; created: boolean; url: string; width: number; height: number; notes: string[] | null; files: string[] }
 
@@ -144,6 +147,12 @@ export const api = {
     get<{ verify: { google?: string; bing?: string; yandex?: string }; indexnow: string; siteURL: string; sitemap: string; commit: string; branch: string; canWrite: boolean }>(siteURL(id, 'search', { branch })),
   searchSave: (id: string, b: { branch: string; baseCommit: string; verify: Record<string, string>; indexnow: string }) =>
     post<{ branch: string; commit: string; created: boolean }>(site(id, 'search-save'), b),
+  forms: (id: string, branch?: string) =>
+    get<{ forms: { name: string; form: FormDef; usedBy: string[] | null }[]; commit: string; branch: string; canWrite: boolean; submissions: boolean }>(siteURL(id, 'forms', { branch })),
+  formLive: (id: string, b: { branch: string; name: string; form: FormDef }) => post<{ url?: string; error?: string; page?: string }>(site(id, 'form-live'), b),
+  formSave: (id: string, b: { branch: string; baseCommit: string; name: string; form?: FormDef; delete?: boolean }) =>
+    post<{ branch: string; commit: string; created: boolean }>(site(id, 'form-save'), b),
+  submissions: (id: string, form: string, offset = 0) => get<Submissions>(siteURL(id, 'submissions', { form, offset: String(offset), limit: '50' })),
   sections: (id: string, branch?: string) => get<SectionLib>(siteURL(id, 'sections', { branch })),
   media: (id: string, branch?: string) => get<MediaItem[]>(siteURL(id, 'media', { branch })),
   mediaFile: (id: string, url: string, branch?: string) => siteURL(id, 'media-file', { url, branch }),

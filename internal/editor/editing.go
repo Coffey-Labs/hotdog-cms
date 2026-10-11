@@ -31,7 +31,7 @@ func (s *Server) apiWrite(w http.ResponseWriter, r *http.Request, sess *Session,
 		apiError(w, http.StatusNotFound, "No such site, or you can't open it.")
 		return
 	}
-	if !acc.Write && action != "live" && action != "look-live" && action != "file-diff" {
+	if !acc.Write && action != "live" && action != "look-live" && action != "file-diff" && action != "form-live" {
 		apiError(w, http.StatusForbidden, "The platform gives you read-only access to this site.")
 		return
 	}
@@ -49,6 +49,10 @@ func (s *Server) apiWrite(w http.ResponseWriter, r *http.Request, sess *Session,
 		s.newPage(w, r, sess, f, st)
 	case "live":
 		s.liveRender(w, r, sess, f, st)
+	case "form-live":
+		s.formLive(w, r, sess, f, st)
+	case "form-save":
+		s.formSave(w, r, sess, f, st)
 	case "search-save":
 		s.searchSave(w, r, sess, f, st)
 	case "privacy-save":

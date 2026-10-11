@@ -61,6 +61,11 @@ func New(configFile string, logw io.Writer) (*Server, error) {
 			return nil, fmt.Errorf("%s isn't set: the client secret for %s", f.ClientSecretEnv, f.Host)
 		}
 	}
+	for _, st := range cfg.Sites {
+		if env := st.Submissions.TokenEnv; env != "" && os.Getenv(env) == "" {
+			return nil, fmt.Errorf("%s isn't set: the token for %s's submissions viewer", env, st.Name)
+		}
+	}
 	ui, _ := fs.Sub(uiFiles, "ui/dist")
 	s := &Server{cfg: cfg, seal: seal, ws: newWorkspaces(cfg.Cache), http: &http.Client{Timeout: 20 * time.Second}, log: log.New(logw, "", log.LstdFlags), ui: ui,
 		cloneURL: func(sc *SiteConfig) string { return sc.Repo }}
@@ -224,6 +229,10 @@ func (s *Server) apiRoute(w http.ResponseWriter, r *http.Request) {
 		s.apiSite(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "page":
 		s.apiPage(w, r, sess, f, parts[1])
+	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "forms":
+		s.apiForms(w, r, sess, f, parts[1])
+	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "submissions":
+		s.apiSubmissions(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "search":
 		s.apiSearch(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "privacy":

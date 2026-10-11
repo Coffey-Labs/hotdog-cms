@@ -7,6 +7,7 @@ import { go, href, useRoute, type Route } from './route'
 import { useCommands } from './Commands'
 import { Console, showConsole } from './Console'
 import { FilesView } from './Files'
+import { FormsView } from './Forms'
 import { LookPanel } from './Look'
 import { Palette, showPalette } from './Palette'
 import { PrivacyView } from './Privacy'
@@ -55,6 +56,7 @@ export function App() {
       {route.view === 'redirects' && <RedirectsView id={route.id} branch={route.branch} />}
       {route.view === 'privacy' && <PrivacyView id={route.id} branch={route.branch} />}
       {route.view === 'search' && <SearchView id={route.id} branch={route.branch} />}
+      {route.view === 'forms' && <FormsView id={route.id} branch={route.branch} form={route.form} />}
     </Shell>
   )
 }
@@ -196,6 +198,7 @@ function SiteView({ id, branch }: { id: string; branch?: string }) {
         <nav aria-label="Site files">
           <h2 className="side-label">Files</h2>
           <Link to={{ view: 'media', id, branch }} className="side-item">Pictures</Link>
+          <Link to={{ view: 'forms', id, branch }} className="side-item">Forms</Link>
           <Link to={{ view: 'look', id, branch }} className="side-item">Look</Link>
           <Link to={{ view: 'files', id, branch }} className="side-item">Files</Link>
           <Link to={{ view: 'redirects', id, branch }} className="side-item">Redirects</Link>
@@ -339,6 +342,7 @@ function GlobalCommands({ session }: { session: SessionInfo }) {
           { id: 'go-files', title: 'Files', group: 'Go to', run: () => go({ view: 'files', id, branch }) },
           { id: 'go-pictures', title: 'Pictures', group: 'Go to', run: () => go({ view: 'media', id, branch }) },
           { id: 'go-look', title: 'Look', group: 'Go to', run: () => go({ view: 'look', id, branch }) },
+          { id: 'go-forms', title: 'Forms and submissions', group: 'Go to', run: () => go({ view: 'forms', id, branch }) },
           { id: 'go-redirects', title: 'Redirects', group: 'Go to', run: () => go({ view: 'redirects', id, branch }) },
           { id: 'go-search', title: 'Search engines (verification, IndexNow)', group: 'Go to', run: () => go({ view: 'search', id, branch }) },
           { id: 'go-privacy', title: 'Privacy and statistics (analytics)', group: 'Go to', run: () => go({ view: 'privacy', id, branch }) },

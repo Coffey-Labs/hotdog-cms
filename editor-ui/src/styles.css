@@ -351,3 +351,12 @@ pre.diff .h { color: var(--muted); display: block; }
 .provider { display: grid; gap: .15rem; padding: .55rem .65rem; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
 .provider.on { border-color: var(--accent); background: var(--accent-soft); }
 .provider input { justify-self: start; }
+
+/* ---- Forms (Forms.tsx) -------------------------------------------------- */
+.form-list { display: grid; gap: .2rem; margin: .4rem 0 1rem; }
+.form-list .side-item { width: 100%; text-align: left; display: flex; justify-content: space-between; gap: .5rem; }
+.builder { display: grid; gap: .6rem; }
+.field-card { border: 1px solid var(--line); border-left: 3px solid var(--accent-soft); border-radius: 8px; padding: .6rem .7rem; background: var(--surface); }
+label.inline { display: inline-flex; align-items: center; gap: .4rem; font-weight: 500; }
+label.inline input { width: 6rem; }
+.sub-cell { max-width: 22rem; white-space: pre-wrap; overflow-wrap: anywhere; }

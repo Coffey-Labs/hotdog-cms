@@ -19,6 +19,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forms"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/starter"
@@ -1067,5 +1068,91 @@ func TestSearchEngineSettings(t *testing.T) {
 	}
 	if rec := post(s, "/api/sites/site/search-save", jar, map[string]any{"branch": "main", "baseCommit": mainTip, "indexnow": "short"}); rec.Code != 422 {
 		t.Errorf("short key: %d", rec.Code)
+	}
+}
+
+func TestFormBuilder(t *testing.T) {
+	s, ff, repo := newTestServerRepo(t)
+	jar := []*http.Cookie{signIn(t, s, ff)}
+	mainTip := git(t, repo, "rev-parse", "main")
+
+	var list struct {
+		Forms []struct {
+			Name   string
+			Form   forms.Form
+			UsedBy []string
+		}
+	}
+	json.NewDecoder(do(s, "GET", "/api/sites/site/forms", jar, nil).Body).Decode(&list)
+	if len(list.Forms) != 1 || list.Forms[0].Name != "contact" || len(list.Forms[0].UsedBy) != 1 || list.Forms[0].UsedBy[0] != "content/contact.md" || len(list.Forms[0].Form.Fields) < 2 {
+		t.Fatalf("forms: %+v", list.Forms)
+	}
+	fm := list.Forms[0].Form
+	fm.Submit = "Send it"
+	fm.Fields = append(fm.Fields, forms.Field{Name: "phone", Type: "tel", Label: "Phone"})
+
+	// The preview shows the edited form on the page that uses it.
+	rec := post(s, "/api/sites/site/form-live", jar, map[string]any{"branch": "main", "name": "contact", "form": fm})
+	var lv map[string]string
+	json.NewDecoder(rec.Body).Decode(&lv)
+	u, err := url.Parse(lv["url"])
+	if rec.Code != 200 || err != nil || lv["error"] != "" {
+		t.Fatalf("form-live: %d %v", rec.Code, lv)
+	}
+	req := httptest.NewRequest("GET", lv["url"], nil)
+	req.Host = u.Host
+	page := httptest.NewRecorder()
+	s.live.ServeHTTP(page, req)
+	if !strings.Contains(page.Body.String(), "Send it") || !strings.Contains(page.Body.String(), `name="phone"`) {
+		t.Errorf("preview:\n%s", page.Body)
+	}
+
+	// Saving keeps the file's opening comments.
+	orig := git(t, repo, "show", "main:forms/contact.yaml")
+	rec = post(s, "/api/sites/site/form-save", jar, map[string]any{"branch": "main", "baseCommit": mainTip, "name": "contact", "form": fm})
+	var sv map[string]any
+	json.NewDecoder(rec.Body).Decode(&sv)
+	if rec.Code != 200 || sv["branch"] != "draft/form-contact" {
+		t.Fatalf("save: %d %v", rec.Code, sv)
+	}
+	saved := git(t, repo, "show", "draft/form-contact:forms/contact.yaml")
+	if !strings.HasPrefix(saved, strings.SplitN(orig, "\n", 2)[0]) || !strings.Contains(saved, "submit: Send it") || !strings.Contains(saved, "- name: phone\n    type: tel") {
+		t.Errorf("saved:\n%s", saved)
+	}
+	// A field type that doesn't exist is refused; a new form is a new file.
+	tip := git(t, repo, "rev-parse", "draft/form-contact")
+	bad := forms.Form{To: "a@example.org", Fields: []forms.Field{{Name: "x", Type: "colour"}}}
+	if rec := post(s, "/api/sites/site/form-save", jar, map[string]any{"branch": "draft/form-contact", "baseCommit": tip, "name": "newsletter", "form": bad}); rec.Code != 422 {
+		t.Errorf("bad type: %d %s", rec.Code, rec.Body)
+	}
+	good := forms.Form{To: "a@example.org", Fields: []forms.Field{{Name: "email", Type: "email", Required: true}}}
+	if rec := post(s, "/api/sites/site/form-save", jar, map[string]any{"branch": "draft/form-contact", "baseCommit": tip, "name": "newsletter", "form": good}); rec.Code != 200 {
+		t.Errorf("new form: %d %s", rec.Code, rec.Body)
+	}
+	if got := git(t, repo, "show", "draft/form-contact:forms/newsletter.yaml"); got != "to: a@example.org\nfields:\n  - name: email\n    type: email\n    required: true" {
+		t.Errorf("new form file:\n%s", got)
+	}
+
+	// Submissions come through the endpoint's viewer, with the editor's token.
+	var askedWith string
+	fake := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		askedWith = r.Header.Get("Authorization")
+		if r.URL.Path != "/sites/example.org/forms/contact" {
+			w.WriteHeader(404)
+			return
+		}
+		w.Write([]byte(`{"form":"contact","total":1,"submissions":[{"time":"2026-10-10T12:00:00Z","values":{"name":"Ada"}}]}`))
+	}))
+	defer fake.Close()
+	t.Setenv("SUBS_TOKEN", strings.Repeat("s", 40))
+	s.cfg.Sites[0].Submissions = SubmissionsConfig{URL: fake.URL, TokenEnv: "SUBS_TOKEN", Site: "example.org"}
+	rec = do(s, "GET", "/api/sites/site/submissions?form=contact", jar, nil)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"Ada"`) || askedWith != "Bearer "+strings.Repeat("s", 40) {
+		t.Fatalf("submissions: %d %s (asked with %q)", rec.Code, rec.Body, askedWith)
+	}
+	// Someone who can only read the site can't read its submissions.
+	bob := addAccount(t, s, ff, nil, "bob-code")
+	if rec := do(s, "GET", "/api/sites/site/submissions?form=contact&as=forge.test/bob", bob, nil); rec.Code != 403 {
+		t.Errorf("reader: %d", rec.Code)
 	}
 }

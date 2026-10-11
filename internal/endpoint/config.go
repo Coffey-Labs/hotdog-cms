@@ -30,6 +30,8 @@ type Config struct {
 	SMTP           SMTPConfig   `yaml:"smtp"`
 	RateLimit      RateLimit    `yaml:"rate_limit"`
 	Sites          []SiteConfig `yaml:"sites"`
+	// Viewer lets the editor read stored submissions (viewer.go).
+	Viewer ViewerConfig `yaml:"viewer"`
 }
 
 // SMTPConfig is how submissions are emailed.
@@ -144,6 +146,9 @@ func LoadConfig(file string) (*Config, map[string]*siteRuntime, error) {
 	}
 	if len(sites) == 0 {
 		return nil, nil, fmt.Errorf("%s: no sites", file)
+	}
+	if err := c.Viewer.check(); err != nil {
+		return nil, nil, fmt.Errorf("%s: %w", file, err)
 	}
 	return &c, sites, nil
 }
