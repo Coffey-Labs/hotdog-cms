@@ -156,15 +156,15 @@ func Run(opt Options) (*Result, error) {
 		}
 	}
 	for name, cc := range cfg.Collections {
-		if s.Collection(name) == nil {
-			continue
-		}
-		if cc.Search {
+		if cc.Search && s.Collection(name) != nil {
 			if err := writeSearch(s, name, work); err != nil {
 				return nil, fmt.Errorf("search index for %s: %w", name, err)
 			}
 		}
-		if !cc.Feed {
+		// A feed exists as soon as the collection does (its folder has a page
+		// of its own, or any pages), so links to it work before the first
+		// post: subscribers simply see nothing yet.
+		if !cc.Feed || (s.Collection(name) == nil && s.Lists[name] == nil) {
 			continue
 		}
 		write := writeFeed

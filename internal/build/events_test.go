@@ -118,3 +118,19 @@ func TestBanners(t *testing.T) {
 		t.Error("an empty banner built")
 	}
 }
+
+func TestFeedBeforeFirstPost(t *testing.T) {
+	dir := writeStarter(t)
+	os.MkdirAll(filepath.Join(dir, "content", "news"), 0o755)
+	os.WriteFile(filepath.Join(dir, "content", "news", "_index.md"), []byte("---\ntitle: News\n---\n"), 0o644)
+	cfg, _ := os.ReadFile(filepath.Join(dir, "site.yaml"))
+	os.WriteFile(filepath.Join(dir, "site.yaml"), []byte(strings.Replace(string(cfg), "collections:\n", "collections:\n  news:\n    feed: true\n", 1)), 0o644)
+	res, err := Run(Options{SiteDir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	feed, err := os.ReadFile(filepath.Join(res.Out, "news", "feed.xml"))
+	if err != nil || !strings.Contains(string(feed), "<feed") || strings.Contains(string(feed), "<entry") {
+		t.Errorf("empty news feed: %v\n%s", err, feed)
+	}
+}
