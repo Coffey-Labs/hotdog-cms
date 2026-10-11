@@ -113,6 +113,13 @@ pre code { background: none; padding: 0; color: inherit; }
 .meta { color: var(--muted); margin: 0; }
 .tags { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
 .tags a { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--text); text-decoration: none; font-size: .85rem; }
+.pages { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 40px; flex-wrap: wrap; }
+.pages ol { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; justify-content: center; }
+.pages a { display: inline-block; min-width: 2.4em; padding: 8px 12px; text-align: center; border: 1px solid var(--line); border-radius: var(--radius); text-decoration: none; color: var(--text); background: var(--surface); }
+.pages a[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: var(--accent-text, #fff); font-weight: 600; }
+.pages .gap { padding: 8px 4px; color: var(--muted); }
+.pages .newer, .pages .older { min-width: 6.5em; }
+.pages .older { text-align: right; }
 .pager { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 48px; }
 .pager a { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; text-decoration: none; color: var(--text); background: var(--surface); }
 .pager span { display: block; font-size: .8rem; color: var(--muted); }

@@ -1,0 +1,11 @@
+{{/* Links between the pages of a long list: newer, older, and numbers.
+     Set paginate: in site.yaml (or per collection) to split lists. */}}
+{{ with .Paginator }}{{ if gt .TotalPages 1 }}
+<nav class="pages" aria-label="Pages">
+  {{ with .Prev }}<a class="newer" href="{{ .Path }}" rel="prev">← Newer</a>{{ else }}<span class="newer" aria-hidden="true"></span>{{ end }}
+  <ol>
+    {{ range .Links 2 }}{{ if .Gap }}<li class="gap" aria-hidden="true">…</li>{{ else if .Current }}<li><a href="{{ .Path }}" aria-current="page">{{ .Number }}</a></li>{{ else }}<li><a href="{{ .Path }}">{{ .Number }}</a></li>{{ end }}{{ end }}
+  </ol>
+  {{ with .Next }}<a class="older" href="{{ .Path }}" rel="next">Older →</a>{{ else }}<span class="older" aria-hidden="true"></span>{{ end }}
+</nav>
+{{ end }}{{ end }}

@@ -144,3 +144,34 @@ and so on. Two template functions use it:
 - **Contrast:** every `contrast` pair is checked in light and dark mode.
   `hotdog-cms check` refuses to publish one under 4.5:1 (`look-contrast`),
   and the Look panel shows each ratio as colors are picked.
+
+## Long lists
+
+A collection's page and a tag's page list everything in them. Set
+`paginate:` in `site.yaml` to split long lists into pages of that many:
+`/articles/`, `/articles/page/2/`, and so on. A collection can set its own
+under `collections:`.
+
+Every list page has a `.Paginator`, split or not, so a template ranges over
+`.Paginator.Items` either way:
+
+```
+<ul class="cards">
+  {{ range .Paginator.Items }}{{ template "card" . }}{{ end }}
+</ul>
+{{ template "pagination" . }}
+```
+
+| Field | What it is |
+|---|---|
+| `.Number`, `.TotalPages`, `.TotalItems` | Where this page is, and how much there is |
+| `.Items` | The pages listed on this one |
+| `.Prev`, `.Next` | The neighbouring pages (newer, older), or nothing at either end |
+| `.First`, `.All` | Page 1, and every page in order |
+| `.Links 2` | A row of numbered links: the first, the last, two either side of this one, and gaps (`.Gap`) for the rest; `.Current` marks this page |
+
+The starter's `partials/pagination.html` draws newer and older links and the
+numbers, marks the current page for screen readers, and its head adds
+`rel="prev"` and `rel="next"` and "page 2" to later pages' titles. Later
+pages keep their own canonical address. The duplicate-title check leaves
+them out.

@@ -1,9 +1,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-{{ if .IsHome }}<title>{{ .Site.Config.Name }}</title>{{ else }}<title>{{ .Title }} · {{ .Site.Config.Name }}</title>{{ end }}
+{{ $page := "" }}{{ with .Paginator }}{{ if gt .Number 1 }}{{ $page = printf " · page %d" .Number }}{{ end }}{{ end }}
+{{ if .IsHome }}<title>{{ .Site.Config.Name }}</title>{{ else }}<title>{{ .Title }}{{ $page }} · {{ .Site.Config.Name }}</title>{{ end }}
 {{ $desc := default .Site.Config.Description .Summary }}
 {{ with $desc }}<meta name="description" content="{{ . }}">{{ end }}
 <link rel="canonical" href="{{ .Permalink }}">
+{{ with .Paginator }}{{ if gt .TotalPages 1 }}{{ with .Prev }}<link rel="prev" href="{{ .Permalink }}">{{ end }}{{ with .Next }}<link rel="next" href="{{ .Permalink }}">{{ end }}{{ end }}{{ end }}
 {{ if .IsHome }}{{ verificationTags }}{{ end }}
 {{ if .NoIndex }}<meta name="robots" content="noindex">{{ end }}
 <meta property="og:site_name" content="{{ .Site.Config.Name }}">

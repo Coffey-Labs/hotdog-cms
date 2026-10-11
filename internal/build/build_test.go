@@ -104,7 +104,8 @@ func TestPaginationTermsRedirectsRSS(t *testing.T) {
 		os.WriteFile(filepath.Join(dir, "content", "articles", fmt.Sprintf("a%02d.md", i)), []byte(body), 0o644)
 	}
 	cfg, _ := os.ReadFile(filepath.Join(dir, "site.yaml"))
-	extra := "\npaginate: 5\nterm_index_min: 20\nredirects:\n  - { from: /old/, to: /about/ }\n"
+	cfg = []byte(strings.Replace(string(cfg), "\npaginate: 12\n", "\npaginate: 5\n", 1))
+	extra := "\nterm_index_min: 20\nredirects:\n  - { from: /old/, to: /about/ }\n"
 	cfg = []byte(strings.Replace(string(cfg), "    feed: true\n", "    feed: true\n    feed_format: rss\n    paginate: 6\n", 1) + extra)
 	cfg = []byte(strings.Replace(string(cfg), "markdown:", "markdown:", 1))
 	cfg = append(cfg, []byte("markdown:\n  autolink: false\n  external_links: new_tab\n")...)
@@ -120,6 +121,15 @@ func TestPaginationTermsRedirectsRSS(t *testing.T) {
 		if read(p) == "" {
 			t.Errorf("missing %s", p)
 		}
+	}
+	p2 := read("articles/page/2/index.html")
+	for _, want := range []string{"<title>Articles · page 2 · Test</title>", `<link rel="prev" href="https://example.org/articles/">`, `<link rel="next" href="https://example.org/articles/page/3/">`, `<a href="/articles/page/2/" aria-current="page">2</a>`, `<a class="older" href="/articles/page/3/" rel="next">`} {
+		if !strings.Contains(p2, want) {
+			t.Errorf("page 2 lacks %s", want)
+		}
+	}
+	if strings.Count(p2, `<li class="card">`) != 6 {
+		t.Errorf("page 2 lists %d cards, want 6", strings.Count(p2, `<li class="card">`))
 	}
 	if read("articles/page/4/index.html") != "" {
 		t.Error("a fourth page of 15 items at 6 a page")

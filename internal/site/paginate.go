@@ -19,7 +19,7 @@ func (s *Site) paginate() {
 		}
 		items := p.Pages
 		if per <= 0 || len(items) <= per {
-			p.Paginator = &Paginator{Number: 1, TotalPages: 1, TotalItems: len(items), Items: items, First: p}
+			p.Paginator = &Paginator{Number: 1, TotalPages: 1, TotalItems: len(items), Items: items, First: p, All: []*Page{p}}
 			continue
 		}
 		total := (len(items) + per - 1) / per
@@ -39,7 +39,7 @@ func (s *Site) paginate() {
 			if end > len(items) {
 				end = len(items)
 			}
-			pg.Paginator = &Paginator{Number: i + 1, TotalPages: total, TotalItems: len(items), Items: items[i*per : end], First: p}
+			pg.Paginator = &Paginator{Number: i + 1, TotalPages: total, TotalItems: len(items), Items: items[i*per : end], First: p, All: pages}
 		}
 		for i, pg := range pages {
 			if i > 0 {

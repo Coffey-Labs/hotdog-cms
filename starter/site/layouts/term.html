@@ -3,7 +3,8 @@
   <p class="eyebrow"><a href="/{{ .Taxonomy }}/">{{ .Taxonomy }}</a></p>
   <h1>{{ .Title }}</h1>
   <ul class="cards">
-    {{ range .Pages }}{{ template "card" . }}{{ end }}
+    {{ range .Paginator.Items }}{{ template "card" . }}{{ end }}
   </ul>
+  {{ template "pagination" . }}
 </section>
 {{ end }}

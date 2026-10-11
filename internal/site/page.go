@@ -61,6 +61,32 @@ type Paginator struct {
 	Items      []*Page // the items on this page
 	First      *Page   // page 1
 	Prev, Next *Page   // neighbouring pages, nil at either end
+	All        []*Page // every page of the list, in order
+}
+
+// PageLink is one entry in a row of numbered page links.
+type PageLink struct {
+	Number  int
+	Path    string
+	Current bool
+	Gap     bool // stands for the pages left out: draw "…"
+}
+
+// Links is a row of numbered links: the first and last pages, and those
+// within around of the current one, with gaps for the rest.
+//
+//	{{ range .Paginator.Links 2 }}…{{ end }}
+func (pg *Paginator) Links(around int) []PageLink {
+	var out []PageLink
+	for i, p := range pg.All {
+		n := i + 1
+		if n == 1 || n == pg.TotalPages || (n >= pg.Number-around && n <= pg.Number+around) {
+			out = append(out, PageLink{Number: n, Path: p.Path, Current: n == pg.Number})
+		} else if len(out) > 0 && !out[len(out)-1].Gap {
+			out = append(out, PageLink{Gap: true})
+		}
+	}
+	return out
 }
 
 // Section is one block of a page built from sections.

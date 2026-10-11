@@ -3,7 +3,8 @@
   <h1>{{ .Title }}</h1>
   {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
   <ul class="cards">
-    {{ range .Pages }}{{ template "card" . }}{{ end }}
+    {{ range .Paginator.Items }}{{ template "card" . }}{{ end }}
   </ul>
+  {{ template "pagination" . }}
 </section>
 {{ end }}

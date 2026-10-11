@@ -5,11 +5,16 @@ language: en
 description: A site built with HotDog CMS.
 author: Your Name
 
+# Long lists (a collection's page, a tag's page) split into pages of this
+# many: /articles/, /articles/page/2/, ... A collection can set its own.
+paginate: 12
+
 # Every folder in content/ is a collection. Settings here change its defaults.
 collections:
   articles:
     layout: article
     feed: true
+    # paginate: 20
 
 # Front matter keys that become browsable pages: /tags/ and /tags/<tag>/.
 taxonomies: [tags]
