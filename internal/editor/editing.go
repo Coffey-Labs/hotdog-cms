@@ -13,6 +13,7 @@ import (
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/check"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/gitx"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/isolate"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/media"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/preview"
@@ -196,6 +197,9 @@ func shortSHA(c string) string {
 type newRequest struct {
 	Collection string `json:"collection"`
 	Title      string `json:"title"`
+	// Branch: a draft to add the page to; empty (or the publishing branch)
+	// starts a new draft.
+	Branch string `json:"branch"`
 }
 
 func (s *Server) newPage(w http.ResponseWriter, r *http.Request, sess *Session, f *ForgeConfig, st *SiteConfig) {
@@ -214,7 +218,15 @@ func (s *Server) newPage(w http.ResponseWriter, r *http.Request, sess *Session, 
 		return
 	}
 	source := path.Join("content", req.Collection, name+".md")
-	_, siteDir, base, err := s.ws.checkout(sess, f.Kind, st, s.cloneURL(st), st.Branch)
+	from := st.Branch
+	if req.Branch != "" && req.Branch != st.Branch {
+		if !gitx.ValidBranch(req.Branch) {
+			apiError(w, http.StatusBadRequest, "That isn't a branch name the editor uses.")
+			return
+		}
+		from = req.Branch
+	}
+	_, siteDir, base, err := s.ws.checkout(sess, f.Kind, st, s.cloneURL(st), from)
 	if err != nil {
 		s.writeError(w, r, err)
 		return
@@ -232,8 +244,11 @@ func (s *Server) newPage(w http.ResponseWriter, r *http.Request, sess *Session, 
 		apiError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	target := s.draftName(r, sess, f, st, source)
-	commit, err := s.ws.save(sess, f.Kind, st, s.cloneURL(st), st.Branch, target, true, base, map[string][]byte{repoFile(st, source): content}, "New page: "+req.Title)
+	target, create := from, false
+	if from == st.Branch {
+		target, create = s.draftName(r, sess, f, st, source), true
+	}
+	commit, err := s.ws.save(sess, f.Kind, st, s.cloneURL(st), from, target, create, base, map[string][]byte{repoFile(st, source): content}, "New page: "+req.Title)
 	if err != nil {
 		s.writeError(w, r, err)
 		return

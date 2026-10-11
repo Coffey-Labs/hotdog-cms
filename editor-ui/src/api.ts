@@ -128,7 +128,7 @@ export const api = {
   quick: (id: string, b: Record<string, unknown>) => post<QuickResult>(site(id, 'quick'), b),
   save: (id: string, b: { source: string; branch: string; baseCommit: string; edit: Edit; message?: string }) =>
     post<{ branch: string; commit: string; created: boolean; preview?: string }>(site(id, 'save'), b),
-  newPage: (id: string, b: { collection: string; title: string }) => post<{ branch: string; commit: string; source: string }>(site(id, 'new'), b),
+  newPage: (id: string, b: { collection: string; title: string; branch?: string }) => post<{ branch: string; commit: string; source: string }>(site(id, 'new'), b),
   live: (id: string, b: { source: string; branch: string; edit: Edit | null }) =>
     post<{ url?: string; path?: string; error?: string; seo?: Seo; siteURL?: string }>(site(id, 'live'), b),
   review: (id: string, b: { branch: string; title: string; description: string; reviewers?: string[] }) =>

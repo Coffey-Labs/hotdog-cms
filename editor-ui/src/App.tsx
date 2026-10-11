@@ -239,7 +239,7 @@ function SiteView({ id, branch }: { id: string; branch?: string }) {
           <h2>{collection === '' ? 'All pages' : collection === '-' ? 'Pages' : (d.collections || []).find((c) => c.name === collection)?.title}</h2>
           <span className="toolbar-actions">
             {d.canWrite && <Link to={{ view: 'quick', id }} className="button primary">Quick post</Link>}
-            {d.canWrite && <NewPage id={id} collections={d.collections} />}
+            {d.canWrite && <NewPage id={id} collections={d.collections} branch={d.branch !== d.publishBranch ? d.branch : undefined} />}
             {d.preview && <button type="button" className="button" onClick={() => go({ view: 'present', id, url: d.preview!, branch })}>Present</button>}
             {d.preview && <a className="button" href={d.preview} target="_blank" rel="noopener noreferrer">Open preview ↗</a>}
           </span>
@@ -295,7 +295,7 @@ function PageRoute({ id, source, branch }: { id: string; source: string; branch?
   return <PageEditor id={id} source={source} branch={branch} site={site.data} onSiteChanged={site.reload} />
 }
 
-function NewPage({ id, collections }: { id: string; collections: SiteDetail['collections'] }) {
+function NewPage({ id, collections, branch }: { id: string; collections: SiteDetail['collections']; branch?: string }) {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [col, setCol] = useState(collections?.[0]?.name || '')
@@ -306,7 +306,7 @@ function NewPage({ id, collections }: { id: string; collections: SiteDetail['col
     setBusy(true)
     setErr(undefined)
     try {
-      const r = await api.newPage(id, { collection: col, title })
+      const r = await api.newPage(id, { collection: col, title, branch })
       go({ view: 'page', id, source: r.source, branch: r.branch })
     } catch (e) {
       setErr((e as Error).message)

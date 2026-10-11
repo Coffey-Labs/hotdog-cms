@@ -1382,3 +1382,20 @@ func TestHostCookiesOverHTTPS(t *testing.T) {
 		t.Errorf("cookie over https: %+v", c)
 	}
 }
+
+func TestNewPageOnDraft(t *testing.T) {
+	s, ff, repo := newTestServerRepo(t)
+	jar := []*http.Cookie{signIn(t, s, ff)}
+	var a, b map[string]any
+	json.NewDecoder(post(s, "/api/sites/site/new", jar, map[string]any{"collection": "", "title": "First"}).Body).Decode(&a)
+	if a["branch"] != "draft/first" {
+		t.Fatalf("new page: %v", a)
+	}
+	json.NewDecoder(post(s, "/api/sites/site/new", jar, map[string]any{"collection": "", "title": "Second", "branch": "draft/first"}).Body).Decode(&b)
+	if b["branch"] != "draft/first" {
+		t.Fatalf("second page started its own draft: %v", b)
+	}
+	if tree := git(t, repo, "ls-tree", "-r", "--name-only", "draft/first"); !strings.Contains(tree, "content/first.md") || !strings.Contains(tree, "content/second.md") {
+		t.Errorf("draft tree:\n%s", tree)
+	}
+}
