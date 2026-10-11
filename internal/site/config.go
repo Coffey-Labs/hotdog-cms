@@ -33,6 +33,10 @@ type Config struct {
 	// would otherwise hand search engines a thousand thin pages.
 	TermIndexMin int        `yaml:"term_index_min"`
 	Redirects    []Redirect `yaml:"redirects"`
+	// Analytics counts visits, only after a visitor agrees (consent.go in
+	// the build). Privacy is who answers for the site's data, for the notice.
+	Analytics *AnalyticsConfig `yaml:"analytics"`
+	Privacy   PrivacyConfig    `yaml:"privacy"`
 	// Fediverse is the author's handle (@name@instance), which Mastodon
 	// credits in link previews: <meta name="fediverse:creator">.
 	Fediverse string `yaml:"fediverse"`
@@ -176,6 +180,9 @@ func LoadConfig(dir string) (*Config, error) {
 		return nil, fmt.Errorf("site.yaml: url %q has a path; a site lives at the root of its host", c.URL)
 	}
 	c.URL = strings.TrimRight(c.URL, "/")
+	if err := c.Analytics.Validate(); err != nil {
+		return nil, fmt.Errorf("site.yaml: analytics: %w", err)
+	}
 	if c.Fediverse != "" && !fediverseRe.MatchString(c.Fediverse) {
 		return nil, fmt.Errorf("site.yaml: fediverse %q should be a handle like @name@instance.social", c.Fediverse)
 	}
@@ -249,3 +256,67 @@ func (c *CardsConfig) Signature() string {
 }
 
 var fediverseRe = regexp.MustCompile(`^@[^@\s]+@[^@\s]+\.[^@\s]+$`)
+
+// AnalyticsConfig sets up visit counting. It starts only after a visitor
+// agrees, through the consent banner, unless gated is set to false: an
+// explicit choice, which `hotdog-cms check` still warns about.
+type AnalyticsConfig struct {
+	Provider string `yaml:"provider" json:"provider"`        // plausible, matomo or ga4
+	Domain   string `yaml:"domain" json:"domain,omitempty"`  // plausible: the site's domain as Plausible knows it
+	Src      string `yaml:"src" json:"src,omitempty"`        // plausible: the script, if self-hosted
+	URL      string `yaml:"url" json:"url,omitempty"`        // matomo: where Matomo runs
+	SiteID   string `yaml:"site_id" json:"siteId,omitempty"` // matomo
+	ID       string `yaml:"id" json:"id,omitempty"`          // ga4: G-…
+	Gated    *bool  `yaml:"gated" json:"gated,omitempty"`    // default true
+}
+
+// IsGated reports whether analytics waits for consent.
+func (a *AnalyticsConfig) IsGated() bool { return a == nil || a.Gated == nil || *a.Gated }
+
+// Validate says what's wrong with the settings, or nothing.
+func (a *AnalyticsConfig) Validate() error {
+	if a == nil {
+		return nil
+	}
+	https := func(name, v string) error {
+		if v != "" && !strings.HasPrefix(v, "https://") {
+			return fmt.Errorf("%s %q should start with https://", name, v)
+		}
+		return nil
+	}
+	switch a.Provider {
+	case "plausible":
+		if a.Domain == "" {
+			return fmt.Errorf("plausible needs domain:, the site as Plausible knows it")
+		}
+		return https("src", a.Src)
+	case "matomo":
+		if a.URL == "" || a.SiteID == "" {
+			return fmt.Errorf("matomo needs url: and site_id:")
+		}
+		return https("url", a.URL)
+	case "ga4":
+		if !regexp.MustCompile(`^G-[A-Z0-9]+$`).MatchString(a.ID) {
+			return fmt.Errorf("ga4 needs id: like G-ABC123")
+		}
+		return nil
+	default:
+		return fmt.Errorf("provider %q isn't plausible, matomo or ga4", a.Provider)
+	}
+}
+
+// PrivacyConfig is what the privacy notice says about who's responsible.
+type PrivacyConfig struct {
+	Controller string        `yaml:"controller"` // the person or organization responsible
+	Contact    string        `yaml:"contact"`    // an email address to write to
+	Updated    string        `yaml:"updated"`    // when the notice last changed, as you'd write it
+	Extra      []PrivacyFact `yaml:"extra"`      // anything else the site uses
+}
+
+// PrivacyFact is one thing a site uses that touches visitors' data.
+type PrivacyFact struct {
+	What  string `yaml:"what"`
+	Who   string `yaml:"who"`
+	Why   string `yaml:"why"`
+	Basis string `yaml:"basis"` // the lawful basis: consent, legitimate interest, contract…
+}

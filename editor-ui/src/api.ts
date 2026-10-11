@@ -31,6 +31,7 @@ export type LookValue = string | { light?: string; dark?: string }
 export type LookInfo = { look: LookFile | null; values: Record<string, LookValue>; branch: string; commit: string; canWrite: boolean; minContrast: number }
 export type FileInfo = { path: string; size: number; text: boolean }
 export type Commit = { sha: string; author: string; when: string; subject: string }
+export type Analytics = { provider: 'plausible' | 'matomo' | 'ga4'; domain?: string; src?: string; url?: string; siteId?: string; id?: string; gated?: boolean }
 export type MediaItem = { url: string; width: number; height: number; thumb: string; bytes: number; files: number; usedBy: string[]; alt: string }
 export type Uploaded = { branch: string; commit: string; created: boolean; url: string; width: number; height: number; notes: string[] | null; files: string[] }
 
@@ -135,6 +136,10 @@ export const api = {
     post<{ branch: string; commit: string; created: boolean }>(site(id, 'redirects-save'), b),
   move: (id: string, b: { branch: string; baseCommit: string; source: string; to: string }) =>
     post<{ branch: string; commit: string; created: boolean; source: string; from: string; to: string; redirected: boolean }>(site(id, 'move'), b),
+  privacy: (id: string, branch?: string) =>
+    get<{ analytics: Analytics | null; privacy: { controller: string; contact: string; updated: string }; commit: string; branch: string; canWrite: boolean }>(siteURL(id, 'privacy', { branch })),
+  privacySave: (id: string, b: { branch: string; baseCommit: string; analytics: Analytics | null; privacy: Record<string, string> }) =>
+    post<{ branch: string; commit: string; created: boolean }>(site(id, 'privacy-save'), b),
   sections: (id: string, branch?: string) => get<SectionLib>(siteURL(id, 'sections', { branch })),
   media: (id: string, branch?: string) => get<MediaItem[]>(siteURL(id, 'media', { branch })),
   mediaFile: (id: string, url: string, branch?: string) => siteURL(id, 'media-file', { url, branch }),

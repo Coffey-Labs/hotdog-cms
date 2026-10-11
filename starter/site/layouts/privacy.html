@@ -1,0 +1,23 @@
+{{ define "main" }}
+<article class="wrap prose page">
+  <h1>{{ .Title }}</h1>
+  {{ .Content }}
+  {{ with .Site.Config.Privacy }}
+    {{ if .Controller }}<p>Responsible for this site: {{ .Controller }}.{{ with .Contact }} Write to {{ emailOff }}<a href="mailto:{{ . }}">{{ . }}</a>{{ emailOffEnd }}.{{ end }}</p>
+    {{ else if .Contact }}<p>Questions about your data: {{ emailOff }}<a href="mailto:{{ .Contact }}">{{ .Contact }}</a>{{ emailOffEnd }}.</p>{{ end }}
+  {{ end }}
+  <h2>What this site uses</h2>
+  {{ with privacyFacts }}
+  <div class="table-wrap">
+    <table class="privacy-facts">
+      <thead><tr><th>What</th><th>Who sees it</th><th>Why</th><th>On what basis</th></tr></thead>
+      <tbody>{{ range . }}<tr><td>{{ .What }}</td><td>{{ .Who }}</td><td>{{ .Why }}</td><td>{{ .Basis }}</td></tr>{{ end }}</tbody>
+    </table>
+  </div>
+  {{ else }}
+  <p>Nothing beyond the pages themselves: no statistics, no forms, nothing from other sites.</p>
+  {{ end }}
+  {{ if consentActive }}<p><button type="button" class="btn" data-hotdog-consent-open>Change your answer about statistics</button></p>{{ end }}
+  {{ with .Site.Config.Privacy.Updated }}<p class="muted">Last changed {{ . }}.</p>{{ end }}
+</article>
+{{ end }}

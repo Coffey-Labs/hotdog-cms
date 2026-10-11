@@ -23,6 +23,7 @@ menus:
   footer:
     - { name: Tags, url: /tags/ }
     - { name: Feed, url: /articles/feed.xml }
+    - { name: Privacy, url: /privacy/ }
 
 outputs:
   llms: true
@@ -31,6 +32,15 @@ outputs:
 # every page that doesn't set image: in its front matter. Its colors follow
 # look.yaml; set font:, background:, text:, accent: or logo: to choose.
 cards: true
+# Visit statistics, counted only after a visitor agrees (a consent banner
+# asks; "Cookie settings" in the footer changes the answer). One of:
+# analytics: { provider: plausible, domain: example.org }
+# analytics: { provider: matomo, url: "https://matomo.example.org/", site_id: "1" }
+# analytics: { provider: ga4, id: G-XXXXXXX }
+#
+# Who answers for visitors' data, for the privacy notice (/privacy/).
+# privacy: { controller: Your Name, contact: privacy@example.org }
+#
 # Your fediverse handle, which Mastodon credits in link previews.
 # fediverse: "@you@your.instance"
 # Patterns `hotdog-cms check` refuses to publish: internal host names, private

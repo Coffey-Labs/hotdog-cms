@@ -275,8 +275,8 @@ func TestSocialCards(t *testing.T) {
 		t.Fatal(err)
 	}
 	cards, _ := filepath.Glob(filepath.Join(res.Out, "cards", "*.png"))
-	// Home, the articles list, the article, contact; not 404, tags or about.
-	if len(cards) != 4 {
+	// Home, the articles list, the article, contact, privacy; not 404, tags or about.
+	if len(cards) != 5 {
 		t.Errorf("%d cards: %v", len(cards), cards)
 	}
 	// A new title is a new address, so previews refresh.

@@ -346,3 +346,8 @@ pre.diff .h { color: var(--muted); display: block; }
 .move-btn { margin-left: .6rem; }
 .move-form { border: 1px solid var(--line); border-radius: var(--radius); padding: .6rem .8rem; margin: .4rem 0 .8rem; display: grid; gap: .4rem; }
 .redirect-table input { width: 100%; }
+.wizard { display: grid; gap: .9rem; max-width: 46rem; }
+.provider-pick { display: grid; gap: .45rem; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); margin-bottom: .5rem; }
+.provider { display: grid; gap: .15rem; padding: .55rem .65rem; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+.provider.on { border-color: var(--accent); background: var(--accent-soft); }
+.provider input { justify-self: start; }

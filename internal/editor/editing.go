@@ -49,6 +49,8 @@ func (s *Server) apiWrite(w http.ResponseWriter, r *http.Request, sess *Session,
 		s.newPage(w, r, sess, f, st)
 	case "live":
 		s.liveRender(w, r, sess, f, st)
+	case "privacy-save":
+		s.privacySave(w, r, sess, f, st)
 	case "redirects-save":
 		s.redirectsSave(w, r, sess, f, st)
 	case "move":

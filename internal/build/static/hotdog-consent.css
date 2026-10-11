@@ -1,0 +1,10 @@
+/* HotDog CMS consent banner. It uses the site's colors where the theme
+   defines them (--surface, --text, --line, --accent), with plain fallbacks. */
+.hotdog-consent { position: fixed; left: 1rem; right: 1rem; bottom: 1rem; z-index: 50; max-width: 40rem; margin: 0 auto; padding: 1rem 1.2rem; border: 1px solid var(--line, #ccc); border-radius: 12px; background: var(--surface, #fff); color: var(--text, #111); box-shadow: 0 10px 30px rgba(0,0,0,.18); font: inherit; }
+.hotdog-consent p { margin: 0 0 .8rem; }
+.hotdog-consent a { color: inherit; }
+.hotdog-consent-row { display: flex; gap: .6rem; flex-wrap: wrap; }
+/* The two answers look the same: neither is the "right" one. */
+.hotdog-consent-row button { flex: 1 1 8rem; padding: .6rem 1rem; border: 2px solid currentColor; border-radius: 8px; background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
+.hotdog-consent-row button:focus-visible { outline: 3px solid var(--accent, #1a73e8); outline-offset: 2px; }
+[data-hotdog-consent-open] { cursor: pointer; }

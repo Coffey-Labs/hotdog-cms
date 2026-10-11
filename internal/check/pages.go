@@ -38,6 +38,8 @@ type page struct {
 	insecure     []string // http:// resources
 	exposed      []string // addresses and handles outside email_off
 	mailtos      []string
+	consentHosts []string // the hosts HotDog CMS's consent script loads a counter from
+	ungated      bool     // … without asking first (analytics.gated: false)
 }
 
 var (
@@ -148,6 +150,12 @@ func parsePage(data []byte, file, u string) *page {
 			case "script":
 				src, hasSrc := attr(t, "src")
 				typ, _ := attr(t, "type")
+				if _, ok := attr(t, "data-hotdog-consent"); ok {
+					hosts, _ := attr(t, "data-hosts")
+					pg.consentHosts = strings.Fields(hosts)
+					g, _ := attr(t, "data-gated")
+					pg.ungated = g == "false"
+				}
 				if hasSrc {
 					pg.scripts = append(pg.scripts, src)
 					pg.links = append(pg.links, src)

@@ -62,6 +62,9 @@ func (c *checker) checkPage(pg *page) {
 			c.add(Warning, "third-party", pg.file, "loads from %s; list it in check.allow_third_party if that's intended, and in the privacy notice", h)
 		}
 	}
+	if pg.ungated {
+		c.add(Warning, "analytics-ungated", pg.file, "visit statistics start on page view, without asking (analytics.gated: false in site.yaml)")
+	}
 	for _, js := range pg.inlineJS {
 		if strings.Contains(js, "gtag(") || strings.Contains(js, "dataLayer") || strings.Contains(js, "fbq(") || strings.Contains(js, "_paq") {
 			c.add(Error, "tracker-before-consent", pg.file, "inline tracking code runs on page view: %s", js)

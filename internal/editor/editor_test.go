@@ -1008,3 +1008,44 @@ func TestCheckRedirects(t *testing.T) {
 		}
 	}
 }
+
+func TestPrivacySettings(t *testing.T) {
+	s, ff, repo := newTestServerRepo(t)
+	jar := []*http.Cookie{signIn(t, s, ff)}
+	mainTip := git(t, repo, "rev-parse", "main")
+	orig := git(t, repo, "show", "main:site.yaml")
+
+	if rec := post(s, "/api/sites/site/privacy-save", jar, map[string]any{"branch": "main", "baseCommit": mainTip, "analytics": map[string]any{"provider": "ga4", "id": "UA-1"}}); rec.Code != 422 || !strings.Contains(rec.Body.String(), "G-ABC123") {
+		t.Errorf("bad id: %d %s", rec.Code, rec.Body)
+	}
+	if rec := post(s, "/api/sites/site/privacy-save", jar, map[string]any{"branch": "main", "baseCommit": mainTip, "privacy": map[string]string{"contact": "not an address"}}); rec.Code != 422 {
+		t.Errorf("bad contact: %d", rec.Code)
+	}
+	rec := post(s, "/api/sites/site/privacy-save", jar, map[string]any{"branch": "main", "baseCommit": mainTip,
+		"analytics": map[string]any{"provider": "plausible", "domain": "example.org"},
+		"privacy":   map[string]string{"controller": "Test Co", "contact": "privacy@example.org"}})
+	var sv map[string]any
+	json.NewDecoder(rec.Body).Decode(&sv)
+	if rec.Code != 200 || sv["branch"] != "draft/privacy" {
+		t.Fatalf("save: %d %v", rec.Code, sv)
+	}
+	cfg := git(t, repo, "show", "draft/privacy:site.yaml")
+	if cfg != orig+"\nanalytics:\n  domain: example.org\n  provider: plausible\nprivacy:\n  contact: privacy@example.org\n  controller: Test Co" {
+		t.Errorf("site.yaml:\n%s", cfg)
+	}
+	// Counting without asking is written down as a choice.
+	tip := git(t, repo, "rev-parse", "draft/privacy")
+	post(s, "/api/sites/site/privacy-save", jar, map[string]any{"branch": "draft/privacy", "baseCommit": tip,
+		"analytics": map[string]any{"provider": "plausible", "domain": "example.org", "gated": false}, "privacy": map[string]string{}})
+	cfg = git(t, repo, "show", "draft/privacy:site.yaml")
+	if !strings.Contains(cfg, "  gated: false") || strings.Contains(cfg, "\nprivacy:") {
+		t.Errorf("ungated:\n%s", cfg)
+	}
+	var got struct {
+		Analytics *site.AnalyticsConfig
+	}
+	json.NewDecoder(do(s, "GET", "/api/sites/site/privacy?branch=draft/privacy", jar, nil).Body).Decode(&got)
+	if got.Analytics == nil || got.Analytics.IsGated() {
+		t.Errorf("read back: %+v", got.Analytics)
+	}
+}

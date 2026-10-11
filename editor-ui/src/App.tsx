@@ -9,6 +9,7 @@ import { Console, showConsole } from './Console'
 import { FilesView } from './Files'
 import { LookPanel } from './Look'
 import { Palette, showPalette } from './Palette'
+import { PrivacyView } from './Privacy'
 import { RedirectsView } from './Redirects'
 import { MediaLibrary } from './Media'
 import { PageEditor } from './PageEditor'
@@ -51,6 +52,7 @@ export function App() {
       {route.view === 'look' && <LookPanel id={route.id} branch={route.branch} />}
       {route.view === 'files' && <FilesView id={route.id} branch={route.branch} path={route.path} />}
       {route.view === 'redirects' && <RedirectsView id={route.id} branch={route.branch} />}
+      {route.view === 'privacy' && <PrivacyView id={route.id} branch={route.branch} />}
     </Shell>
   )
 }
@@ -195,6 +197,7 @@ function SiteView({ id, branch }: { id: string; branch?: string }) {
           <Link to={{ view: 'look', id, branch }} className="side-item">Look</Link>
           <Link to={{ view: 'files', id, branch }} className="side-item">Files</Link>
           <Link to={{ view: 'redirects', id, branch }} className="side-item">Redirects</Link>
+          <Link to={{ view: 'privacy', id, branch }} className="side-item">Privacy &amp; statistics</Link>
         </nav>
         <nav aria-label="Drafts">
           <h2 className="side-label">Drafts</h2>
@@ -334,6 +337,7 @@ function GlobalCommands({ session }: { session: SessionInfo }) {
           { id: 'go-pictures', title: 'Pictures', group: 'Go to', run: () => go({ view: 'media', id, branch }) },
           { id: 'go-look', title: 'Look', group: 'Go to', run: () => go({ view: 'look', id, branch }) },
           { id: 'go-redirects', title: 'Redirects', group: 'Go to', run: () => go({ view: 'redirects', id, branch }) },
+          { id: 'go-privacy', title: 'Privacy and statistics (analytics)', group: 'Go to', run: () => go({ view: 'privacy', id, branch }) },
         ]
       : []),
     { id: 'console-open', title: 'Open the console', group: 'Editor', keys: 'Ctrl+`', run: showConsole },

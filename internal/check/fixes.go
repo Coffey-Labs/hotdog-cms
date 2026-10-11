@@ -29,5 +29,6 @@ var Fixes = map[string]string{
 	"img-alt":                "Add alt text to the image, or alt=\"\" if it's only decoration.",
 	"image-location":         "Upload the picture through the editor (it removes location data), or strip it: exiftool -gps:all= FILE",
 	"image-weight":           "Upload the picture through the editor, which resizes it and makes WebP copies, or shrink it before committing.",
+	"analytics-ungated":      "Remove gated: false from analytics: in site.yaml, so the consent banner asks first; if you keep it, say so in the privacy notice.",
 	"look-contrast":          "Pick colors further apart in the Look panel (it shows the ratio as you go); text needs 4.5:1.",
 }

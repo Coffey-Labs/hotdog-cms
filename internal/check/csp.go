@@ -57,6 +57,13 @@ func policy(pages []*page) string {
 				add("frame-src", o)
 			}
 		}
+		// A counter the consent script loads (only after consent): its own
+		// script, where it reports, and its tracking pixel.
+		for _, h := range pg.consentHosts {
+			add("script-src", h)
+			add("connect-src", h)
+			add("img-src", h)
+		}
 		if len(pg.inlineJS) > 0 || len(pg.handlers) > 0 {
 			add("script-src", "'unsafe-inline'")
 		}
@@ -78,7 +85,7 @@ func policy(pages []*page) string {
 		list("style-src", "'self'"),
 		list("img-src", "'self'"),
 		"font-src 'self'",
-		"connect-src 'self'",
+		list("connect-src", "'self'"),
 	}
 	if len(sets["frame-src"]) > 0 {
 		parts = append(parts, list("frame-src"))

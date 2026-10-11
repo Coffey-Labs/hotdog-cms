@@ -220,6 +220,14 @@ func prepare(siteDir string, s *site.Site, out string) (*Templates, error) {
 			return nil, err
 		}
 	}
+	if s.Config.Analytics != nil {
+		if err := assets.add(out, "hotdog-consent.js", consentScript); err != nil {
+			return nil, err
+		}
+		if err := assets.add(out, "hotdog-consent.css", consentStyle); err != nil {
+			return nil, err
+		}
+	}
 	// The site's look: a stylesheet of what it changes, after the theme's own.
 	look, err := site.LoadLook(siteDir)
 	if err != nil {
@@ -245,6 +253,9 @@ func prepare(siteDir string, s *site.Site, out string) (*Templates, error) {
 		u, _ := assets.URL("look.css")
 		return u
 	}
+	fm["consent"] = func() template.HTML { return consentTags(s.Config, assets) }
+	fm["consentActive"] = func() bool { return s.Config.Analytics != nil }
+	fm["privacyFacts"] = func() []site.PrivacyFact { return privacyFacts(s.Config, siteForms) }
 	fm["look"] = func(name string) string {
 		if look == nil {
 			return ""
