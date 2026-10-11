@@ -1,0 +1,21 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/calendar/calendar.css" }}">
+<section class="wrap page cal-list">
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  <p class="cal-subscribe">
+    <a class="btn" href="{{ webcal .Collection }}">Subscribe in your calendar app</a>
+    <span class="cal-feed">or add this address to it: <code>{{ calendarURL .Collection }}</code></span>
+  </p>
+  <h2>Coming up</h2>
+  {{ with upcoming .Collection }}
+  <ul class="cal-items">{{ range . }}{{ template "calendar-event" . }}{{ end }}</ul>
+  {{ else }}
+  <p class="cal-none">Nothing on the calendar right now.</p>
+  {{ end }}
+  {{ with pastEvents .Collection 10 }}
+  <h2>Recently</h2>
+  <ul class="cal-items cal-past">{{ range . }}{{ template "calendar-event" . }}{{ end }}</ul>
+  {{ end }}
+</section>
+{{ end }}

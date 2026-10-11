@@ -1,0 +1,8 @@
+{{/* One event in a list: its date, title, when and where. */}}
+<li class="cal-item{{ if .Event.Cancelled }} is-cancelled{{ end }}">
+  <time class="cal-date" datetime="{{ .Event.Start.Format "2006-01-02" }}"><span class="cal-m">{{ .Event.Start.Format "Jan" }}</span><span class="cal-d">{{ .Event.Start.Format "2" }}</span></time>
+  <div class="cal-text">
+    <a class="cal-title" href="{{ .Href }}">{{ .Title }}</a>{{ if .Event.Cancelled }} <strong class="cal-status">Cancelled</strong>{{ else if eq .Event.Status "postponed" }} <strong class="cal-status">Postponed</strong>{{ end }}
+    <p class="cal-when">{{ .Event.When }}{{ with .Event.Location }} · {{ . }}{{ end }}</p>
+  </div>
+</li>

@@ -54,6 +54,14 @@ const nginxConf = `server {
         add_header X-Content-Type-Options "nosniff" always;
     }
 
+    # Calendar feeds: nginx doesn't know .ics, and calendar apps want
+    # text/calendar.
+    location ~ "\.ics$" {
+        default_type "text/calendar; charset=utf-8";
+        add_header Cache-Control "no-cache" always;
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
     location = /` + build.Marker + ` { return 404; }
     location = /` + build.RedirectsFile + ` { return 404; }
 {{REDIRECTS}}    error_page 404 /404.html;
@@ -78,6 +86,8 @@ const caddyFile = `:8080 {
 	@hashed path_regexp \.[0-9a-f]{10}\.[A-Za-z0-9]+$
 	header @hashed Cache-Control "public, immutable, max-age=31536000"
 	header ?Cache-Control "no-cache"
+	@ics path *.ics
+	header @ics Content-Type "text/calendar; charset=utf-8"
 	respond /` + build.Marker + ` 404
 	respond /` + build.RedirectsFile + ` 404
 {{REDIRECTS}}	file_server

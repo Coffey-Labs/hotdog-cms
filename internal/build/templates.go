@@ -157,6 +157,9 @@ func (t *Templates) layoutFor(p *site.Page, cfg *site.Config) (string, error) {
 		}
 		try = append(try, "page")
 	case site.KindList:
+		if l := cfg.Collections[p.Collection].ListLayout; l != "" {
+			try = append(try, l)
+		}
 		try = append(try, "list")
 	case site.KindTerm:
 		try = append(try, "term", "list")

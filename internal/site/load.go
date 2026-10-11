@@ -30,11 +30,16 @@ type Site struct {
 	Data        map[string]any // data/*.yaml and data/*.json, by file name without extension
 	BuildTime   time.Time
 	Dev         bool // built by `hotdog-cms serve`
-	// NextScheduled is the earliest publish_at still in the future: the
-	// moment a rebuild will change the site without a new commit.
+	// NextScheduled is the earliest moment a rebuild will change the site
+	// without a new commit: a publish_at still in the future, or an event
+	// ending (it leaves the upcoming lists).
 	NextScheduled time.Time
-	Markdown      *Markdown
-	terms         map[string]*termIndex
+	// Now is the time the build judges against: scheduled pages, upcoming
+	// events. Location is the site's time zone.
+	Now      time.Time
+	Location *time.Location
+	Markdown *Markdown
+	terms    map[string]*termIndex
 }
 
 // Options change what Load includes.
@@ -82,6 +87,10 @@ func Load(dir string, opt Options) (*Site, error) {
 	if now.IsZero() {
 		now = time.Now()
 	}
+	if s.Location, err = cfg.Location(); err != nil {
+		return nil, err
+	}
+	s.Now = now
 	if s.Data, err = loadData(filepath.Join(dir, "data")); err != nil {
 		return nil, err
 	}
@@ -100,10 +109,14 @@ func Load(dir string, opt Options) (*Site, error) {
 		if pg.Draft && !opt.Drafts {
 			return nil
 		}
+		if err := pg.resolveEvent(s.Location); err != nil {
+			return fmt.Errorf("content/%s: %w", rel, err)
+		}
+		if pg.Event != nil {
+			s.schedule(pg.Event.Ends(), now)
+		}
 		if !pg.PublishAt.IsZero() && pg.PublishAt.After(now) {
-			if s.NextScheduled.IsZero() || pg.PublishAt.Before(s.NextScheduled) {
-				s.NextScheduled = pg.PublishAt
-			}
+			s.schedule(pg.PublishAt, now)
 			if !opt.Drafts {
 				return nil
 			}
@@ -160,6 +173,13 @@ func Load(dir string, opt Options) (*Site, error) {
 	return s, nil
 }
 
+// schedule notes a moment the site changes by itself, if it's still ahead.
+func (s *Site) schedule(t, now time.Time) {
+	if t.After(now) && (s.NextScheduled.IsZero() || t.Before(s.NextScheduled)) {
+		s.NextScheduled = t
+	}
+}
+
 var leadImageRe = regexp.MustCompile(`\A\s*!\[([^\]]*)\]\(([^)\s]+)\)`)
 
 var frontMatterRe = regexp.MustCompile(`(?s)\A---\r?\n(.*?)\r?\n---\r?\n?`)
@@ -169,6 +189,7 @@ func loadPage(raw []byte, rel string, md *Markdown) (*Page, error) {
 	raw = bytes.TrimPrefix(raw, []byte("\xef\xbb\xbf"))
 	fm := map[string]any{}
 	body := raw
+	var eventStart, eventEnd string
 	if m := frontMatterRe.FindSubmatchIndex(raw); m != nil {
 		if err := yaml.Unmarshal(raw[m[2]:m[3]], &fm); err != nil {
 			simple, ok := simpleFrontMatter(string(raw[m[2]:m[3]]))
@@ -176,13 +197,23 @@ func loadPage(raw []byte, rel string, md *Markdown) (*Page, error) {
 				return nil, fmt.Errorf("front matter: %w", err)
 			}
 			fm = simple
+		} else if fm["start"] != nil {
+			// An event's times as written: YAML would read a bare
+			// timestamp as UTC, but they're in the site's time zone.
+			var ev struct{ Start, End yaml.Node }
+			if yaml.Unmarshal(raw[m[2]:m[3]], &ev) == nil {
+				eventStart, eventEnd = ev.Start.Value, ev.End.Value
+			}
 		}
 		if fm == nil {
 			fm = map[string]any{}
 		}
 		body = raw[m[1]:]
 	}
-	p := &Page{Kind: KindPage, Source: rel, Params: fm, Terms: map[string][]string{}}
+	p := &Page{Kind: KindPage, Source: rel, Params: fm, Terms: map[string][]string{}, eventStart: eventStart, eventEnd: eventEnd}
+	if p.eventStart == "" && fm["start"] != nil {
+		p.eventStart, p.eventEnd = str(fm["start"]), str(fm["end"])
+	}
 	p.Title = str(fm["title"])
 	p.Summary = str(fm["summary"])
 	if p.Summary == "" {
@@ -335,7 +366,11 @@ func (s *Site) assemble() {
 		}
 	}
 	for name, pages := range s.Collections {
-		sortPages(pages, cfg.Collections[name].Sort)
+		by := cfg.Collections[name].Sort
+		if by == "" && cfg.Collections[name].Calendar {
+			by = "start"
+		}
+		sortPages(pages, by)
 		for i, p := range pages {
 			if i > 0 {
 				p.Prev = pages[i-1]
@@ -397,6 +432,14 @@ func sortPages(pages []*Page, by string) {
 		switch by {
 		case "title":
 			return strings.ToLower(a.Title) < strings.ToLower(b.Title)
+		case "start": // events, soonest first; pages that aren't events after them
+			if (a.Event == nil) != (b.Event == nil) {
+				return a.Event != nil
+			}
+			if a.Event != nil && !a.Event.Start.Equal(b.Event.Start) {
+				return a.Event.Start.Before(b.Event.Start)
+			}
+			return a.Path < b.Path
 		case "weight":
 			if a.Weight != b.Weight {
 				return a.Weight < b.Weight

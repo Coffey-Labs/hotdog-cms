@@ -27,7 +27,7 @@ import (
 // HTML rule. A template author cannot open a hole by accident.
 func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.FuncMap {
 	hashes := map[string]string{} // fileHash results; pages render one at a time
-	return template.FuncMap{
+	m := template.FuncMap{
 		// asset "styles.css" -> /styles.3f9a1c2b07.css; an unknown name fails the build.
 		"asset": a.URL,
 		// absURL "/about/" -> https://example.org/about/
@@ -228,6 +228,10 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 			return SectionContext{Type: sec.Type, Data: sec.Data, Page: p, Site: s}
 		},
 	}
+	for k, v := range eventFuncs(s) {
+		m[k] = v
+	}
+	return m
 }
 
 // staticPath maps a site path like /img/x.jpg into the site's static folder,

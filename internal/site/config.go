@@ -16,10 +16,14 @@ import (
 
 // Config is site.yaml.
 type Config struct {
-	Name        string                      `yaml:"name"`
-	URL         string                      `yaml:"url"`
-	Language    string                      `yaml:"language"`
-	Description string                      `yaml:"description"`
+	Name        string `yaml:"name"`
+	URL         string `yaml:"url"`
+	Language    string `yaml:"language"`
+	Description string `yaml:"description"`
+	// Timezone is where the site's events happen (an IANA name such as
+	// America/Phoenix): event times without a zone are read in it, and
+	// pages show them in it. Default UTC.
+	Timezone    string                      `yaml:"timezone"`
 	Author      string                      `yaml:"author"`
 	Markdown    MarkdownConfig              `yaml:"markdown"`
 	Collections map[string]CollectionConfig `yaml:"collections"`
@@ -113,6 +117,14 @@ type CollectionConfig struct {
 	FeedDescription string `yaml:"feed_description"`
 	// Paginate overrides the site's paginate for this collection's list.
 	Paginate int `yaml:"paginate"`
+	// ListLayout is the layout for the collection's own page (/<collection>/);
+	// default list.
+	ListLayout string `yaml:"list_layout"`
+	// Calendar writes /<collection>/calendar.ics, a feed of the collection's
+	// events that calendar apps subscribe to (webcal://). Its pages are
+	// sorted by start unless sort says otherwise.
+	Calendar     bool   `yaml:"calendar"`
+	CalendarName string `yaml:"calendar_name"` // what calendar apps call it; default "<site>: <collection>"
 	// Search writes /<collection>/search.json, an index of the collection's
 	// pages for a search box to load when someone searches.
 	Search bool `yaml:"search"`
@@ -363,4 +375,8 @@ type PackRef struct {
 	Source  string   `yaml:"source,omitempty" json:"source,omitempty"`
 	Commit  string   `yaml:"commit,omitempty" json:"commit,omitempty"`
 	Files   []string `yaml:"files" json:"files"`
+
+	// From the last install, for showing; never written to site.yaml.
+	AddedCollections []string `yaml:"-" json:"-"`
+	Notes            string   `yaml:"-" json:"-"`
 }

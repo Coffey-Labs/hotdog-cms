@@ -46,7 +46,10 @@ type Page struct {
 	PublishAt  time.Time  // front matter publish_at: left out of live builds until then
 	LeadImage  *LeadImage // the picture the body opens with, if it opens with one
 	Paginator  *Paginator // for list and taxonomy pages
+	Event      *Event     // set when the front matter has start: (event.go)
 	Site       *Site
+
+	eventStart, eventEnd string // start: and end: as written, read in the site's time zone
 }
 
 // LeadImage is an image at the very top of a page's body, which templates can

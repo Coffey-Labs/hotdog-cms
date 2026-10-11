@@ -1,0 +1,22 @@
+{{/* section
+label: Upcoming events
+about: The next few events from the calendar, with a link to subscribe.
+fields:
+  - { name: heading, type: text, default: Coming up }
+  - { name: collection, type: collection, default: events, help: The collection the events are in. }
+  - { name: count, type: number, default: 3, label: How many }
+  - { name: subscribe, type: bool, default: true, label: Show the subscribe link }
+*/}}
+{{ $c := default "events" .Data.collection }}{{ $n := default 3 .Data.count }}
+<link rel="stylesheet" href="{{ asset "packs/calendar/calendar.css" }}">
+<section class="block">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with upcoming $c $n }}
+    <ul class="cal-items">{{ range . }}{{ template "calendar-event" . }}{{ end }}</ul>
+    {{ else }}
+    <p class="cal-none">Nothing on the calendar right now.</p>
+    {{ end }}
+    <p class="cal-more"><a class="more" href="/{{ $c }}/">The whole calendar</a>{{ if .Data.subscribe }} · <a href="{{ webcal $c }}">Subscribe</a>{{ end }}</p>
+  </div>
+</section>

@@ -587,7 +587,7 @@ func cmdImport(args []string) error {
 }
 
 func cmdPack(args []string) error {
-	usage := errors.New("usage: hotdog-cms pack add <folder|git-url[@tag]> [-force] | remove <name> | list | check <folder>  (all take -site, default .)")
+	usage := errors.New("usage: hotdog-cms pack add [-force] <name|folder|git-url[@tag]> | remove <name> | list | check <name|folder|git-url>\n(each takes -site DIR before its argument; default .)")
 	if len(args) == 0 {
 		return usage
 	}
@@ -609,7 +609,14 @@ func cmdPack(args []string) error {
 		for _, f := range ref.Files {
 			fmt.Println(" ", f)
 		}
+		if len(ref.AddedCollections) > 0 {
+			fmt.Printf("site.yaml: added collections settings for %s\n", strings.Join(ref.AddedCollections, ", "))
+		}
 		fmt.Println("They're the site's files now: commit them, and review them like any change.")
+		if ref.Notes != "" {
+			fmt.Println()
+			fmt.Print(strings.TrimRight(ref.Notes, "\n") + "\n")
+		}
 	case "remove":
 		if fl.NArg() != 1 {
 			return usage
@@ -633,11 +640,12 @@ func cmdPack(args []string) error {
 			}
 			fmt.Printf("%s %s (%d files, from %s)\n", p.Name, p.Version, len(p.Files), src)
 		}
+		fmt.Printf("\nPacks that come with HotDog CMS (hotdog-cms pack add <name>): %s\n", strings.Join(packs.BundledNames(), ", "))
 	case "check":
 		if fl.NArg() != 1 {
 			return usage
 		}
-		m, files, err := packs.Check(fl.Arg(0))
+		m, files, err := packs.CheckSource(fl.Arg(0))
 		if err != nil {
 			return err
 		}

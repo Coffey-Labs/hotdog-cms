@@ -139,6 +139,9 @@ func Run(opt Options) (*Result, error) {
 	}
 
 	cfg := s.Config
+	if err := writeCalendars(s, work); err != nil {
+		return nil, err
+	}
 	if cfg.Outputs.SitemapOn() {
 		if err := writeSitemap(s, work); err != nil {
 			return nil, err

@@ -1,0 +1,19 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/calendar/calendar.css" }}">
+<article class="wrap page cal-event{{ if .Event }}{{ if .Event.Cancelled }} is-cancelled{{ end }}{{ end }}">
+  {{ with index .Site.Lists .Collection }}<p class="eyebrow"><a href="{{ .Path }}">{{ .Title }}</a></p>{{ end }}
+  <h1>{{ .Title }}</h1>
+  {{ with .Event }}
+  {{ if .Cancelled }}<p class="cal-banner">This event is cancelled.</p>{{ else if eq .Status "postponed" }}<p class="cal-banner">This event is postponed. A new date will be posted here.</p>{{ end }}
+  <dl class="cal-facts">
+    <div><dt>When</dt><dd><time datetime="{{ if .AllDay }}{{ .Start.Format "2006-01-02" }}{{ else }}{{ date "rfc3339" .Start }}{{ end }}">{{ .When }}</time></dd></div>
+    {{ with .Location }}<div><dt>Where</dt><dd>{{ . }}</dd></div>{{ end }}
+  </dl>
+  <p class="cal-actions">
+    {{ with .Link }}<a class="btn primary" href="{{ . }}">Tickets and sign-up</a>{{ end }}
+    {{ if not .Cancelled }}<a class="btn" href="{{ $.EventICS }}" download>Add to my calendar</a>{{ end }}
+  </p>
+  {{ end }}
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+</article>
+{{ end }}

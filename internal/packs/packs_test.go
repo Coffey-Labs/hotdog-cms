@@ -148,3 +148,40 @@ func TestPacksCarryNoCode(t *testing.T) {
 		}
 	}
 }
+
+func TestBundledCalendar(t *testing.T) {
+	if !Bundled("calendar") || Bundled("../calendar") || Bundled("nope") {
+		t.Fatal("bundled pack names")
+	}
+	dir := starterSite(t)
+	ref, err := Add(dir, "calendar", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ref.Source != "hotdog-cms:calendar" || len(ref.AddedCollections) != 1 || ref.Notes == "" {
+		t.Errorf("ref: %+v", ref)
+	}
+	cfg, _ := site.LoadConfig(dir)
+	if cc := cfg.Collections["events"]; !cc.Calendar || cc.Layout != "event" || cc.ListLayout != "events" {
+		t.Errorf("events collection: %+v", cc)
+	}
+	if raw, _ := os.ReadFile(filepath.Join(dir, "site.yaml")); !strings.Contains(string(raw), "    # paginate: 20\n  events:\n") {
+		t.Errorf("site.yaml's comments moved:\n%s", raw)
+	}
+	os.MkdirAll(filepath.Join(dir, "content", "events"), 0o755)
+	os.WriteFile(filepath.Join(dir, "content", "events", "fair.md"), []byte("---\ntitle: Fair\nstart: 2099-05-01\n---\n"), 0o644)
+	res, err := build.Run(build.Options{SiteDir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, _ := os.ReadFile(filepath.Join(res.Out, "events", "index.html"))
+	for _, want := range []string{"Coming up", `href="/events/fair/"`, "webcal://example.org/events/calendar.ics", "Friday, May 1, 2099"} {
+		if !strings.Contains(string(list), want) {
+			t.Errorf("events page lacks %q", want)
+		}
+	}
+	// Installing again keeps the site's own settings for the collection.
+	if ref, err := Add(dir, "calendar", false); err != nil || len(ref.AddedCollections) != 0 {
+		t.Errorf("reinstall: %v %+v", err, ref)
+	}
+}

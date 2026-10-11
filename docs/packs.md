@@ -12,6 +12,7 @@ Content-Security-Policy as the site's own.
 
 ## Using one
 
+    hotdog-cms pack add calendar                                       # one that comes with HotDog CMS
     hotdog-cms pack add ../faq-pack                                    # a folder
     hotdog-cms pack add https://git.example.org/packs/faq.git@v1.2.0   # a repository, at a tag
     hotdog-cms pack list
@@ -25,6 +26,9 @@ Content-Security-Policy as the site's own.
   overwritten, unless you add `-force`. Two packs can't install the same
   file.
 - `remove` takes the pack's files out and forgets it.
+- `list` also names the packs that come with HotDog CMS. For now that's
+  **calendar**: events, an upcoming-events section and a feed people
+  subscribe to (see [events.md](events.md)).
 - `-site` picks the site folder (default: the current one).
 
 ```yaml
@@ -61,7 +65,19 @@ title: FAQ
 description: Questions and answers that open and close.
 license: MIT
 author: Example Studio
+# Settings its layouts expect, added to site.yaml's collections: on install
+# unless the site already configures that collection.
+collections:
+  faq:
+    layout: faq-page
+# Shown after installing: what to do next.
+notes: |
+  Add questions as content/faq/<name>.md.
 ```
+
+Collection settings are data, not code, and are checked against what
+`site.yaml` accepts. Removing a pack leaves them, since they may have been
+changed and do nothing without the pack's layouts.
 
 What a pack can hold:
 - **Templates:** `.html` files directly in `sections/`, `partials/` or

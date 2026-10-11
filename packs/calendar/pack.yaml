@@ -1,0 +1,27 @@
+name: calendar
+version: 1.0.0
+title: Calendar
+description: Events with their own pages, an upcoming-events section, and a feed people subscribe to in their calendar app (webcal).
+license: MIT
+author: Coffey Labs LLC
+# Installing adds this to site.yaml's collections:, unless the site already
+# has an events collection configured.
+collections:
+  events:
+    layout: event
+    list_layout: events
+    calendar: true
+notes: |
+  Add events as content/events/<name>.md:
+
+    ---
+    title: Spring open house
+    start: 2026-11-07 18:00
+    end: 2026-11-07 20:00
+    location: The Grange Hall, 12 Main St
+    ---
+    What's happening, in Markdown.
+
+  Times are in the site's timezone: set timezone: in site.yaml (America/Phoenix,
+  Europe/Berlin, ...). /events/ lists what's coming up, /events/calendar.ics is
+  the feed, and the "Upcoming events" section puts the next few on any page.

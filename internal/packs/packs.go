@@ -36,6 +36,7 @@ import (
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/siteyaml"
+	bundled "git.coffeylabs.org/coffey-labs/hotdog-cms/packs"
 )
 
 // Manifest is a pack's pack.yaml.
@@ -46,6 +47,12 @@ type Manifest struct {
 	Description string `yaml:"description"`
 	License     string `yaml:"license"`
 	Author      string `yaml:"author"`
+	// Collections are settings a pack's layouts expect (calendar: true,
+	// layout: event). Installing adds each to site.yaml's collections:
+	// unless the site already configures that collection.
+	Collections map[string]yaml.Node `yaml:"collections"`
+	// Notes are shown after installing: what to do next.
+	Notes string `yaml:"notes"`
 }
 
 var (
@@ -79,6 +86,18 @@ func Check(dir string) (*Manifest, []File, error) {
 	}
 	if m.Version == "" {
 		return nil, nil, fmt.Errorf("pack.yaml: version is required")
+	}
+	for name, node := range m.Collections {
+		var cc site.CollectionConfig
+		if !nameRe.MatchString(name) {
+			return nil, nil, fmt.Errorf("pack.yaml: collection %q should be lowercase letters, digits and dashes", name)
+		}
+		raw, _ := yaml.Marshal(&node)
+		dec := yaml.NewDecoder(bytes.NewReader(raw))
+		dec.KnownFields(true)
+		if err := dec.Decode(&cc); err != nil {
+			return nil, nil, fmt.Errorf("pack.yaml: collections: %s: %w", name, err)
+		}
 	}
 	var files []File
 	var problems []string
@@ -139,11 +158,56 @@ func Check(dir string) (*Manifest, []File, error) {
 	return &m, files, nil
 }
 
-// fetch makes a local copy of a pack: a folder as it is, or a git repository
-// (url, or url@ref) cloned at that point. It returns the folder and the commit.
+// Bundled says whether name is a pack that comes with HotDog CMS.
+func Bundled(name string) bool {
+	if !nameRe.MatchString(name) {
+		return false
+	}
+	_, err := fs.Stat(bundled.FS, name+"/pack.yaml")
+	return err == nil
+}
+
+// BundledNames lists the packs that come with HotDog CMS.
+func BundledNames() []string {
+	var out []string
+	entries, _ := fs.ReadDir(bundled.FS, ".")
+	for _, e := range entries {
+		if e.IsDir() && Bundled(e.Name()) {
+			out = append(out, e.Name())
+		}
+	}
+	return out
+}
+
+// CheckSource is Check for anything Add takes: a folder, a bundled pack's
+// name or a git repository.
+func CheckSource(src string) (*Manifest, []File, error) {
+	tmp, err := os.MkdirTemp("", "hotdog-cms-pack-")
+	if err != nil {
+		return nil, nil, err
+	}
+	defer os.RemoveAll(tmp)
+	dir, _, err := fetch(src, tmp)
+	if err != nil {
+		return nil, nil, err
+	}
+	return Check(dir)
+}
+
+// fetch makes a local copy of a pack: a folder as it is, a pack that comes
+// with HotDog CMS by name, or a git repository (url, or url@ref) cloned at
+// that point. It returns the folder and the commit.
 func fetch(src, tmp string) (string, string, error) {
 	if fi, err := os.Stat(src); err == nil && fi.IsDir() {
 		return src, "", nil
+	}
+	if Bundled(src) {
+		dir := filepath.Join(tmp, "pack")
+		sub, _ := fs.Sub(bundled.FS, src)
+		if err := os.CopyFS(dir, sub); err != nil {
+			return "", "", err
+		}
+		return dir, "", nil
 	}
 	repo, ref := src, ""
 	if i := strings.LastIndex(src, "@"); i > strings.Index(src, "://")+3 && !strings.Contains(src[i:], "/") {
@@ -215,6 +279,8 @@ func Add(siteDir, src string, force bool) (*site.PackRef, error) {
 	ref := site.PackRef{Name: m.Name, Version: m.Version, Source: src, Commit: commit}
 	if fi, err := os.Stat(src); err == nil && fi.IsDir() {
 		ref.Source = "" // a local folder's path means nothing to anyone else
+	} else if Bundled(src) {
+		ref.Source = "hotdog-cms:" + src
 	}
 	for _, f := range files {
 		data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(f.From)))
@@ -234,7 +300,46 @@ func Add(siteDir, src string, force bool) (*site.PackRef, error) {
 	for f := range mine { // dropped by the new version
 		_ = os.Remove(filepath.Join(siteDir, filepath.FromSlash(f)))
 	}
-	return &ref, writeRefs(siteDir, append(others, ref))
+	if err := writeRefs(siteDir, append(others, ref)); err != nil {
+		return nil, err
+	}
+	added, err := addCollections(siteDir, cfg, m)
+	ref.AddedCollections = added
+	ref.Notes = m.Notes
+	return &ref, err
+}
+
+// addCollections puts the pack's collection settings in site.yaml, for
+// collections the site doesn't configure yet. Removing the pack leaves them:
+// they may have been changed since, and they do nothing without its layouts.
+func addCollections(siteDir string, cfg *site.Config, m *Manifest) ([]string, error) {
+	var names []string
+	for name := range m.Collections {
+		if _, ok := cfg.Collections[name]; !ok {
+			names = append(names, name)
+		}
+	}
+	if len(names) == 0 {
+		return nil, nil
+	}
+	sort.Strings(names)
+	p := filepath.Join(siteDir, "site.yaml")
+	raw, err := os.ReadFile(p)
+	if err != nil {
+		return nil, err
+	}
+	text := string(raw)
+	for _, name := range names {
+		var v map[string]any
+		node := m.Collections[name]
+		if err := node.Decode(&v); err != nil {
+			return nil, err
+		}
+		if text, err = siteyaml.AddEntry(text, "collections", name, v); err != nil {
+			return nil, err
+		}
+	}
+	return names, os.WriteFile(p, []byte(text), 0o644)
 }
 
 // Remove takes a pack's files out of a site and forgets it.
