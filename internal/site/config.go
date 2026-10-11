@@ -24,8 +24,8 @@ type Config struct {
 	// Timezone is where the site's events happen (an IANA name such as
 	// America/Phoenix): event times without a zone are read in it, and
 	// pages show them in it. Default UTC.
-	Timezone    string                      `yaml:"timezone"`
-	Author      string                      `yaml:"author"`
+	Timezone string `yaml:"timezone"`
+	Author   string `yaml:"author"`
 	// Copyright is who holds the copyright the footer shows; default the
 	// site's name.
 	Copyright string `yaml:"copyright"`
@@ -33,7 +33,7 @@ type Config struct {
 	CopyrightURL string `yaml:"copyright_url"`
 	// Credit shows "Built with HotDog CMS" in the footer, linking to
 	// hotdogcms.org.
-	Credit bool `yaml:"credit"`
+	Credit      bool                        `yaml:"credit"`
 	Markdown    MarkdownConfig              `yaml:"markdown"`
 	Collections map[string]CollectionConfig `yaml:"collections"`
 	Taxonomies  []string                    `yaml:"taxonomies"`
