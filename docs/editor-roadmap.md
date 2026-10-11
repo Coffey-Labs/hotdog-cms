@@ -163,6 +163,41 @@ the rules it has to keep:
 - **Possible data-store point:** none expected. Tokens live in the operator's
   environment or CI secrets, as deploy credentials do today.
 
+### Mail servers: inbuxa and others (wanted, not yet designed)
+
+John, 2026-10-10: plug straight into inbuxa, or a similar mail server, to set
+up email for forms and the rest, securely. Today the forms endpoint sends
+through any SMTP server, with a password in its environment. The idea:
+- **Connect once, least privilege.** The operator connects the endpoint to
+  their mail server. What it holds is a credential that can only send, only
+  from the site's own address (`forms@example.org`), only to the form's
+  recipients, at a limited rate. It never reads a mailbox.
+  - On inbuxa: an OAuth client (inbuxa only accepts registered clients)
+    sending through JMAP. Where inbuxa lacks a send-only scope, that's an
+    inbuxa feature to add (and a divergence-log entry).
+  - Elsewhere: SMTP submission over TLS, and JMAP where the server speaks it.
+- **The credential lives with the endpoint,** in the operator's environment,
+  like every other secret: never in the editor, never in a repository.
+- **Setup helper:**
+  - create the sending address or identity;
+  - check the domain's mail records (SPF, DKIM, DMARC), showing what's
+    missing rather than changing DNS on its own;
+  - send a test message.
+
+  Where the mail server manages DNS itself, as inbuxa does for DKIM, defer to
+  it.
+- **Submissions into the mail server:** optionally, deliver each submission
+  as a message filed into a mailbox (a Sieve rule files it into "Forms"). The
+  mail server's spam filtering and search then do the work, and the E7
+  submissions viewer could read that mailbox with a read-only grant instead
+  of the JSON-lines files. **No data store:** the mail server is the store.
+- **Other mail functions, later:** the "thanks, we got it" reply from the
+  site's address, newsletter sign-up handed to the mail server's lists, and
+  `security.txt` and privacy-page contacts checked against addresses that
+  actually exist.
+- **inbuxa first** because it's ours; then generic JMAP and SMTP servers, and
+  maybe sending services (Postmark, SES) through the same narrow interface.
+
 ### Several accounts and repositories
 
 *Built 2026-10-10* (John: operators may have several accounts, on one git
