@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { ACCEPT } from './Media'
 import { api, type Field, type MediaItem, type SectionInfo, type SectionLib } from './api'
 
 // A page made of sections, as cards: add one from the site's library, drag or
@@ -57,9 +58,11 @@ function summary(d: Data): string {
   return ''
 }
 
-export type Ctx = { id: string; branch: string; lib: SectionLib }
+// upload, when the panel offers it, saves a picture to the site and returns
+// its address; the panel takes care of the draft it lands on.
+export type Ctx = { id: string; branch: string; lib: SectionLib; upload?: (file: File) => Promise<string> }
 
-export function SectionsEditor({ id, branch, value, onChange, disabled }: { id: string; branch: string; value: Sec[]; onChange: (v: Sec[]) => void; disabled?: boolean }) {
+export function SectionsEditor({ id, branch, value, onChange, disabled, upload }: { id: string; branch: string; value: Sec[]; onChange: (v: Sec[]) => void; disabled?: boolean; upload?: (file: File) => Promise<string> }) {
   const [lib, setLib] = useState<SectionLib>()
   const [error, setError] = useState<string>()
   const [open, setOpen] = useState<string>()
@@ -108,7 +111,7 @@ export function SectionsEditor({ id, branch, value, onChange, disabled }: { id: 
                   {s.raw !== undefined && <p className="muted small">This entry isn't a section the form can edit; change it in the YAML view.</p>}
                   {s.raw === undefined && lib && !si && <p className="notice bad small">This site has no <span className="mono">sections/{s.type}.html</span>, so the page won't build until it's removed or added.</p>}
                   {si?.problem && <p className="notice warn small">The section's field list couldn't be read ({si.problem}); its fields were worked out from the template instead.</p>}
-                  {si && lib && <Fields fields={si.fields} value={s.data} onChange={(d) => set(i, { ...s, data: d })} ctx={{ id, branch, lib }} disabled={disabled} />}
+                  {si && lib && <Fields fields={si.fields} value={s.data} onChange={(d) => set(i, { ...s, data: d })} ctx={{ id, branch, lib, upload }} disabled={disabled} />}
                   {extra.length > 0 && <p className="muted small">Also has {extra.join(', ')}; edit {extra.length === 1 ? 'it' : 'them'} in the YAML view.</p>}
                 </div>
               )}
@@ -275,6 +278,22 @@ function FieldInput({ field: f, value, onChange, ctx, disabled }: { field: Field
 export function ImageField({ f, label, help, value, onChange, ctx, disabled }: { f: Field; label: React.ReactNode; help: React.ReactNode; value: string; onChange: (v: unknown) => void; ctx: Ctx; disabled?: boolean }) {
   const [picking, setPicking] = useState(false)
   const [items, setItems] = useState<MediaItem[]>()
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [upErr, setUpErr] = useState<string>()
+  const send = async (file?: File) => {
+    if (!file || !ctx.upload) return
+    setUploading(true)
+    setUpErr(undefined)
+    try {
+      onChange(await ctx.upload(file))
+      setPicking(false)
+    } catch (e) {
+      setUpErr((e as Error).message)
+    } finally {
+      setUploading(false)
+    }
+  }
   useEffect(() => {
     if (picking && !items) api.media(ctx.id, ctx.branch).then(setItems, () => setItems([]))
   }, [picking])
@@ -285,12 +304,17 @@ export function ImageField({ f, label, help, value, onChange, ctx, disabled }: {
         <span className="image-row">
           <input value={value} disabled={disabled} placeholder="/media/…" onChange={(e) => onChange(e.target.value)} />
           {!disabled && <button type="button" className="ghost small" onClick={() => setPicking(!picking)}>{picking ? 'Close' : 'Choose'}</button>}
+          {!disabled && ctx.upload && (
+            <button type="button" className="ghost small" disabled={uploading} onClick={() => fileRef.current?.click()}>{uploading ? 'Uploading…' : 'Upload'}</button>
+          )}
         </span>
       </label>
+      {ctx.upload && <input ref={fileRef} type="file" accept={ACCEPT} className="visually-hidden" tabIndex={-1} aria-hidden="true" onChange={(e) => { send(e.target.files?.[0]); e.target.value = '' }} />}
+      {upErr && <span className="field-warn small">{upErr}</span>}
       {help}
       {picking && (
         <ul className="media-grid small">
-          {items?.length === 0 && <li className="muted small">No pictures yet; add one from the body with Insert picture.</li>}
+          {items?.length === 0 && <li className="muted small">No pictures yet{ctx.upload ? '; upload one.' : '; add one from the body with Insert picture.'}</li>}
           {items?.map((m) => (
             <li key={m.url}>
               <button type="button" className={`media-pick ${value === m.url ? 'on' : ''}`} onClick={() => { onChange(m.url); setPicking(false) }}>

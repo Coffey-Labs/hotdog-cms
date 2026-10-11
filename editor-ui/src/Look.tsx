@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { api, type LookFile, type LookInfo, type LookToken, type LookValue, type SiteDetail } from './api'
+import { api, type LookFile, type LookInfo, type LookToken, type LookValue, type SiteDetail, type Uploaded } from './api'
 import { useShortcut } from './Commands'
 import { ReviewForm } from './PageEditor'
 import { go } from './route'
@@ -51,11 +51,22 @@ export function LookPanel({ id, branch }: { id: string; branch?: string }) {
   const [site, setSite] = useState<SiteDetail>()
   const [reviewOpen, setReviewOpen] = useState(false)
 
+  // A picture uploaded for the logo can start a draft; the panel moves to it
+  // and keeps the choices made so far.
+  const afterUpload = useRef<Uploaded>(undefined)
+  const carry = useRef<Record<string, LookValue>>(undefined)
+  const upload = async (file: File) => {
+    const r = await api.upload(id, file, { branch: branch || info?.branch || '', baseCommit: info?.commit || '', source: 'look.md' })
+    afterUpload.current = r
+    return r.url
+  }
   const load = () =>
     api.look(id, branch).then(
       (i) => {
         setInfo(i)
-        setVals(i.values || {})
+        const c = carry.current
+        carry.current = undefined
+        setVals(c || i.values || {})
       },
       (e: Error) => setError(e.message),
     )
@@ -68,6 +79,18 @@ export function LookPanel({ id, branch }: { id: string; branch?: string }) {
   const onDraft = site ? cur !== site.publishBranch : false
   const review = site?.reviews?.find((r) => r.branch === cur)
   const dirty = info ? JSON.stringify(vals) !== JSON.stringify(info.values || {}) : false
+  useEffect(() => {
+    const r = afterUpload.current
+    if (!r) return
+    afterUpload.current = undefined
+    setStatus({ kind: 'good', text: `Added ${r.url}${r.created ? ` on a new draft, ${r.branch}` : ''}. Save to keep it in the look.` })
+    if (r.created || r.branch !== cur) {
+      carry.current = vals
+      go({ view: 'look', id, branch: r.branch })
+    } else if (info) {
+      setInfo({ ...info, commit: r.commit })
+    }
+  }, [vals])
 
   // The preview follows the choices, a moment after the last change.
   const timer = useRef<number>(0)
@@ -193,7 +216,7 @@ export function LookPanel({ id, branch }: { id: string; branch?: string }) {
 
           <div className="form look-form">
             {info.look.tokens.map((t) => (
-              <TokenInput key={t.name} t={t} value={vals[t.name]} onChange={(v) => setVal(t.name, v)} id={id} branch={cur} disabled={!canWrite} />
+              <TokenInput key={t.name} t={t} value={vals[t.name]} onChange={(v) => setVal(t.name, v)} id={id} branch={cur} disabled={!canWrite} upload={upload} />
             ))}
           </div>
         </section>
@@ -215,7 +238,7 @@ function label(lf: LookFile, name: string) {
   return lf.tokens.find((t) => t.name === name)?.label || name
 }
 
-function TokenInput({ t, value, onChange, id, branch, disabled }: { t: LookToken; value?: LookValue; onChange: (v: LookValue | undefined) => void; id: string; branch: string; disabled?: boolean }) {
+function TokenInput({ t, value, onChange, id, branch, disabled, upload }: { t: LookToken; value?: LookValue; onChange: (v: LookValue | undefined) => void; id: string; branch: string; disabled?: boolean; upload?: (file: File) => Promise<string> }) {
   const reset = value !== undefined && !disabled && <button type="button" className="ghost small" onClick={() => onChange(undefined)}>Use the theme's</button>
   const help = t.help && <span className="muted small">{t.help}</span>
   switch (t.type) {
@@ -266,7 +289,7 @@ function TokenInput({ t, value, onChange, id, branch, disabled }: { t: LookToken
           help={help}
           value={light(value)}
           onChange={(v) => onChange((v as string) || undefined)}
-          ctx={{ id, branch, lib: { sections: [], data: [], collections: [] } }}
+          ctx={{ id, branch, lib: { sections: [], data: [], collections: [] }, upload }}
           disabled={disabled}
         />
       )

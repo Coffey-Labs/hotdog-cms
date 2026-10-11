@@ -257,6 +257,29 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
     }
   }
 
+  // A picture uploaded into a section's field: like Insert picture, it may
+  // start a draft, and the editor moves there with the unsaved edits.
+  const sectionUpload = useRef<Uploaded>(undefined)
+  const uploadForSection = async (file: File) => {
+    const r = await api.upload(id, file, { branch: cur, baseCommit: page?.commit || '', source })
+    sectionUpload.current = r
+    return r.url
+  }
+  useEffect(() => {
+    const r = sectionUpload.current
+    if (!r) return
+    sectionUpload.current = undefined
+    const notes = (r.notes || []).join(' ')
+    setStatus({ kind: 'good', text: `Added ${r.url}${r.created ? ` on a new draft, ${r.branch}` : ''}. ${notes} Save to keep it in the page.`.trim() })
+    onSiteChanged()
+    if (r.created || r.branch !== cur) {
+      if (fields) carry.current = { fields, body, yaml, yamlMode, secs }
+      go({ view: 'page', id, source, branch: r.branch })
+    } else if (page) {
+      setPage({ ...page, commit: r.commit })
+    }
+  }, [secs])
+
   const publish = async () => {
     setBusy(true)
     setStatus({ kind: 'info', text: 'Checking the draft and publishing…' })
@@ -410,7 +433,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
         {secs && !yamlMode && (
           <>
             <h2 className="side-label">Sections <span className="muted small">the page, top to bottom</span></h2>
-            <SectionsEditor id={id} branch={cur} value={secs} onChange={setSecs} disabled={!canWrite} />
+            <SectionsEditor id={id} branch={cur} value={secs} onChange={setSecs} disabled={!canWrite} upload={uploadForSection} />
           </>
         )}
         <div className="body-head">
