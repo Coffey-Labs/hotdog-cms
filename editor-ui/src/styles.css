@@ -344,6 +344,7 @@ pre.diff .h { color: var(--muted); display: block; }
 .visual-host .ProseMirror blockquote { margin: 0 0 .8rem; padding-left: .9rem; border-left: 3px solid var(--accent-soft); color: var(--muted); }
 .visual-host .ProseMirror pre { background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem; font: .85rem/1.5 var(--mono); }
 .visual-host .ProseMirror code { font-family: var(--mono); font-size: .9em; background: var(--accent-soft); padding: .05em .3em; border-radius: 4px; }
+.visual-host .ProseMirror pre code { background: none; padding: 0; border-radius: 0; font-size: inherit; }
 .visual-host .ProseMirror img { max-width: 100%; height: auto; border-radius: 6px; }
 .visual-host .ProseMirror img.ProseMirror-selectednode { outline: 3px solid var(--accent); }
 .visual-host .ProseMirror hr { border: 0; border-top: 2px solid var(--line); margin: 1rem 0; }
