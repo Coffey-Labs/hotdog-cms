@@ -90,6 +90,12 @@ func Write(items []Item, opt Options) (*Report, error) {
 	}
 	keptHTML := false
 	redirects := map[string]string{}
+	oldPages := map[string]bool{} // the old site's pages that come across
+	for _, it := range items {
+		if p := oldPath(it.OldURL); p != "" {
+			oldPages[p] = true
+		}
+	}
 	for _, it := range items {
 		// Slugs and folders come from the export or the old site, so they're
 		// made safe here: one plain name each, never "..", never a path.
@@ -166,7 +172,7 @@ func Write(items []Item, opt Options) (*Report, error) {
 					body = strings.ReplaceAll(body, u, bring(u))
 				}
 			} else {
-				body = conv.Markdown
+				body = unlinkOldPictures(conv.Markdown, opt.Base, oldPages)
 				for _, u := range conv.Images {
 					if n := bring(u); n != u {
 						body = strings.ReplaceAll(body, "]("+u, "]("+n)
@@ -192,7 +198,7 @@ func Write(items []Item, opt Options) (*Report, error) {
 			fm["updated"] = it.Updated.Format("2006-01-02")
 		}
 		if it.Summary != "" {
-			fm["summary"] = it.Summary
+			fm["summary"] = shortSummary(it.Summary)
 		}
 		if len(it.Tags) > 0 {
 			fm["tags"] = it.Tags
@@ -287,6 +293,52 @@ func Write(items []Item, opt Options) (*Report, error) {
 
 var mdImage = regexp.MustCompile(`!\[([^\]]*)\]\(\s*<?([^)\s>]+)`)
 
+// shortSummary keeps a summary to what search results show (about 160
+// characters): whole sentences while they fit, else the first one cut at a
+// word. WordPress's excerpts are its first 55 words, twice that.
+func shortSummary(s string) string {
+	const max = 160
+	if len([]rune(s)) <= max {
+		return s
+	}
+	out := ""
+	for _, sent := range regexp.MustCompile(`[^.!?]+[.!?]+(\s+|$)`).FindAllString(s, -1) {
+		if len([]rune(out+sent)) > max {
+			break
+		}
+		out += sent
+	}
+	if out = strings.TrimSpace(out); out != "" {
+		return out
+	}
+	r := []rune(s)[:max-1]
+	cut := strings.LastIndex(string(r), " ")
+	if cut < max/2 {
+		cut = len(string(r))
+	}
+	return strings.TrimRight(string(r)[:cut], " ,;:—-") + "…"
+}
+
+// unlinkOldPictures takes the link off a picture that links to something on
+// the old site that doesn't come across: a WordPress gallery links each
+// thumbnail to its attachment page or the full-size file. The picture stays.
+func unlinkOldPictures(md, base string, oldPages map[string]bool) string {
+	b, err := url.Parse(base)
+	if err != nil || base == "" {
+		return md
+	}
+	return linkedPicture.ReplaceAllStringFunc(md, func(m string) string {
+		sm := linkedPicture.FindStringSubmatch(m)
+		u, err := url.Parse(sm[2])
+		if err != nil || (u.Host != "" && u.Host != b.Host) || oldPages[oldPath(b.ResolveReference(u).String())] {
+			return m
+		}
+		return sm[1]
+	})
+}
+
+var linkedPicture = regexp.MustCompile(`\[(!\[[^\]]*\]\([^)]*\))\]\(([^)\s]+)\)`)
+
 func imageAddresses(h string) []string {
 	var out []string
 	for _, m := range regexp.MustCompile(`<img[^>]+src="([^"]+)"`).FindAllStringSubmatch(h, -1) {
@@ -295,9 +347,12 @@ func imageAddresses(h string) []string {
 	return out
 }
 
-// cleanHTML drops WordPress's block markers from HTML that's kept as it is.
+// cleanHTML drops WordPress's block markers from HTML that's kept as it is,
+// and the srcset and sizes on its pictures: they list the old site's copies,
+// and only the picture itself is brought across.
 func cleanHTML(h string) string {
 	h = regexp.MustCompile(`<!-- /?wp:[^>]*-->\n?`).ReplaceAllString(h, "")
+	h = regexp.MustCompile(`\s(srcset|sizes)="[^"]*"`).ReplaceAllString(h, "")
 	return strings.TrimSpace(h) + "\n"
 }
 

@@ -19,6 +19,8 @@ func TestToMarkdown(t *testing.T) {
 		{"break and strike", `<p>Line one<br>line two <del>gone</del></p>`, "Line one\\\nline two ~~gone~~\n"},
 		{"simple table", `<table><thead><tr><th>Plan</th><th>Price</th></tr></thead><tbody><tr><td>Basic</td><td>$5</td></tr></tbody></table>`,
 			"| Plan | Price |\n| --- | --- |\n| Basic | $5 |\n"},
+		{"wordpress caption", `<figure id="attachment_5" style="width: 1600px" class="wp-caption aligncenter"><img class="size-full" src="/a.jpg" alt="A dock" width="1600" height="900" srcset="/a-300.jpg 300w" sizes="100vw"><figcaption class="wp-caption-text">At dawn</figcaption></figure>`,
+			"![A dock](/a.jpg)\n\n*At dawn*\n"},
 		{"block comments ignored", "<!-- wp:paragraph -->\n<p>Hi</p>\n<!-- /wp:paragraph -->", "Hi\n"},
 	} {
 		got := ToMarkdown(c.in)
@@ -54,5 +56,37 @@ func TestSafeImportPaths(t *testing.T) {
 	}
 	if s := slugify("Café Ñandú 日本"); s != "café-ñandú-日本" {
 		t.Errorf("letters lost: %q", s)
+	}
+}
+
+func TestShortSummary(t *testing.T) {
+	long := "In the realm of Linux system administration, tools like sudo are indispensable. However, there's a newcomer on the block, run0. This tool is designed to provide a secure way to run commands as root."
+	if got := shortSummary(long); got != "In the realm of Linux system administration, tools like sudo are indispensable. However, there's a newcomer on the block, run0." {
+		t.Errorf("sentences: %q", got)
+	}
+	one := strings.Repeat("word ", 50) + "end."
+	if got := shortSummary(one); len([]rune(got)) > 160 || !strings.HasSuffix(got, "word…") {
+		t.Errorf("one long sentence: %q (%d)", got, len([]rune(got)))
+	}
+	if got := shortSummary("Short and sweet."); got != "Short and sweet." {
+		t.Errorf("short: %q", got)
+	}
+}
+
+func TestCleanHTMLDropsSrcset(t *testing.T) {
+	got := cleanHTML(`<img src="/a.jpg" srcset="https://old.example/a-300.jpg 300w, https://old.example/a-1024.jpg 1024w" sizes="(max-width: 1600px) 100vw, 1600px" alt="x">`)
+	if strings.Contains(got, "srcset") || strings.Contains(got, "sizes") || !strings.Contains(got, `src="/a.jpg"`) {
+		t.Errorf("cleanHTML: %q", got)
+	}
+}
+
+func TestUnlinkOldPictures(t *testing.T) {
+	md := "[![Shot](https://old.example/wp-content/uploads/a-150x150.jpg)](https://old.example/a/)\n\n" +
+		"[![Post](/p.jpg)](https://old.example/kept-post/)\n\n[![Elsewhere](/e.jpg)](https://other.example/x/)\n"
+	got := unlinkOldPictures(md, "https://old.example", map[string]bool{"/kept-post/": true})
+	want := "![Shot](https://old.example/wp-content/uploads/a-150x150.jpg)\n\n" +
+		"[![Post](/p.jpg)](https://old.example/kept-post/)\n\n[![Elsewhere](/e.jpg)](https://other.example/x/)\n"
+	if got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}
 }
