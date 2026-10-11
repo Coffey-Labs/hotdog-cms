@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/about"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forms"
 )
 
@@ -67,6 +68,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	if r.URL.Path == "/_hotdog/health" {
 		fmt.Fprintln(w, "ok")
+		return
+	}
+	if r.URL.Path == "/_hotdog/source" {
+		http.Redirect(w, r, about.Get(s.cfg.Source, nil).Source, http.StatusFound)
 		return
 	}
 	host := strings.ToLower(r.Host)

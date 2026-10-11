@@ -19,6 +19,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/about"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forms"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
@@ -1258,5 +1259,16 @@ func TestPipelineFile(t *testing.T) {
 		if pipelineFile(p) != want {
 			t.Errorf("%s: want %v", p, want)
 		}
+	}
+}
+
+func TestAboutBeforeSignIn(t *testing.T) {
+	s, _ := newTestServer(t)
+	s.cfg.Links = []about.Link{{Name: "Privacy", URL: "https://example.org/privacy/"}}
+	rec := do(s, "GET", "/api/about", nil, nil)
+	var a about.Info
+	json.NewDecoder(rec.Body).Decode(&a)
+	if rec.Code != 200 || a.License != "AGPL-3.0-or-later" || !strings.HasPrefix(a.Source, about.DefaultSource) || a.CompanyURL != "https://coffeylabs.org" || len(a.Links) != 1 {
+		t.Errorf("about: %d %+v", rec.Code, a)
 	}
 }

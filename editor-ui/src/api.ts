@@ -38,6 +38,11 @@ export type Submissions = { form: string; total: number; fields?: { name: string
 export type MediaItem = { url: string; width: number; height: number; thumb: string; bytes: number; files: number; usedBy: string[]; alt: string }
 export type Uploaded = { branch: string; commit: string; created: boolean; url: string; width: number; height: number; notes: string[] | null; files: string[] }
 
+export type About = {
+  name: string; version: string; revision?: string; modified?: boolean; copyright: string; companyURL: string
+  source: string; license: string; licenseURL: string; links?: { name: string; url: string }[]
+}
+
 export class SignedOut extends Error {}
 export class Conflict extends Error {}
 export class CheckFailed extends Error {
@@ -160,6 +165,7 @@ export const api = {
   media: (id: string, branch?: string) => get<MediaItem[]>(siteURL(id, 'media', { branch })),
   mediaFile: (id: string, url: string, branch?: string) => siteURL(id, 'media-file', { url, branch }),
   session: () => get<SessionInfo>('/api/session'),
+  about: () => get<About>('/api/about'),
   sites: () => get<SiteSummary[]>('/api/sites'),
   site: (id: string, branch?: string) => get<SiteDetail>(siteURL(id, '', { branch })),
   page: (id: string, source: string, branch?: string) => get<PageDetail>(siteURL(id, 'page', { source, branch })),

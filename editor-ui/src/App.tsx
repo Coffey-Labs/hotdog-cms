@@ -1,3 +1,4 @@
+import { Footer } from './Footer'
 import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
 import logoDark from '../../brand/svg/logo-header-dark.svg'
 import logoLight from '../../brand/svg/logo-header-light.svg'
@@ -79,6 +80,7 @@ function Shell({ children, session, onAccountsChanged }: { children: ReactNode; 
         </div>
       </header>
       <main id="main">{children}</main>
+      <Footer />
       {session?.signedIn && <GlobalCommands session={session} />}
       {session?.signedIn && <Palette />}
       {session?.signedIn && <Console />}
@@ -96,24 +98,27 @@ function Problem({ error }: { error: Error }) {
 function SignIn({ session }: { session: SessionInfo }) {
   const ret = location.pathname + location.search
   return (
-    <div className="signin">
-      <div className="card">
-        <img className="signin-logo only-light" src={logoLight} alt="HotDog CMS" />
-        <img className="signin-logo only-dark" src={logoDark} alt="HotDog CMS" />
-        <h1>Sign in</h1>
-        <p className="muted">
-          With the git platform your sites live on. The editor keeps no accounts of its own: what you can open and change is
-          what the platform already lets you, and every change is made as you.
-        </p>
-        <div className="stack">
-          {session.forges.map((f) => (
-            <a key={f.host} className="button primary" href={signInURL(f.host, ret)}>
-              Sign in with {label(f.kind)} <span className="muted-on">· {f.host}</span>
-            </a>
-          ))}
-          {session.forges.length === 0 && <p className="notice bad">No git platform is configured for this editor.</p>}
+    <div className="app">
+      <div className="signin">
+        <div className="card">
+          <img className="signin-logo only-light" src={logoLight} alt="HotDog CMS" />
+          <img className="signin-logo only-dark" src={logoDark} alt="HotDog CMS" />
+          <h1>Sign in</h1>
+          <p className="muted">
+            With the git platform your sites live on. The editor keeps no accounts of its own: what you can open and change is
+            what the platform already lets you, and every change is made as you.
+          </p>
+          <div className="stack">
+            {session.forges.map((f) => (
+              <a key={f.host} className="button primary" href={signInURL(f.host, ret)}>
+                Sign in with {label(f.kind)} <span className="muted-on">· {f.host}</span>
+              </a>
+            ))}
+            {session.forges.length === 0 && <p className="notice bad">No git platform is configured for this editor.</p>}
+          </div>
         </div>
       </div>
+      <Footer />
     </div>
   )
 }

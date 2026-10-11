@@ -90,6 +90,7 @@ smtp:
   from: "Example <forms@example.org>"
   tls: starttls                      # or tls (465); none only to localhost
 rate_limit: { count: 5, window: 10m }
+# source: https://git.example.org/me/hotdog-cms  # only if you've changed the code
 sites:
   - dir: /srv/sites/example.org      # the site's source: site.yaml, forms/
     public: /var/www/example.org     # the built site, for search
@@ -111,6 +112,11 @@ location /_hotdog/ {
 ```
 
 For local work, `hotdog-cms serve -endpoint http://127.0.0.1:8180` does the same.
+
+`/_hotdog/source` sends people to the endpoint's source code, as the AGPL
+asks of software people use over a network. Leave `source` out when running
+HotDog CMS as released; if you've changed the code, publish your changes and
+set `source` to where they are.
 
 ## Where a data store would come in
 

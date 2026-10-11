@@ -37,7 +37,27 @@ sites:                               # sites offered to everyone who can open th
 live:                                # the live preview of pages being edited
   listen: 127.0.0.1:8191
   domain: live.example.org           # previews are <token>.live.example.org
+
+links:                               # your own, in the footer
+  - { name: Privacy, url: https://example.org/privacy/ }
+  - { name: Help, url: https://example.org/help/ }
+# source: https://git.example.org/me/hotdog-cms  # only if you've changed the code
 ```
+
+### The footer and the source link
+
+A bar along the bottom of every screen, signed in or not, shows the
+copyright, a link to coffeylabs.org, the version, and links to the source
+code and the license. Your `links` (a privacy notice, terms, where to get
+help) go there too.
+
+HotDog CMS is under the GNU Affero General Public License. Anyone using the
+editor over a network may have the source of the version they're using, and
+the source link is how they get it. As released, it points at the exact
+commit the binary was built from. **If you've changed the code**, publish
+your changes and set `source` to where they are; the footer says "modified"
+when the binary was built from uncommitted changes. The endpoint answers the
+same way at `/_hotdog/source` (see [forms.md](forms.md)).
 
 ### Signing in
 

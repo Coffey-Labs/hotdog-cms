@@ -367,3 +367,18 @@ func TestSubmissionsViewer(t *testing.T) {
 		t.Errorf("private address refused: %v", err)
 	}
 }
+
+func TestSourceLink(t *testing.T) {
+	s, _, _ := setup(t, "")
+	rec := httptest.NewRecorder()
+	s.ServeHTTP(rec, httptest.NewRequest("GET", "http://anything.example/_hotdog/source", nil))
+	if rec.Code != 302 || !strings.HasPrefix(rec.Header().Get("Location"), "https://git.coffeylabs.org/coffey-labs/hotdog-cms") {
+		t.Errorf("source: %d %s", rec.Code, rec.Header().Get("Location"))
+	}
+	s.cfg.Source = "https://git.example.org/me/hotdog-fork"
+	rec = httptest.NewRecorder()
+	s.ServeHTTP(rec, httptest.NewRequest("GET", "http://example.org/_hotdog/source", nil))
+	if rec.Header().Get("Location") != "https://git.example.org/me/hotdog-fork" {
+		t.Errorf("operator's source: %s", rec.Header().Get("Location"))
+	}
+}

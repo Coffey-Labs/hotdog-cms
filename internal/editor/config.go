@@ -15,6 +15,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/about"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
 )
 
@@ -26,6 +27,13 @@ type Config struct {
 	Forges    []ForgeConfig `yaml:"forges"`
 	Sites     []SiteConfig  `yaml:"sites"`
 	Live      LiveConfig    `yaml:"live"` // the live preview of pages being edited
+	// Source is where people using this editor can get its source (the
+	// AGPL's section 13). Leave it out when running HotDog CMS as released;
+	// set it to your own repository if you've changed the code.
+	Source string `yaml:"source"`
+	// Links are your own, shown in the editor's footer: a privacy notice,
+	// terms, where to get help.
+	Links []about.Link `yaml:"links"`
 }
 
 // ForgeConfig is an OAuth application on a git platform.
@@ -104,6 +112,14 @@ func LoadConfig(file string) (*Config, error) {
 		c.PublicURL = "http://" + c.Listen
 	}
 	c.PublicURL = strings.TrimRight(c.PublicURL, "/")
+	if c.Source != "" && !about.CheckURL(c.Source) {
+		return nil, fmt.Errorf("%s: source %q is not a web address", file, c.Source)
+	}
+	for _, l := range c.Links {
+		if l.Name == "" || !about.CheckURL(l.URL) {
+			return nil, fmt.Errorf("%s: links need a name and a web address", file)
+		}
+	}
 	if u, err := url.Parse(c.PublicURL); err != nil || u.Host == "" {
 		return nil, fmt.Errorf("%s: public_url %q is not a URL", file, c.PublicURL)
 	}

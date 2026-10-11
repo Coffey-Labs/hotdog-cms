@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/about"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/check"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/ci"
@@ -30,8 +31,6 @@ import (
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/starter"
 )
-
-var version = "dev"
 
 const usage = `hotdog-cms builds a website from Markdown files and templates.
 
@@ -95,7 +94,17 @@ func main() {
 	case "pack":
 		err = cmdPack(args)
 	case "version", "-v", "--version":
-		fmt.Println("hotdog-cms", version)
+		rev, mod := about.Revision()
+		if len(rev) > 12 {
+			rev = rev[:12]
+		}
+		if mod {
+			rev += ", modified"
+		}
+		if rev != "" {
+			rev = " (" + rev + ")"
+		}
+		fmt.Printf("hotdog-cms %s%s\n%s. %s; source: %s\n", about.Version, rev, about.Copyright, about.License, about.DefaultSource)
 	case "help", "-h", "--help":
 		fmt.Print(usage)
 	default:

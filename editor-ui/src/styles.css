@@ -61,7 +61,11 @@ button.ghost { border: 1px solid var(--line); background: transparent; color: va
 .who { display: flex; align-items: center; gap: .8rem; font-size: .9rem; }
 main { flex: 1; min-height: 0; overflow: auto; }
 
-.signin { min-height: 100%; display: grid; place-items: center; padding: 24px; }
+.bottom { display: flex; justify-content: space-between; align-items: center; gap: .4rem 1.2rem; flex-wrap: wrap; padding: .35rem 1.2rem; background: var(--surface); border-top: 1px solid var(--line); color: var(--muted); font-size: .78rem; }
+.bottom a { color: var(--muted); }
+.bottom a:hover { color: var(--text); }
+.bottom-links { display: flex; flex-wrap: wrap; gap: .3rem 1rem; align-items: center; }
+.signin { flex: 1; min-height: 0; overflow: auto; display: grid; place-items: center; padding: 24px; }
 .signin .card { max-width: 30rem; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 28px; }
 .stack { display: grid; gap: .6rem; margin-top: 1.2rem; }
 

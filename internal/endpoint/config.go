@@ -16,6 +16,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/about"
+
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forms"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
@@ -32,6 +34,10 @@ type Config struct {
 	Sites          []SiteConfig `yaml:"sites"`
 	// Viewer lets the editor read stored submissions (viewer.go).
 	Viewer ViewerConfig `yaml:"viewer"`
+	// Source is where people using the endpoint can get its source (the
+	// AGPL's section 13), answered at /_hotdog/source. Leave it out when
+	// running HotDog CMS as released; set it if you've changed the code.
+	Source string `yaml:"source"`
 }
 
 // SMTPConfig is how submissions are emailed.
@@ -81,6 +87,9 @@ func LoadConfig(file string) (*Config, map[string]*siteRuntime, error) {
 	}
 	if c.Listen == "" {
 		c.Listen = "127.0.0.1:8180"
+	}
+	if c.Source != "" && !about.CheckURL(c.Source) {
+		return nil, nil, fmt.Errorf("%s: source %q is not a web address", file, c.Source)
 	}
 	if c.RateLimit.Count <= 0 {
 		c.RateLimit.Count = 5

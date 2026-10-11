@@ -18,6 +18,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/about"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/preview"
 )
@@ -179,6 +180,10 @@ func (s *Server) apiRoute(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimPrefix(r.URL.Path, "/api/")
 	if path == "session" {
 		s.apiSession(w, r)
+		return
+	}
+	if path == "about" { // before sign-in too: the source link is for everyone
+		writeJSON(w, http.StatusOK, about.Get(s.cfg.Source, s.cfg.Links))
 		return
 	}
 	accts := s.freshen(w, r, s.seal.accounts(r))
