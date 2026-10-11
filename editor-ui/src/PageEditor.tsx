@@ -1,10 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, CheckFailed, Conflict, type Edit, type PageDetail, type Problem, type SiteDetail, type Uploaded } from './api'
 import { go, href } from './route'
 import { useCommands, useShortcut } from './Commands'
 import { ACCEPT, InsertPicture } from './Media'
 import { liveChannel } from './Present'
 import { fromFrontMatter, SectionsEditor, toFrontMatter, type Sec } from './Sections'
+import type { VisualHandle } from './VisualEditor'
+
+// The visual editor (ProseMirror and a Markdown parser) loads only when
+// someone switches to it.
+const VisualEditor = lazy(() => import('./VisualEditor').then((m) => ({ default: m.VisualEditor })))
 import { Split } from './Split'
 import { DevicePicker, PreviewFrame, useDevice } from './Viewport'
 
@@ -84,6 +89,24 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
   const [problems, setProblems] = useState<Problem[]>()
   const [picture, setPicture] = useState<{ file?: File }>()
   const [secs, setSecs] = useState<Sec[]>()
+  // The body as Markdown or as it reads (visual), remembered per browser.
+  const [bodyMode, setBodyModeState] = useState<'markdown' | 'visual'>(() => {
+    try {
+      return localStorage.getItem('hotdog-body-mode') === 'visual' ? 'visual' : 'markdown'
+    } catch {
+      return 'markdown'
+    }
+  })
+  const setBodyMode = (m: 'markdown' | 'visual') => {
+    setBodyModeState(m)
+    try {
+      localStorage.setItem('hotdog-body-mode', m)
+    } catch {
+      /* not remembered */
+    }
+  }
+  const visualRef = useRef<VisualHandle>(null)
+  const [pointing, setPointing] = useState(false)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   // Edits carried across a branch change that the editor made itself (an
   // upload that started a draft), so nothing typed is lost.
@@ -196,13 +219,20 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
 
   // A picture goes in where the cursor was, on a line of its own.
   const insertPicture = (md: string) => {
-    const el = bodyRef.current
-    const at = el ? el.selectionStart : body.length
-    const before = body.slice(0, at)
-    const after = body.slice(at)
-    const lead = before === '' || before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n'
-    const trail = after.startsWith('\n\n') ? '' : after.startsWith('\n') ? '\n' : after === '' ? '\n' : '\n\n'
-    const next = before + lead + md + trail + after
+    let next: string
+    const vis = bodyMode === 'visual' && visualRef.current
+    const img = /^!\[([^\]]*)\]\(([^)]+)\)$/.exec(md)
+    if (vis && img) {
+      next = visualRef.current!.insertImage(img[2], img[1])
+    } else {
+      const el = bodyRef.current
+      const at = el ? el.selectionStart : body.length
+      const before = body.slice(0, at)
+      const after = body.slice(at)
+      const lead = before === '' || before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n'
+      const trail = after.startsWith('\n\n') ? '' : after.startsWith('\n') ? '\n' : after === '' ? '\n' : '\n\n'
+      next = before + lead + md + trail + after
+    }
     setBody(next)
     setPicture(undefined)
     const r = uploaded.current
@@ -238,6 +268,45 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
     }
   }
 
+  // Point and edit: the preview tells us what text was clicked; the cursor
+  // goes there, in whichever view the body is in.
+  const previewOrigin = previewURL ? new URL(previewURL).origin : ''
+  const tellPreview = (on: boolean) => {
+    const frame = document.querySelector<HTMLIFrameElement>('.preview-pane iframe')
+    if (frame?.contentWindow && previewOrigin) frame.contentWindow.postMessage({ type: 'hotdog:point', on }, previewOrigin)
+  }
+  useEffect(() => {
+    const on = (e: MessageEvent) => {
+      if (!previewOrigin || e.origin !== previewOrigin || !e.data || typeof e.data !== 'object') return
+      if (e.data.type === 'hotdog:ready') tellPreview(pointing)
+      if (e.data.type !== 'hotdog:jump' || typeof e.data.text !== 'string') return
+      const text = e.data.text.slice(0, 200)
+      if (bodyMode === 'visual' && visualRef.current) {
+        if (!visualRef.current.jumpTo(text)) setStatus({ kind: 'info', text: `"${text.slice(0, 60)}" isn't in the body; it comes from the front matter, a section or the template.` })
+        return
+      }
+      const el = bodyRef.current
+      if (!el) return
+      const hay = body.toLowerCase()
+      const words = text.toLowerCase().split(' ')
+      let at = -1
+      for (const probe of [text.toLowerCase().slice(0, 40), words.slice(0, 4).join(' '), words.slice(0, 2).join(' ')]) {
+        if (probe.length >= 3 && (at = hay.indexOf(probe)) >= 0) break
+      }
+      if (at < 0) {
+        setStatus({ kind: 'info', text: `"${text.slice(0, 60)}" isn't in the body; it comes from the front matter, a section or the template.` })
+        return
+      }
+      el.focus()
+      el.setSelectionRange(at, at + Math.min(text.length, body.length - at))
+      const line = body.slice(0, at).split('\n').length
+      el.scrollTop = Math.max(0, (line - 3) * parseFloat(getComputedStyle(el).lineHeight || '20'))
+    }
+    window.addEventListener('message', on)
+    return () => window.removeEventListener('message', on)
+  }, [previewOrigin, pointing, bodyMode, body])
+  useEffect(() => tellPreview(pointing), [pointing, previewURL])
+
   // Keyboard first: Ctrl+S saves, and the palette has the rest.
   useShortcut('mod+s', () => dirty && !busy && canWrite && save(), !!page)
   useCommands(() =>
@@ -246,6 +315,8 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
       : [
           ...(canWrite && dirty ? [{ id: 'page-save', title: onDraft ? 'Save' : 'Save as draft', group: 'Page', keys: 'Ctrl+S', run: save }] : []),
           ...(canWrite ? [{ id: 'page-picture', title: 'Insert picture', group: 'Page', run: () => setPicture({}) }] : []),
+          { id: 'page-mode', title: bodyMode === 'visual' ? 'Edit the body as Markdown' : 'Edit the body visually', group: 'Page', run: () => setBodyMode(bodyMode === 'visual' ? 'markdown' : 'visual') },
+          ...(previewURL ? [{ id: 'page-point', title: pointing ? 'Stop pointing in the preview' : 'Point and edit: click text in the preview', group: 'Page', run: () => setPointing(!pointing) }] : []),
           { id: 'page-yaml', title: yamlMode ? 'Edit front matter as fields' : 'Edit front matter as YAML', group: 'Page', run: () => setYamlMode(!yamlMode) },
           ...(onDraft && !review && canWrite && !dirty ? [{ id: 'page-review', title: 'Submit for review', group: 'Page', run: () => setReviewOpen(true) }] : []),
           ...(onDraft && review && canWrite && !dirty ? [{ id: 'page-publish', title: 'Publish', group: 'Page', run: publish }] : []),
@@ -326,10 +397,19 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
           </>
         )}
         <div className="body-head">
-          <h2 className="side-label">Body <span className="muted small">Markdown</span></h2>
-          {canWrite && <button type="button" className="ghost small" onClick={() => setPicture({})}>Insert picture</button>}
+          <h2 className="side-label">Body</h2>
+          <div className="seg small" role="group" aria-label="Edit the body as">
+            <button type="button" aria-pressed={bodyMode === 'markdown'} onClick={() => setBodyMode('markdown')}>Markdown</button>
+            <button type="button" aria-pressed={bodyMode === 'visual'} onClick={() => setBodyMode('visual')}>Visual</button>
+          </div>
+          {canWrite && bodyMode === 'markdown' && <button type="button" className="ghost small" onClick={() => setPicture({})}>Insert picture</button>}
         </div>
-        <textarea
+        {bodyMode === 'visual' && (
+          <Suspense fallback={<p className="muted small">Loading the visual editor…</p>}>
+            <VisualEditor ref={visualRef} value={body} onChange={setBody} onPicture={(f) => setPicture({ file: f })} disabled={!canWrite} />
+          </Suspense>
+        )}
+        {bodyMode === 'markdown' && <textarea
           ref={bodyRef}
           className="code body-edit"
           value={body}
@@ -351,7 +431,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
           }}
           spellCheck
           aria-label="Page body, Markdown"
-        />
+        />}
         {picture && (
           <InsertPicture
             id={id}
@@ -374,6 +454,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
           <span className="spacer" />
           {/* A new tab, so the edit in progress stays open here; the preview
               of the unsaved text lives on the server, so it shows there too. */}
+          {previewURL && <button type="button" className="ghost small" aria-pressed={pointing} onClick={() => setPointing(!pointing)} title="Click text in the preview to put the cursor there">Point &amp; edit</button>}
           {previewURL && <a className="ghost small linkbtn" href={href({ view: 'present', id, url: previewURL, branch })} target="_blank" rel="noopener">Present ↗</a>}
           {previewURL && <a className="ghost small linkbtn" href={previewURL} target="_blank" rel="noopener noreferrer">Open ↗</a>}
         </div>

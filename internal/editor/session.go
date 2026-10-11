@@ -41,7 +41,11 @@ type Session struct {
 	Email   string    `json:"m"` // commits are attributed to this address
 	Token   string    `json:"t"`
 	Expires time.Time `json:"e"`
-	slot    int       // which cookie holds it
+	// Refresh renews Token before TokenExp, for platforms whose tokens
+	// expire (Gitea and Forgejo after an hour by default, GitLab after two).
+	Refresh  string    `json:"rt,omitempty"`
+	TokenExp time.Time `json:"x,omitempty"`
+	slot     int       // which cookie holds it
 }
 
 // ID names the account in the interface and in requests: platform/login.

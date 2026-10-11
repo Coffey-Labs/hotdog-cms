@@ -121,7 +121,8 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no such platform here", http.StatusBadRequest)
 		return
 	}
-	token, err := s.exchange(r.Context(), f, q.Get("code"), st.Verifier)
+	ts, err := s.exchange(r.Context(), f, q.Get("code"), st.Verifier)
+	token := ts.Access
 	if err != nil {
 		s.log.Printf("sign-in with %s: %v", f.Host, err)
 		http.Error(w, "The platform didn't accept the sign-in. Try again.", http.StatusBadGateway)
@@ -133,7 +134,7 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Couldn't read your profile from the platform.", http.StatusBadGateway)
 		return
 	}
-	sess := Session{Forge: f.Host, Login: login, Name: name, Email: email, Token: token, Expires: time.Now().Add(sessionTTL)}
+	sess := Session{Forge: f.Host, Login: login, Name: name, Email: email, Token: token, Expires: time.Now().Add(sessionTTL), Refresh: ts.Refresh, TokenExp: ts.Expires}
 	// The same account again refreshes its cookie; a new one takes a free slot.
 	slot := -1
 	used := map[int]bool{}
@@ -160,18 +161,34 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, st.Return, http.StatusFound)
 }
 
-func (s *Server) exchange(ctx context.Context, f *ForgeConfig, code, verifier string) (string, error) {
+// tokenSet is what a platform's token endpoint hands back.
+type tokenSet struct {
+	Access  string
+	Refresh string
+	Expires time.Time // zero when the token doesn't expire
+}
+
+func (s *Server) exchange(ctx context.Context, f *ForgeConfig, code, verifier string) (tokenSet, error) {
+	return s.tokenRequest(ctx, f, url.Values{"grant_type": {"authorization_code"}, "code": {code}, "redirect_uri": {s.redirectURI()}, "code_verifier": {verifier}})
+}
+
+// renew trades a refresh token for a new access token.
+func (s *Server) renew(ctx context.Context, f *ForgeConfig, refresh string) (tokenSet, error) {
+	return s.tokenRequest(ctx, f, url.Values{"grant_type": {"refresh_token"}, "refresh_token": {refresh}})
+}
+
+func (s *Server) tokenRequest(ctx context.Context, f *ForgeConfig, form url.Values) (tokenSet, error) {
 	secret := os.Getenv(f.ClientSecretEnv)
 	if secret == "" {
-		return "", fmt.Errorf("%s is not set", f.ClientSecretEnv)
+		return tokenSet{}, fmt.Errorf("%s is not set", f.ClientSecretEnv)
 	}
-	form := url.Values{"grant_type": {"authorization_code"}, "code": {code}, "redirect_uri": {s.redirectURI()}, "code_verifier": {verifier}, "client_id": {f.ClientID}}
+	form.Set("client_id", f.ClientID)
 	if f.Kind != forge.Bitbucket {
 		form.Set("client_secret", secret)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, f.endpoints().token, strings.NewReader(form.Encode()))
 	if err != nil {
-		return "", err
+		return tokenSet{}, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
@@ -180,22 +197,78 @@ func (s *Server) exchange(ctx context.Context, f *ForgeConfig, code, verifier st
 	}
 	res, err := s.http.Do(req)
 	if err != nil {
-		return "", err
+		return tokenSet{}, err
 	}
 	defer res.Body.Close()
 	var d struct {
-		AccessToken string `json:"access_token"`
-		Error       string `json:"error"`
-		Description string `json:"error_description"`
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int64  `json:"expires_in"`
+		Error        string `json:"error"`
+		Description  string `json:"error_description"`
 	}
 	body, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 	if err := json.Unmarshal(body, &d); err != nil {
-		return "", fmt.Errorf("token response: %s", res.Status)
+		return tokenSet{}, fmt.Errorf("token response: %s", res.Status)
 	}
 	if d.AccessToken == "" {
-		return "", fmt.Errorf("no token: %s %s", d.Error, d.Description)
+		return tokenSet{}, fmt.Errorf("no token: %s %s", d.Error, d.Description)
 	}
-	return d.AccessToken, nil
+	ts := tokenSet{Access: d.AccessToken, Refresh: d.RefreshToken}
+	if d.ExpiresIn > 0 {
+		ts.Expires = time.Now().Add(time.Duration(d.ExpiresIn) * time.Second)
+	}
+	return ts, nil
+}
+
+// refreshAhead is how long before a token expires it's renewed.
+const refreshAhead = 2 * time.Minute
+
+type renewal struct {
+	ts  tokenSet
+	err error
+	at  time.Time
+}
+
+// freshen renews any account's token that is about to expire, and updates
+// its cookie. Requests that arrive together with the same refresh token share
+// one renewal, since some platforms accept a refresh token only once. An
+// account whose renewal is refused is signed out; the others stay.
+func (s *Server) freshen(w http.ResponseWriter, r *http.Request, accts []*Session) []*Session {
+	out := accts[:0:0]
+	for _, a := range accts {
+		if a.TokenExp.IsZero() || time.Until(a.TokenExp) > refreshAhead || a.Refresh == "" {
+			out = append(out, a)
+			continue
+		}
+		f := s.cfg.forge(a.Forge)
+		if f == nil {
+			continue
+		}
+		s.renewMu.Lock()
+		got, ok := s.renewed[a.Refresh]
+		if !ok || time.Since(got.at) > time.Minute {
+			ts, err := s.renew(r.Context(), f, a.Refresh)
+			got = renewal{ts: ts, err: err, at: time.Now()}
+			if s.renewed == nil || len(s.renewed) > 1024 {
+				s.renewed = map[string]renewal{}
+			}
+			s.renewed[a.Refresh] = got
+		}
+		s.renewMu.Unlock()
+		if got.err != nil {
+			s.log.Printf("%s on %s: renewing the token failed, signing out that account: %v", a.Login, a.Forge, got.err)
+			clearCookie(w, r, accountCookie(a.slot))
+			continue
+		}
+		a.Token, a.TokenExp = got.ts.Access, got.ts.Expires
+		if got.ts.Refresh != "" {
+			a.Refresh = got.ts.Refresh
+		}
+		_ = s.seal.setCookie(w, r, accountCookie(a.slot), a, time.Until(a.Expires))
+		out = append(out, a)
+	}
+	return out
 }
 
 func (s *Server) whoami(ctx context.Context, f *ForgeConfig, token string) (login, name, email string, err error) {

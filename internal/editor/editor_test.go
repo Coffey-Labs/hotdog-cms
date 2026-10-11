@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
@@ -32,6 +33,9 @@ type fakeForge struct {
 	merged    []string            // merge calls
 	bobGone   bool                // the platform stops taking bob's token
 	listed    int                 // repository listings served
+	expiring  bool                // hand out tokens that expire in a minute, with a refresh token
+	refreshes int                 // refresh-token renewals served
+	refuse    bool                // refuse renewals
 }
 
 func newFakeForge(t *testing.T) *fakeForge {
@@ -39,6 +43,14 @@ func newFakeForge(t *testing.T) *fakeForge {
 	ff.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := r.Header.Get("Authorization")
 		switch {
+		case r.URL.Path == "/login/oauth/access_token" && r.FormValue("grant_type") == "refresh_token":
+			ff.refreshes++
+			if ff.refuse || !strings.HasPrefix(r.FormValue("refresh_token"), "rt-") || r.FormValue("client_secret") != "shh" {
+				w.WriteHeader(400)
+				json.NewEncoder(w).Encode(map[string]string{"error": "invalid_grant"})
+				return
+			}
+			json.NewEncoder(w).Encode(map[string]any{"access_token": "user-token", "refresh_token": fmt.Sprintf("rt-%d", ff.refreshes), "expires_in": 3600})
 		case r.URL.Path == "/login/oauth/access_token":
 			r.ParseForm()
 			sum := sha256.Sum256([]byte(r.PostForm.Get("code_verifier")))
@@ -51,6 +63,10 @@ func newFakeForge(t *testing.T) *fakeForge {
 			tok := "user-token"
 			if code == "bob-code" {
 				tok = "bob-token"
+			}
+			if ff.expiring {
+				json.NewEncoder(w).Encode(map[string]any{"access_token": tok, "refresh_token": "rt-0", "expires_in": 60})
+				return
 			}
 			json.NewEncoder(w).Encode(map[string]string{"access_token": tok})
 		case auth != "Bearer user-token" && (auth != "Bearer bob-token" || ff.bobGone):
@@ -864,5 +880,61 @@ func TestFilesPowerTools(t *testing.T) {
 	json.NewDecoder(do(s, "GET", "/api/sites/site/log?branch=draft/site&path=site.yaml", jar, nil).Body).Decode(&lg)
 	if len(lg.Commits) != 2 || lg.Commits[0].Subject != "Edit site.yaml" {
 		t.Errorf("file log: %+v", lg.Commits)
+	}
+}
+
+func TestPointAndEdit(t *testing.T) {
+	l := newLiveServer(LiveConfig{Listen: "127.0.0.1:8191"}, "http://editor.test")
+	u := l.show("o", t.TempDir(), "/about/", []byte("<html><body><h1>About</h1></body></html>"), nil)
+	host := strings.TrimPrefix(strings.Split(u, "/")[2], "")
+	get := func(p string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("GET", "http://"+host+p, nil)
+		req.Host = host
+		rec := httptest.NewRecorder()
+		l.ServeHTTP(rec, req)
+		return rec
+	}
+	if b := get("/about/").Body.String(); !strings.Contains(b, `<script src="/__hotdog/jump.js" defer></script></body>`) {
+		t.Errorf("page: %s", b)
+	}
+	js := get("/__hotdog/jump.js")
+	if !strings.Contains(js.Body.String(), `const editor = "http://editor.test"`) || !strings.HasPrefix(js.Header().Get("Content-Type"), "text/javascript") {
+		t.Errorf("script: %s %s", js.Header().Get("Content-Type"), js.Body)
+	}
+	if !strings.Contains(js.Body.String(), `replace(/\s+/g, ' ')`) {
+		t.Errorf("the script's regular expression was mangled:\n%s", js.Body)
+	}
+}
+
+func TestTokenRenewal(t *testing.T) {
+	s, ff := newTestServer(t)
+	ff.expiring = true
+	jar := []*http.Cookie{signIn(t, s, ff)}
+
+	// The token expires within the renewal window, so the next request renews
+	// it first, and hands the browser the updated account.
+	rec := do(s, "GET", "/api/sites", jar, nil)
+	renewed := cookie(rec, accountCookie(0))
+	if rec.Code != 200 || ff.refreshes != 1 || renewed == nil || renewed.MaxAge <= 0 {
+		t.Fatalf("renewal: %d, %d renewals, cookie %+v", rec.Code, ff.refreshes, renewed)
+	}
+	// With the renewed account (good for an hour), no further renewal.
+	if rec := do(s, "GET", "/api/sites", []*http.Cookie{renewed}, nil); rec.Code != 200 || ff.refreshes != 1 {
+		t.Errorf("renewed again: %d, %d renewals", rec.Code, ff.refreshes)
+	}
+	// A burst of requests with the old account shares one renewal.
+	s.renewed = nil
+	for i := 0; i < 3; i++ {
+		do(s, "GET", "/api/sites", jar, nil)
+	}
+	if ff.refreshes != 2 {
+		t.Errorf("a burst renewed %d times, want once more", ff.refreshes-1)
+	}
+	// A refused renewal signs that account out.
+	ff.refuse = true
+	s.renewed = nil
+	rec = do(s, "GET", "/api/sites", jar, nil)
+	if c := cookie(rec, accountCookie(0)); rec.Code != 401 || c == nil || c.MaxAge >= 0 {
+		t.Errorf("refused renewal: %d %+v", rec.Code, c)
 	}
 }

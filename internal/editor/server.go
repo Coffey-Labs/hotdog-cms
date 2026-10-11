@@ -41,6 +41,9 @@ type Server struct {
 	accessMu   sync.Mutex
 	accessSeen map[string]accessHit
 	found      discoverCache
+
+	renewMu sync.Mutex
+	renewed map[string]renewal // recent token renewals, by the refresh token used
 }
 
 // New builds the editor from editor.yaml. HOTDOG_EDITOR_SECRET seals sessions.
@@ -173,7 +176,7 @@ func (s *Server) apiRoute(w http.ResponseWriter, r *http.Request) {
 		s.apiSession(w, r)
 		return
 	}
-	accts := s.seal.accounts(r)
+	accts := s.freshen(w, r, s.seal.accounts(r))
 	if len(accts) == 0 {
 		apiError(w, http.StatusUnauthorized, "Sign in to continue.")
 		return

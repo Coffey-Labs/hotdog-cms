@@ -108,3 +108,35 @@ person couldn't read anyway.
 
   It runs nothing on the server: every command is a call the editor's buttons
   make too. The editor host is not a shell.
+
+## Visual editing
+
+The page body can be edited as Markdown or visually, with a switch above it
+that's remembered per browser. The visual editor shows the page as it reads:
+- headings, lists, quotes, code, links and pictures, with a toolbar;
+- the usual shortcuts (Ctrl+B, Ctrl+I, Ctrl+Z);
+- Markdown typing shortcuts (`## `, `- `, `1. `, `> `, three backticks).
+
+It writes Markdown, never HTML, and only rewrites what you change:
+- **Untouched paragraphs** are saved exactly as they were written, hand
+  wrapping included, so a diff shows only your edit.
+- **New and edited blocks** are written plainly: `-` bullets, `*` emphasis.
+- **What it can't represent exactly** (tables, raw HTML, footnotes, task
+  lists, `{#id}` attributes, strikethrough) is shown read-only, marked "Kept
+  as written", and edited in the Markdown view.
+
+Pictures dropped or pasted in still go through Insert picture, so they're
+re-encoded and need alt text.
+
+**Point and edit:** with Point & edit on in the preview bar, clicking text in
+the preview puts the cursor on it, in either view. The editor says so when
+the text comes from the front matter, a section or the template instead of
+the body.
+
+## Staying signed in
+
+Some platforms' sign-ins expire: Gitea's and Forgejo's after an hour by
+default, GitLab's after two. The editor renews them shortly before they
+expire, using the refresh token the platform gave at sign-in (sealed in the
+account's cookie like the rest). If the platform refuses, that account alone
+is signed out.

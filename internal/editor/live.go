@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/hex"
 	"net"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -132,14 +134,20 @@ func (l *liveServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "This preview has expired. Reopen the page in the editor.", http.StatusNotFound)
 		return
 	}
+	if r.URL.Path == jumpScriptPath {
+		h.Set("Content-Type", "text/javascript; charset=utf-8")
+		_, _ = w.Write([]byte(strings.Replace(jumpScript, "EDITOR_ORIGIN", strconv.Quote(l.editor), 1)))
+		return
+	}
 	if html != nil {
 		switch path.Ext(r.URL.Path) {
 		case ".css":
 			h.Set("Content-Type", "text/css; charset=utf-8")
+			_, _ = w.Write(html)
 		default:
 			h.Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(withJump(html))
 		}
-		_, _ = w.Write(html)
 		return
 	}
 	clean := path.Clean("/" + r.URL.Path)
@@ -161,5 +169,64 @@ func (l *liveServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	if strings.HasSuffix(p, ".html") {
+		if data, err := os.ReadFile(p); err == nil {
+			h.Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(withJump(data))
+			return
+		}
+	}
 	http.ServeFile(w, r, p)
 }
+
+// Point and edit: preview pages (only these, never a built site) get a small
+// script. When the editor turns pointing on, a click on text in the preview
+// is sent to the editor, which puts the cursor there. It listens only to the
+// editor's window and posts only to the editor's origin; it carries the text
+// that was clicked, nothing else.
+const jumpScriptPath = "/__hotdog/jump.js"
+
+func withJump(html []byte) []byte {
+	tag := []byte(`<script src="` + jumpScriptPath + `" defer></script>`)
+	if i := bytes.LastIndex(html, []byte("</body>")); i >= 0 {
+		out := make([]byte, 0, len(html)+len(tag))
+		out = append(out, html[:i]...)
+		out = append(out, tag...)
+		return append(out, html[i:]...)
+	}
+	return append(append([]byte{}, html...), tag...)
+}
+
+const jumpScript = `(() => {
+  const editor = EDITOR_ORIGIN
+  if (window.parent === window) return
+  const pick = 'h1,h2,h3,h4,h5,h6,p,li,blockquote,figcaption,td,th,dt,dd'
+  let on = false
+  let lit = null
+  const unlight = () => { if (lit) { lit.style.outline = ''; lit.style.cursor = ''; lit = null } }
+  window.addEventListener('message', (e) => {
+    if (e.source !== window.parent || e.origin !== editor || !e.data || e.data.type !== 'hotdog:point') return
+    on = !!e.data.on
+    if (!on) unlight()
+  })
+  // Styles are set from script, not a <style> element, so a site's own CSP
+  // doesn't get in the way.
+  document.addEventListener('mouseover', (e) => {
+    if (!on) return
+    const el = e.target.closest && e.target.closest(pick)
+    if (el === lit) return
+    unlight()
+    if (el) { lit = el; el.style.outline = '2px dashed #f4be2c'; el.style.cursor = 'text' }
+  })
+  document.addEventListener('click', (e) => {
+    if (!on) return
+    const el = e.target.closest && e.target.closest(pick)
+    if (!el) return
+    e.preventDefault()
+    e.stopPropagation()
+    const text = (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200)
+    if (text) window.parent.postMessage({ type: 'hotdog:jump', tag: el.tagName.toLowerCase(), text }, editor)
+  }, true)
+  window.parent.postMessage({ type: 'hotdog:ready' }, editor)
+})()
+`

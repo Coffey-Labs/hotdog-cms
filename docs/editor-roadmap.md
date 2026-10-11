@@ -328,13 +328,35 @@ platform or several, with sites spread across them):
 
 ### E5 · WYSIWYG interface
 
-- A visual editor built on a Markdown-native ProseMirror editor, so the
-  Markdown that comes out is the Markdown a person would have written.
-  Nothing becomes HTML soup.
-- Editing in place on the preview: click a heading on the rendered page to
-  edit it.
-- Only what the site's Markdown settings allow. If raw HTML is off, the
-  toolbar can't produce it.
+*Built 2026-10-10* (see [editor.md](editor.md)):
+- **Visual editing** of the page body, on ProseMirror's own Markdown support
+  (Markdown in, Markdown out, no HTML in between), with a toolbar, the usual
+  shortcuts and Markdown typing shortcuts. A Markdown/Visual switch is
+  remembered per browser.
+- **It never rewrites what nobody touched:** each block remembers its exact
+  source, and untouched blocks are saved character for character. Proven on
+  all 135 jcoffey.dev articles: every one comes back identical, and 3,917 of
+  their 3,918 blocks are editable visually. Editing a heading and adding a
+  list in a real test gave a three-line diff.
+- **Kept as written:** tables, raw HTML, footnotes, task lists, `{#id}`
+  attributes, strikethrough, link definitions, and anything whose round trip
+  would change its meaning are read-only blocks, edited in the Markdown view.
+  The toolbar can only produce Markdown.
+- **Pictures** dropped or pasted in go through Insert picture (re-encoded,
+  alt text required).
+- **Point and edit:** a script added to live previews only (never to built
+  sites) sends the clicked text to the editor, which puts the cursor there in
+  either view. It listens only to the editor's window and posts only to the
+  editor's origin.
+- **Loaded on demand:** the visual editor is a separate download, so the
+  editor's first load didn't grow.
+- **Found and fixed:** Gitea's OAuth tokens expire after an hour, and the
+  editor didn't renew them, so a long session quietly lost access (the sites
+  list went empty). The editor now keeps the refresh token and renews ahead
+  of expiry. Simultaneous requests share one renewal, and a refused renewal
+  signs out only that account.
+- **Tried** on a throwaway repository on the Coffey Labs Gitea (since
+  deleted).
 
 ### E6 · Helpers
 
