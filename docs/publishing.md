@@ -167,11 +167,12 @@ since that target's last publish. Bing, Yandex, Seznam and the others that
 share IndexNow then re-read just those pages.
 
 ```yaml
-live:
-  type: rsync
-  host: deploy@web.example.org
-  path: /var/www/example.org
-  indexnow: true        # the live site only; staging targets leave it off
+targets:
+  live:
+    type: rsync
+    host: deploy@web.example.org
+    path: /var/www/example.org
+    indexnow: true        # the live site only; staging targets leave it off
 ```
 
 - **The pull agent:** takes `-indexnow` for the same thing.
