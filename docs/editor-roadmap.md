@@ -129,6 +129,40 @@ workshopped; for now it only holds a place on the list. Whatever shape it
 takes, it keeps the rules above: a quick post is still a commit, still checked,
 still previewable, with no faster path to the live site.
 
+### Cloudflare (wanted, not yet designed)
+
+John, 2026-10-10: manage DNS, certificates and domain registration, and
+deploy to Cloudflare (Workers with static assets, and Pages, which Cloudflare
+is folding into Workers) directly from the CMS. To be designed. The idea, and
+the rules it has to keep:
+- **Deploying is a publish target.** `hotdog-cms publish` gets a
+  `cloudflare` target: Workers static assets or Pages, with our redirects and
+  headers (CSP included) written in Cloudflare's formats. Like every target,
+  it runs where the operator publishes from (CI, the pull agent, a laptop),
+  and only after the checks pass. From the editor, "Publish" merges, and the
+  operator's pipeline deploys. **The editor holds no Cloudflare token:**
+  taking over the editor still gives no way into the site.
+- **Previews:** each draft branch as a Cloudflare preview deployment, as an
+  alternative to `hotdog-cms preview`, linked from the review the same way.
+- **DNS, certificates and domains:** an operator's tool rather than an
+  editor's, run with a token scoped to the zones it manages:
+  - point a site's domain at its target;
+  - check the certificate and the SSL mode (Full (strict));
+  - Always Use HTTPS, HSTS, DNSSEC;
+  - purge only the changed addresses after a publish.
+
+  Changes are shown before they're applied, like a diff. Domain registration
+  goes through Cloudflare Registrar, as far as its API allows; check that
+  before promising it.
+- **The editor's part:** read-only status beside each site (domain resolves
+  here, certificate valid until, last deploy). Two of `check`'s rules lean on
+  Cloudflare: Email Address Obfuscation (`cloudflare-email`) and cache rules.
+  They could read the zone's real settings instead of assuming.
+- **Not Cloudflare-only:** the same shape should fit other DNS hosts and CDNs
+  later; Cloudflare first because we run on it.
+- **Possible data-store point:** none expected. Tokens live in the operator's
+  environment or CI secrets, as deploy credentials do today.
+
 ### Several accounts and repositories
 
 *Built 2026-10-10* (John: operators may have several accounts, on one git
