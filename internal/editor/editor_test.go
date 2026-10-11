@@ -737,7 +737,7 @@ func TestSectionsAPI(t *testing.T) {
 	for _, x := range lib.Sections {
 		names = append(names, x.Name)
 	}
-	if rec.Code != 200 || len(lib.Sections) != 5 || strings.Join(lib.Data, ",") != "features" || strings.Join(lib.Collections, ",") != "articles" {
+	if rec.Code != 200 || len(lib.Sections) != 6 || strings.Join(lib.Data, ",") != "features" || strings.Join(lib.Collections, ",") != "articles" {
 		t.Fatalf("sections: %d %v %v %v", rec.Code, names, lib.Data, lib.Collections)
 	}
 	// The page API keeps the file's key order, so sections come back as written.

@@ -70,6 +70,13 @@ pre code { background: none; padding: 0; color: inherit; }
 .brand { font-weight: 750; font-size: 1.1rem; color: var(--text); text-decoration: none; margin-right: auto; }
 .brand { display: inline-flex; align-items: center; gap: .55rem; }
 .brand-logo { height: 30px; width: auto; display: block; }
+.only-dark { display: none !important; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .only-dark { display: block !important; }
+  :root:not([data-theme="light"]) .only-light { display: none !important; }
+}
+:root[data-theme="dark"] .only-dark { display: block !important; }
+:root[data-theme="dark"] .only-light { display: none !important; }
 #site-nav ul { list-style: none; display: flex; gap: 4px; margin: 0; padding: 0; }
 #site-nav a { display: block; padding: 8px 12px; border-radius: 9px; color: var(--muted); text-decoration: none; font-weight: 550; }
 #site-nav a:hover { color: var(--text); background: var(--accent-soft); }

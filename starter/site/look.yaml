@@ -27,6 +27,12 @@ tokens:
     default: round
     options: { sharp: 4px, soft: 8px, round: 14px }
   - { name: logo, label: Logo, type: image, help: Shown before the site's name in the header. }
+  - { name: logo-dark, label: Logo in dark mode, type: image, help: Optional; for a logo that doesn't read on a dark background. }
+  - name: brand
+    label: The header shows
+    type: select
+    default: both
+    options: { both: the logo and the site's name, logo: the logo only (it has the name in it) }
 
 # Pairs that have to stay readable: at least 4.5:1, in light and dark mode.
 # `hotdog-cms check` refuses to publish a look that breaks one.

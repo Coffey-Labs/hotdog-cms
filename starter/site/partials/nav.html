@@ -1,6 +1,11 @@
 <header class="top">
   <div class="wrap top-in">
-    <a class="brand" href="/">{{ with look "logo" }}<img class="brand-logo" src="{{ . }}" alt="">{{ end }}{{ .Site.Config.Name }}</a>
+    {{ $logoOnly := and (look "logo") (eq (look "brand") "logo") }}
+    <a class="brand" href="/">
+      {{- with look "logo" }}<img class="brand-logo{{ if look "logo-dark" }} only-light{{ end }}" src="{{ . }}" alt="{{ if $logoOnly }}{{ $.Site.Config.Name }}{{ end }}">{{ end }}
+      {{- with look "logo-dark" }}<img class="brand-logo only-dark" src="{{ . }}" alt="{{ if $logoOnly }}{{ $.Site.Config.Name }}{{ end }}">{{ end }}
+      {{- if not $logoOnly }}<span>{{ .Site.Config.Name }}</span>{{ end -}}
+    </a>
     <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
     <nav id="site-nav" aria-label="Main">
       <ul>
