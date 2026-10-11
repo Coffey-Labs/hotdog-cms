@@ -298,3 +298,19 @@ func exists(root, urlPath string) bool {
 	}
 	return true
 }
+
+// Meta is what a page tells search engines and link previews about itself.
+type Meta struct {
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Canonical   string `json:"canonical"`
+	Image       string `json:"image"`
+	ImageAlt    bool   `json:"imageAlt"`
+	NoIndex     bool   `json:"noindex"`
+}
+
+// PageMeta reads it from a rendered page, the way the checks do.
+func PageMeta(html []byte) Meta {
+	pg := parsePage(html, "", "/")
+	return Meta{Title: strings.TrimSpace(pg.title), Description: pg.description, Canonical: pg.canonical, Image: pg.ogImage, ImageAlt: pg.ogImageAlt, NoIndex: pg.noindex}
+}

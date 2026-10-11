@@ -9,6 +9,7 @@ import { Console, showConsole } from './Console'
 import { FilesView } from './Files'
 import { LookPanel } from './Look'
 import { Palette, showPalette } from './Palette'
+import { RedirectsView } from './Redirects'
 import { MediaLibrary } from './Media'
 import { PageEditor } from './PageEditor'
 import { Present } from './Present'
@@ -49,6 +50,7 @@ export function App() {
       {route.view === 'media' && <MediaLibrary id={route.id} branch={route.branch} />}
       {route.view === 'look' && <LookPanel id={route.id} branch={route.branch} />}
       {route.view === 'files' && <FilesView id={route.id} branch={route.branch} path={route.path} />}
+      {route.view === 'redirects' && <RedirectsView id={route.id} branch={route.branch} />}
     </Shell>
   )
 }
@@ -192,6 +194,7 @@ function SiteView({ id, branch }: { id: string; branch?: string }) {
           <Link to={{ view: 'media', id, branch }} className="side-item">Pictures</Link>
           <Link to={{ view: 'look', id, branch }} className="side-item">Look</Link>
           <Link to={{ view: 'files', id, branch }} className="side-item">Files</Link>
+          <Link to={{ view: 'redirects', id, branch }} className="side-item">Redirects</Link>
         </nav>
         <nav aria-label="Drafts">
           <h2 className="side-label">Drafts</h2>
@@ -258,7 +261,7 @@ function Checks({ build }: { build: SiteDetail['build'] }) {
       {open && (
         <ul className="problems">
           {problems.map((p, i) => (
-            <li key={i} className={p.Level}><span className="pill">{p.Rule}</span> <span className="mono small">{p.File}</span> {p.What}</li>
+            <li key={i} className={p.Level}><span className="pill">{p.Rule}</span> <span className="mono small">{p.File}</span> {p.What}{p.Fix && <span className="fix">{p.Fix}</span>}</li>
           ))}
         </ul>
       )}
@@ -330,6 +333,7 @@ function GlobalCommands({ session }: { session: SessionInfo }) {
           { id: 'go-files', title: 'Files', group: 'Go to', run: () => go({ view: 'files', id, branch }) },
           { id: 'go-pictures', title: 'Pictures', group: 'Go to', run: () => go({ view: 'media', id, branch }) },
           { id: 'go-look', title: 'Look', group: 'Go to', run: () => go({ view: 'look', id, branch }) },
+          { id: 'go-redirects', title: 'Redirects', group: 'Go to', run: () => go({ view: 'redirects', id, branch }) },
         ]
       : []),
     { id: 'console-open', title: 'Open the console', group: 'Editor', keys: 'Ctrl+`', run: showConsole },

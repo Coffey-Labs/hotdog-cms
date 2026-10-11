@@ -8,7 +8,7 @@ Websites from Markdown files and templates, with no database.
     cd mysite
     hotdog-cms serve             preview at http://127.0.0.1:8140, reloading as you save
     hotdog-cms build             write the finished site to public/
-    hotdog-cms check [-csp]      build, then check it: tracking, privacy, links, SEO, security (docs/checks.md)
+    hotdog-cms check [-csp] [-fix] build, then check it: tracking, privacy, links, SEO, security (docs/checks.md)
     hotdog-cms publish <target>  build, then publish: a folder, a server over SSH, a container image, or your own command
     hotdog-cms pull -repo URL -out DIR   on the web server: publish from git when the branch moves
     hotdog-cms preview -repo URL     every branch built as it would be published, at <branch>.localhost:8160

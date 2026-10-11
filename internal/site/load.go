@@ -47,6 +47,8 @@ type Options struct {
 	// such as "about.md"), or adds files that don't exist yet: a page being
 	// edited, before it is saved.
 	Overrides map[string][]byte
+	// Skip leaves these source files out (a page about to be moved).
+	Skip map[string]bool
 	// Look, if not nil, replaces site.yaml's look: (the Look panel's preview).
 	Look map[string]any
 }
@@ -119,6 +121,9 @@ func Load(dir string, opt Options) (*Site, error) {
 		}
 		r, _ := filepath.Rel(content, p)
 		rel := filepath.ToSlash(r)
+		if opt.Skip[rel] {
+			return nil
+		}
 		if o, ok := opt.Overrides[rel]; ok {
 			seen[rel] = true
 			return add(o, rel)

@@ -36,6 +36,7 @@ type Problem struct {
 	Rule  string
 	File  string
 	What  string
+	Fix   string `json:",omitempty"` // what usually puts it right (fixes.go)
 }
 
 func (p Problem) String() string {
@@ -73,7 +74,7 @@ func (c *checker) add(level Level, rule, file, format string, args ...any) {
 	if c.ignore[rule] {
 		return
 	}
-	c.report.Problems = append(c.report.Problems, Problem{level, rule, file, fmt.Sprintf(format, args...)})
+	c.report.Problems = append(c.report.Problems, Problem{Level: level, Rule: rule, File: file, What: fmt.Sprintf(format, args...), Fix: Fixes[rule]})
 }
 
 // Run checks the built site in out against the site in siteDir.

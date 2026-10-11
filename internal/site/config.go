@@ -72,8 +72,8 @@ func (m MarkdownConfig) AutolinkOn() bool { return m.Autolink == nil || *m.Autol
 
 // Redirect sends one old address somewhere else.
 type Redirect struct {
-	From string `yaml:"from"`
-	To   string `yaml:"to"`
+	From string `yaml:"from" json:"from"`
+	To   string `yaml:"to" json:"to"`
 }
 
 // CollectionConfig is the per-folder setting for a collection such as

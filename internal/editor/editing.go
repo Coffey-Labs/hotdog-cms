@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/check"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/media"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/preview"
 )
@@ -48,6 +49,10 @@ func (s *Server) apiWrite(w http.ResponseWriter, r *http.Request, sess *Session,
 		s.newPage(w, r, sess, f, st)
 	case "live":
 		s.liveRender(w, r, sess, f, st)
+	case "redirects-save":
+		s.redirectsSave(w, r, sess, f, st)
+	case "move":
+		s.movePage(w, r, sess, f, st)
 	case "file-save":
 		s.fileSave(w, r, sess, f, st)
 	case "file-diff":
@@ -265,7 +270,8 @@ func (s *Server) liveRender(w http.ResponseWriter, r *http.Request, sess *Sessio
 	}
 	owner := sess.Forge + "|" + sess.Login + "|" + st.ID + "|" + req.Branch
 	url := s.live.show(owner, siteDir+".editor-build", pagePath, html, nil)
-	writeJSON(w, http.StatusOK, map[string]any{"url": url, "path": pagePath})
+	// What search results and link previews will show, read from the page.
+	writeJSON(w, http.StatusOK, map[string]any{"url": url, "path": pagePath, "seo": check.PageMeta(html), "siteURL": loaded.Config.URL, "siteName": loaded.Config.Name})
 }
 
 type reviewRequest struct {

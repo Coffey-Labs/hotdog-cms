@@ -9,7 +9,8 @@ export type SiteAccount = { id: string; login: string; forge: string; canWrite: 
 export type SiteSummary = { id: string; name: string; repo: string; branch: string; canWrite: boolean; accounts: SiteAccount[]; discovered?: boolean }
 export type PageInfo = { path: string; title: string; source?: string; collection?: string; kind: string; date?: string; draft?: boolean; redirect?: string }
 export type CollectionInfo = { name: string; title: string; count: number }
-export type Problem = { Level: 'error' | 'warning'; Rule: string; File: string; What: string }
+export type Problem = { Level: 'error' | 'warning'; Rule: string; File: string; What: string; Fix?: string }
+export type Seo = { title: string; description: string; canonical: string; image: string; imageAlt: boolean; noindex: boolean }
 export type BuildResult = { commit: string; pages: number; errors: number; warnings: number; problems: Problem[] | null; failed?: string }
 export type Draft = { branch: string; commit: string; preview?: string }
 export type Review = { number: number; title: string; branch: string; author: string; url: string; preview?: string }
@@ -113,7 +114,8 @@ export const api = {
   save: (id: string, b: { source: string; branch: string; baseCommit: string; edit: Edit; message?: string }) =>
     post<{ branch: string; commit: string; created: boolean; preview?: string }>(site(id, 'save'), b),
   newPage: (id: string, b: { collection: string; title: string }) => post<{ branch: string; commit: string; source: string }>(site(id, 'new'), b),
-  live: (id: string, b: { source: string; branch: string; edit: Edit | null }) => post<{ url?: string; path?: string; error?: string }>(site(id, 'live'), b),
+  live: (id: string, b: { source: string; branch: string; edit: Edit | null }) =>
+    post<{ url?: string; path?: string; error?: string; seo?: Seo; siteURL?: string }>(site(id, 'live'), b),
   review: (id: string, b: { branch: string; title: string; description: string }) => post<Review>(site(id, 'review'), b),
   publish: (id: string, b: { branch: string }) => post<{ published: boolean; number: number }>(site(id, 'publish'), b),
   upload: (id: string, file: File, b: { branch: string; baseCommit: string; source: string }) => upload(id, file, b),
@@ -128,6 +130,11 @@ export const api = {
   fileDiff: (id: string, b: { branch: string; path: string; content?: string; delete?: boolean }) => post<{ diff: string }>(site(id, 'file-diff'), b),
   compare: (id: string, branch: string) => get<{ diff: string; stat: string; base: string; branch: string }>(siteURL(id, 'compare', { branch })),
   log: (id: string, branch?: string, path?: string, n = 30) => get<{ branch: string; commits: Commit[] }>(siteURL(id, 'log', { branch, path, n: String(n) })),
+  redirects: (id: string, branch?: string) => get<{ redirects: { from: string; to: string }[]; commit: string; branch: string; canWrite: boolean }>(siteURL(id, 'redirects', { branch })),
+  redirectsSave: (id: string, b: { branch: string; baseCommit: string; redirects: { from: string; to: string }[] }) =>
+    post<{ branch: string; commit: string; created: boolean }>(site(id, 'redirects-save'), b),
+  move: (id: string, b: { branch: string; baseCommit: string; source: string; to: string }) =>
+    post<{ branch: string; commit: string; created: boolean; source: string; from: string; to: string; redirected: boolean }>(site(id, 'move'), b),
   sections: (id: string, branch?: string) => get<SectionLib>(siteURL(id, 'sections', { branch })),
   media: (id: string, branch?: string) => get<MediaItem[]>(siteURL(id, 'media', { branch })),
   mediaFile: (id: string, url: string, branch?: string) => siteURL(id, 'media-file', { url, branch }),

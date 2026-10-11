@@ -1,9 +1,10 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { api, CheckFailed, Conflict, type Edit, type PageDetail, type Problem, type SiteDetail, type Uploaded } from './api'
+import { api, CheckFailed, Conflict, type Edit, type PageDetail, type Problem, type Seo, type SiteDetail, type Uploaded } from './api'
 import { go, href } from './route'
 import { useCommands, useShortcut } from './Commands'
 import { ACCEPT, InsertPicture } from './Media'
 import { liveChannel } from './Present'
+import { SeoPanel } from './Seo'
 import { fromFrontMatter, SectionsEditor, toFrontMatter, type Sec } from './Sections'
 import type { VisualHandle } from './VisualEditor'
 
@@ -107,6 +108,8 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
   }
   const visualRef = useRef<VisualHandle>(null)
   const [pointing, setPointing] = useState(false)
+  const [moving, setMoving] = useState<string>()
+  const [seo, setSeo] = useState<{ seo: Seo; siteURL: string; path: string }>()
   const bodyRef = useRef<HTMLTextAreaElement>(null)
   // Edits carried across a branch change that the editor made itself (an
   // upload that started a draft), so nothing typed is lost.
@@ -160,6 +163,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
           if (r.error) setPreviewNote(`The preview shows the last version that rendered. ${r.error}`)
           else {
             setPreviewNote(undefined)
+            if (r.seo && r.siteURL && r.path) setSeo({ seo: r.seo, siteURL: r.siteURL, path: r.path })
             if (r.url !== previewURL) setPreviewURL(r.url)
             else setReload((n) => n + 1)
             channel.current?.postMessage({ url: r.url })
@@ -344,7 +348,11 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
           </span>
         </div>
         <h1>{fields.title || source}</h1>
-        <p className="muted mono small">{source}{pagePath ? ` → ${pagePath}` : ''}</p>
+        <p className="muted mono small">
+          {source}{pagePath ? ` → ${pagePath}` : ''}
+          {canWrite && moving === undefined && source !== 'content/index.md' && <button type="button" className="ghost small move-btn" onClick={() => setMoving(pagePath || '')}>Move…</button>}
+        </p>
+        {moving !== undefined && <MoveForm id={id} source={source} branch={cur} baseCommit={page.commit} current={pagePath || ""} value={moving} dirty={dirty} onChange={setMoving} onDone={(r) => { setMoving(undefined); setStatus({ kind: 'good', text: `Moved to ${r.to}${r.redirected ? `; ${r.from} now redirects there` : ''}.${r.created ? ` On a new draft, ${r.branch}.` : ''}` }); onSiteChanged(); go({ view: 'page', id, source: r.source, branch: r.branch }) }} />}
 
         <div className="actions">
           <button type="button" className="button primary" disabled={!dirty || busy || !canWrite} onClick={save}>{onDraft ? 'Save' : 'Save as draft'}</button>
@@ -363,9 +371,10 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
         {pageProblems.length > 0 && (
           <div className="notice warn">
             <strong>Checks on this page</strong>
-            <ul className="problems">{pageProblems.map((p, i) => <li key={i} className={p.Level}><span className="pill">{p.Rule}</span> {p.What}</li>)}</ul>
+            <ul className="problems">{pageProblems.map((p, i) => <li key={i} className={p.Level}><span className="pill">{p.Rule}</span> {p.What}{p.Fix && <span className="fix">{p.Fix}</span>}</li>)}</ul>
           </div>
         )}
+        {seo && <SeoPanel id={id} branch={cur} seo={seo.seo} siteURL={seo.siteURL} path={seo.path} />}
 
         <div className="fm-head">
           <h2 className="side-label">Front matter</h2>
@@ -487,5 +496,41 @@ export function ReviewForm({ id, branch, title, onDone, onError }: { id: string;
       <label>What changed, for the reviewer<textarea rows={3} value={d} onChange={(e) => setD(e.target.value)} /></label>
       <div className="actions"><button type="button" className="button primary" disabled={busy || !t.trim()} onClick={submit}>Open the review</button></div>
     </div>
+  )
+}
+
+// MoveForm moves a page to a new address: its file is renamed, and the old
+// address redirects to the new one, in one commit.
+function MoveForm({ id, source, branch, baseCommit, current, value, dirty, onChange, onDone }: {
+  id: string; source: string; branch: string; baseCommit: string; current: string; value: string; dirty: boolean
+  onChange: (v: string | undefined) => void
+  onDone: (r: { branch: string; created: boolean; source: string; from: string; to: string; redirected: boolean }) => void
+}) {
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string>()
+  const clean = '/' + value.trim().replace(/^\/+|\/+$/g, '') + '/'
+  const to = clean === '//' ? '' : `content${clean.slice(0, -1)}.md`
+  const go2 = async () => {
+    setBusy(true)
+    setErr(undefined)
+    try {
+      onDone(await api.move(id, { branch, baseCommit, source, to }))
+    } catch (e) {
+      setErr((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <form className="form move-form" onSubmit={(e) => { e.preventDefault(); if (to && !dirty) go2() }}>
+      <label>New address<input autoFocus value={value} onChange={(e) => onChange(e.target.value)} placeholder="/about-us/" /></label>
+      {to && <p className="muted small">Renames <span className="mono">{source}</span> to <span className="mono">{to}</span>{current && clean !== current ? <>, and <span className="mono">{current}</span> will redirect to <span className="mono">{clean}</span></> : ''}.</p>}
+      {dirty && <p className="notice warn small">Save your changes first; the move is its own commit.</p>}
+      {err && <p className="notice bad small">{err}</p>}
+      <div className="actions-row">
+        <button type="submit" className="button" disabled={busy || !to || dirty || clean === current}>Move</button>
+        <button type="button" className="ghost" onClick={() => onChange(undefined)}>Cancel</button>
+      </div>
+    </form>
   )
 }

@@ -938,3 +938,73 @@ func TestTokenRenewal(t *testing.T) {
 		t.Errorf("refused renewal: %d %+v", rec.Code, c)
 	}
 }
+
+func TestMoveAndRedirects(t *testing.T) {
+	s, ff, repo := newTestServerRepo(t)
+	jar := []*http.Cookie{signIn(t, s, ff)}
+	mainTip := git(t, repo, "rev-parse", "main")
+	origCfg := git(t, repo, "show", "main:site.yaml")
+
+	rec := post(s, "/api/sites/site/move", jar, map[string]any{"branch": "main", "baseCommit": mainTip, "source": "content/about.md", "to": "content/about-us.md"})
+	var mv map[string]any
+	json.NewDecoder(rec.Body).Decode(&mv)
+	if rec.Code != 200 || mv["from"] != "/about/" || mv["to"] != "/about-us/" || mv["redirected"] != true || mv["created"] != true {
+		t.Fatalf("move: %d %v", rec.Code, mv)
+	}
+	br := mv["branch"].(string)
+	tree := git(t, repo, "ls-tree", "-r", "--name-only", br)
+	if strings.Contains(tree, "content/about.md") || !strings.Contains(tree, "content/about-us.md") {
+		t.Fatalf("tree:\n%s", tree)
+	}
+	cfg := git(t, repo, "show", br+":site.yaml")
+	if cfg != origCfg+"\nredirects:\n  - from: /about/\n    to: /about-us/" {
+		t.Errorf("site.yaml:\n%s", cfg)
+	}
+
+	// Moving it again points the first redirect at the newest address too.
+	tip := git(t, repo, "rev-parse", br)
+	rec = post(s, "/api/sites/site/move", jar, map[string]any{"branch": br, "baseCommit": tip, "source": "content/about-us.md", "to": "content/team.md"})
+	if rec.Code != 200 {
+		t.Fatalf("second move: %d %s", rec.Code, rec.Body)
+	}
+	cfg = git(t, repo, "show", br+":site.yaml")
+	if !strings.Contains(cfg, "  - from: /about/\n    to: /team/\n  - from: /about-us/\n    to: /team/") {
+		t.Errorf("chained redirects:\n%s", cfg)
+	}
+
+	// The table: read, refused when it would hide a page, saved when right.
+	var rd struct{ Redirects []site.Redirect }
+	json.NewDecoder(do(s, "GET", "/api/sites/site/redirects?branch="+br, jar, nil).Body).Decode(&rd)
+	if len(rd.Redirects) != 2 {
+		t.Fatalf("redirects: %+v", rd.Redirects)
+	}
+	tip = git(t, repo, "rev-parse", br)
+	if rec := post(s, "/api/sites/site/redirects-save", jar, map[string]any{"branch": br, "baseCommit": tip, "redirects": []map[string]string{{"from": "/contact/", "to": "/team/"}}}); rec.Code != 422 || !strings.Contains(rec.Body.String(), "is a page") {
+		t.Errorf("redirect over a page: %d %s", rec.Code, rec.Body)
+	}
+	if rec := post(s, "/api/sites/site/redirects-save", jar, map[string]any{"branch": br, "baseCommit": tip, "redirects": []map[string]string{{"from": "/old/", "to": "https://elsewhere.example/"}}}); rec.Code != 200 {
+		t.Fatalf("save: %d %s", rec.Code, rec.Body)
+	}
+	if cfg := git(t, repo, "show", br+":site.yaml"); cfg != origCfg+"\nredirects:\n  - from: /old/\n    to: https://elsewhere.example/" {
+		t.Errorf("after the table:\n%s", cfg)
+	}
+	if git(t, repo, "rev-parse", "main") != mainTip {
+		t.Error("main moved")
+	}
+}
+
+func TestCheckRedirects(t *testing.T) {
+	for _, c := range []struct {
+		list []site.Redirect
+		want string
+	}{
+		{[]site.Redirect{{From: "old", To: "/new/"}}, "starting with /"},
+		{[]site.Redirect{{From: "/a/", To: "/b/"}, {From: "/a/", To: "/c/"}}, "twice"},
+		{[]site.Redirect{{From: "/a/", To: "javascript:alert(1)"}}, "should start with"},
+		{[]site.Redirect{{From: "/a/", To: "/a/"}}, "itself"},
+	} {
+		if err := checkRedirects(c.list, map[string]bool{}); err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%v: %v", c.list, err)
+		}
+	}
+}

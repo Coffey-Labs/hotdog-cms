@@ -163,6 +163,7 @@ func cmdCheck(args []string) error {
 	fl := flag.NewFlagSet("check", flag.ExitOnError)
 	dir, out, drafts := buildFlags(fl)
 	csp := fl.Bool("csp", false, "also print the Content-Security-Policy the pages need")
+	fix := fl.Bool("fix", false, "say under each finding what usually puts it right")
 	_ = fl.Parse(args)
 	res, err := build.Run(build.Options{SiteDir: *dir, Out: *out, Drafts: *drafts})
 	if err != nil {
@@ -175,6 +176,9 @@ func cmdCheck(args []string) error {
 	}
 	for _, p := range rep.Problems {
 		fmt.Println(" ", p)
+		if *fix && p.Fix != "" {
+			fmt.Println("           fix:", p.Fix)
+		}
 	}
 	if *csp {
 		fmt.Printf("\nThe Content-Security-Policy these pages need (add hosts your scripts fetch to connect-src):\n  %s\n", rep.CSP)

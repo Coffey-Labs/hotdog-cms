@@ -3,6 +3,7 @@ package check
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -172,5 +173,22 @@ func TestLookContrast(t *testing.T) {
 	}
 	if len(found) != 1 || !strings.Contains(found[0], "accent on bg is 1.36:1 in light mode") {
 		t.Errorf("look-contrast: %v", found)
+	}
+}
+
+func TestEveryRuleHasAFix(t *testing.T) {
+	src, _ := os.ReadFile("rules.go")
+	more, _ := os.ReadFile("check.go")
+	pages, _ := os.ReadFile("pages.go")
+	all := string(src) + string(more) + string(pages)
+	for _, m := range regexp.MustCompile(`c\.add\(\w+, "([a-z-]+)"`).FindAllStringSubmatch(all, -1) {
+		if Fixes[m[1]] == "" {
+			t.Errorf("rule %s has no fix", m[1])
+		}
+	}
+	for _, r := range []string{"duplicate-title", "duplicate-description", "forbidden-string"} {
+		if Fixes[r] == "" {
+			t.Errorf("rule %s has no fix", r)
+		}
 	}
 }

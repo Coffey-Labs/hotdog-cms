@@ -145,14 +145,28 @@ func (s *Server) lookSave(w http.ResponseWriter, r *http.Request, sess *Session,
 	writeJSON(w, http.StatusOK, map[string]any{"branch": target, "commit": commit, "created": create, "preview": st.Preview.url(preview.Slug(target))})
 }
 
+func emptyValue(v any) bool {
+	switch x := v.(type) {
+	case nil:
+		return true
+	case map[string]any:
+		return len(x) == 0
+	case []any:
+		return len(x) == 0
+	case []map[string]string:
+		return len(x) == 0
+	}
+	return false
+}
+
 var topKey = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_-]*\s*:`)
 
 // setTopLevel replaces one top-level key of a YAML file (removing it when
 // value is empty), leaving every other line exactly as written: site.yaml is
 // a file people read and comment, and a diff should show only the change.
-func setTopLevel(text, key string, value map[string]any) (string, error) {
+func setTopLevel(text, key string, value any) (string, error) {
 	var block string
-	if len(value) > 0 {
+	if !emptyValue(value) {
 		var buf bytes.Buffer
 		enc := yaml.NewEncoder(&buf)
 		enc.SetIndent(2)
