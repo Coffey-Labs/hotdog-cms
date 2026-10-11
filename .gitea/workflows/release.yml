@@ -1,7 +1,7 @@
 # A v* tag is a release: hotdog-cms for Linux, macOS and Windows, with
 # SHA256SUMS, attached to a Gitea Release, then announced.
 #
-# The tag must be annotated and on main, and named v<year>.<month>.<day>[.<n>]
+# The tag must be annotated and on main, and named v<major>.<minor>.<patch>
 # (scripts/build-release.sh checks the name). Its annotation is the release
 # notes. The Release is a draft until every file is attached, so it is never
 # visible half-filled; a draft this run made is deleted if an upload fails.

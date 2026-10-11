@@ -2,7 +2,7 @@
 # Build the release binaries.
 #
 # Usage: scripts/build-release.sh TAG OUTDIR
-#        scripts/build-release.sh v2026.10.11 dist
+#        scripts/build-release.sh v0.1.0 dist
 #
 # CI runs exactly this on a v* tag (.gitea/workflows/release.yml), so a
 # release can be built and checked on any machine with Go before tagging.
@@ -15,8 +15,8 @@ set -euo pipefail
 
 TAG="${1:?usage: build-release.sh TAG OUTDIR}"
 OUT="${2:?usage: build-release.sh TAG OUTDIR}"
-[[ "$TAG" =~ ^v[0-9]{4}\.[0-9]{1,2}\.[0-9]{1,2}(\.[0-9]+)?$ ]] \
-  || { echo "tag $TAG is not v<year>.<month>.<day>[.<n>]" >&2; exit 1; }
+[[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] \
+  || { echo "tag $TAG is not v<major>.<minor>.<patch>[-<pre-release>]" >&2; exit 1; }
 [ -f internal/editor/ui/dist/index.html ] \
   || { echo "internal/editor/ui/dist is missing: npm ci && npm run build in editor-ui/" >&2; exit 1; }
 
