@@ -382,3 +382,24 @@ func TestSourceLink(t *testing.T) {
 		t.Errorf("operator's source: %s", rec.Header().Get("Location"))
 	}
 }
+
+func TestRecipients(t *testing.T) {
+	sc := SiteConfig{Recipients: []string{"hello@example.org", "@team.example.org"}}
+	for addr, want := range map[string]bool{"hello@example.org": true, "HELLO@example.org": true, "ann@team.example.org": true, "x@evil.example": false, "hello@example.org.evil": false, "x@notteam.example.org": false} {
+		if sc.allowed(addr) != want {
+			t.Errorf("%s: want %v", addr, want)
+		}
+	}
+}
+
+func TestLimitKeyAndTerms(t *testing.T) {
+	if limitKey("2001:db8:1:2:aaaa::1") != limitKey("2001:db8:1:2:bbbb::9") || limitKey("2001:db8:1:3::1") == limitKey("2001:db8:1:2::1") {
+		t.Error("IPv6 isn't counted by /64")
+	}
+	if limitKey("203.0.113.7") != "203.0.113.7" {
+		t.Error("IPv4 changed")
+	}
+	if n := len(queryTerms("aa bb cc dd ee ff gg hh ii jj kk aa aa")); n != maxTerms {
+		t.Errorf("%d terms", n)
+	}
+}

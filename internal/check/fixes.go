@@ -11,6 +11,7 @@ var Fixes = map[string]string{
 	"inline-script":          "Move the script into a file under assets/ and load it with <script src=\"{{ asset \"x.js\" }}\">.",
 	"inline-style":           "Move the styles into assets/styles.css, or a class; for a site's own colors, use look.yaml.",
 	"inline-handler":         "Attach the handler from a script file with addEventListener instead of an on… attribute.",
+	"script-link":            "Link to a page or a file; for something interactive, use a button wired up from a script file.",
 	"mixed-content":          "Load it over https://, or host it on the site.",
 	"broken-link":            "Fix the address, add the missing page, or add a redirect (redirects: in site.yaml) from the old address.",
 	"forbidden-string":       "Remove it from the page or file; it matches a pattern in check.forbid that must never be published.",

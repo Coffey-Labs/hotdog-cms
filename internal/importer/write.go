@@ -91,10 +91,13 @@ func Write(items []Item, opt Options) (*Report, error) {
 	keptHTML := false
 	redirects := map[string]string{}
 	for _, it := range items {
-		slug := it.Slug
+		// Slugs and folders come from the export or the old site, so they're
+		// made safe here: one plain name each, never "..", never a path.
+		slug := slugify(it.Slug)
 		if slug == "" {
 			slug = slugify(it.Title)
 		}
+		it.Dir = safeDir(it.Dir)
 		if slug == "" {
 			slug = "untitled"
 		}
@@ -138,12 +141,7 @@ func Write(items []Item, opt Options) (*Report, error) {
 				return u
 			}
 			for _, f := range img.Files {
-				p := filepath.Join(opt.SiteDir, "static", filepath.FromSlash(f.Path))
-				if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-					rep.Failed[abs] = err.Error()
-					return u
-				}
-				if err := os.WriteFile(p, f.Data, 0o644); err != nil {
+				if err := writeInSite(opt.SiteDir, path.Join("static", f.Path), f.Data); err != nil {
 					rep.Failed[abs] = err.Error()
 					return u
 				}
@@ -223,11 +221,7 @@ func Write(items []Item, opt Options) (*Report, error) {
 		if err != nil {
 			return nil, err
 		}
-		p := filepath.Join(opt.SiteDir, filepath.FromSlash(rel))
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			return nil, err
-		}
-		if err := os.WriteFile(p, []byte("---\n"+doc+"---\n\n"+strings.TrimLeft(body, "\n")), 0o644); err != nil {
+		if err := writeInSite(opt.SiteDir, rel, []byte("---\n"+doc+"---\n\n"+strings.TrimLeft(body, "\n"))); err != nil {
 			return nil, err
 		}
 		rep.Written = append(rep.Written, rel)
@@ -362,7 +356,33 @@ func frontMatter(fm map[string]any) (string, error) {
 	return b.String(), nil
 }
 
-var slugRe = regexp.MustCompile(`[^a-z0-9]+`)
+var slugRe = regexp.MustCompile(`[^\p{Ll}\p{Lo}\p{N}]+`)
+
+// safeDir keeps a folder from an import to plain names: "../../x" becomes
+// "x", "/a//b/" becomes "a/b".
+func safeDir(d string) string {
+	var parts []string
+	for _, p := range strings.Split(strings.ReplaceAll(d, "\\", "/"), "/") {
+		if s := slugify(p); s != "" {
+			parts = append(parts, s)
+		}
+	}
+	return strings.Join(parts, "/")
+}
+
+// writeInSite writes rel inside the site, never outside it.
+func writeInSite(siteDir, rel string, data []byte) error {
+	root, err := os.OpenRoot(siteDir)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	name := filepath.FromSlash(path.Clean("/" + rel))[1:]
+	if err := root.MkdirAll(filepath.Dir(name), 0o755); err != nil {
+		return err
+	}
+	return root.WriteFile(name, data, 0o644)
+}
 
 func slugify(s string) string {
 	return strings.Trim(slugRe.ReplaceAllString(strings.ToLower(s), "-"), "-")

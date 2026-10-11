@@ -66,6 +66,17 @@ type discovery struct {
 type discoverCache struct {
 	mu   sync.Mutex
 	seen map[string]discovery
+	// running: one look through an account's repositories at a time, however
+	// many requests ask; the rest wait for its answer.
+	running map[string]*lookup
+	// slots bounds how many accounts are looked through at once.
+	slots chan struct{}
+}
+
+type lookup struct {
+	done  chan struct{}
+	sites []*SiteConfig
+	err   error
 }
 
 // platformRepo is what Gitea, Forgejo and GitHub say about a repository.
@@ -96,8 +107,42 @@ func (s *Server) discovered(ctx context.Context, sess *Session) ([]*SiteConfig, 
 		s.found.mu.Unlock()
 		return d.sites, nil
 	}
+	if l, ok := s.found.running[key]; ok {
+		s.found.mu.Unlock()
+		select {
+		case <-l.done:
+			return l.sites, l.err
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	if s.found.running == nil {
+		s.found.running = map[string]*lookup{}
+		s.found.slots = make(chan struct{}, 8)
+	}
+	l := &lookup{done: make(chan struct{})}
+	s.found.running[key] = l
+	slots := s.found.slots
 	s.found.mu.Unlock()
+	defer func() {
+		s.found.mu.Lock()
+		delete(s.found.running, key)
+		s.found.mu.Unlock()
+		close(l.done)
+	}()
+	select {
+	case slots <- struct{}{}:
+		defer func() { <-slots }()
+	case <-ctx.Done():
+		l.err = ctx.Err()
+		return nil, l.err
+	}
+	l.sites, l.err = s.discover(ctx, f, sess, key)
+	return l.sites, l.err
+}
 
+// discover does the looking for discovered.
+func (s *Server) discover(ctx context.Context, f *ForgeConfig, sess *Session, key string) ([]*SiteConfig, error) {
 	repos, err := s.listRepos(ctx, f, sess.Token)
 	if err != nil {
 		return nil, err
@@ -148,7 +193,10 @@ func (s *Server) discovered(ctx context.Context, sess *Session) ([]*SiteConfig, 
 		if name == "" {
 			name = h.repo.FullName
 		}
-		st := &SiteConfig{ID: slug(h.repo.FullName), Name: name, Repo: h.repo.CloneURL, Branch: h.repo.DefaultBranch, discovered: true}
+		// The id carries a short hash of the exact repository, so two whose
+		// names slug alike (acme/site, acme-site/_) never share one.
+		sum := sha256.Sum256([]byte(strings.ToLower(f.Host + "/" + h.repo.FullName)))
+		st := &SiteConfig{ID: slug(h.repo.FullName) + "-" + hex.EncodeToString(sum[:])[:6], Name: name, Repo: h.repo.CloneURL, Branch: h.repo.DefaultBranch, discovered: true}
 		sites = append(sites, st)
 		// The listing already says what this account may do here.
 		s.rememberAccess(sess.Token, st, Access{Read: h.repo.Permissions.Pull, Write: h.repo.Permissions.Push, Admin: h.repo.Permissions.Admin})

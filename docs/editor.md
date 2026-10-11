@@ -59,6 +59,16 @@ your changes and set `source` to where they are; the footer says "modified"
 when the binary was built from uncommitted changes. The endpoint answers the
 same way at `/_hotdog/source` (see [forms.md](forms.md)).
 
+### Addresses
+
+Give the live preview and branch previews a different registered domain
+from the editor (`edit.example.org` for the editor, `example-previews.net`
+for previews), not just another subdomain. Previews run the sites' own
+pages, scripts included, and a separate domain keeps them away from the
+editor entirely. Over https the editor's cookies are `__Host-` cookies,
+which a page on a sibling subdomain can't set or replace, but a separate
+domain is the stronger line.
+
 ### Signing in
 
 Each platform needs an OAuth application, registered by whoever runs the

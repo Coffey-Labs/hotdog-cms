@@ -81,8 +81,8 @@ func (b *Builder) Handler(auth *Auth) http.Handler {
 // serveFiles answers the way the production web server config does.
 func serveFiles(w http.ResponseWriter, r *http.Request, root string) {
 	clean := filepath.Clean("/" + r.URL.Path)
-	if clean == "/.hotdog-cms-build" {
-		clean = "/nonexistent"
+	if strings.HasPrefix(filepath.Base(clean), ".hotdog-cms") {
+		clean = "/nonexistent" // hotdog-cms's own bookkeeping, as in production
 	}
 	p := filepath.Join(root, filepath.FromSlash(clean))
 	if fi, err := os.Stat(p); err == nil && fi.IsDir() {
@@ -162,7 +162,7 @@ func (b *Builder) Serve(addr string, auth *Auth, every time.Duration) error {
 			}
 		}
 	}()
-	srv := &http.Server{Addr: addr, Handler: b.Handler(auth), ReadHeaderTimeout: 10 * time.Second}
+	srv := &http.Server{Addr: addr, Handler: b.Handler(auth), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 120 * time.Second, MaxHeaderBytes: 16 << 10}
 	fmt.Fprintf(b.o.Log, "previews of %s at %s://%s%s/\n", b.o.Repo, b.o.Scheme, b.o.Domain, portSuffix(b.o.Port))
 	return srv.ListenAndServe()
 }

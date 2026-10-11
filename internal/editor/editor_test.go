@@ -640,12 +640,13 @@ func TestDiscover(t *testing.T) {
 	// The configured site, then the blog: not the repository without a
 	// site.yaml, the other tool's, the archived one, the other owner's, or
 	// one whose clone address is on another host.
-	if len(sites) != 2 || sites[0].ID != "site" || sites[0].Discovered || sites[1].ID != "owner-blog" || sites[1].Name != "The Blog" || !sites[1].Discovered || !sites[1].CanWrite {
+	if len(sites) != 2 || sites[0].ID != "site" || sites[0].Discovered || !strings.HasPrefix(sites[1].ID, "owner-blog-") || sites[1].Name != "The Blog" || !sites[1].Discovered || !sites[1].CanWrite {
 		t.Fatalf("sites: %+v", sites)
 	}
+	blogID := sites[1].ID
 
 	// A found site opens like any other, by its id.
-	rec := do(s, "GET", "/api/sites/owner-blog", jar, nil)
+	rec := do(s, "GET", "/api/sites/"+blogID, jar, nil)
 	var d struct {
 		Name, Repo, As string
 		CanWrite       bool
@@ -667,7 +668,7 @@ func TestDiscover(t *testing.T) {
 	if len(sites) != 1 || ff2.listed != 0 {
 		t.Errorf("discover off: %+v, listed %d", sites, ff2.listed)
 	}
-	if rec := do(s2, "GET", "/api/sites/owner-blog", jar2, nil); rec.Code != 404 {
+	if rec := do(s2, "GET", "/api/sites/"+blogID, jar2, nil); rec.Code != 404 {
 		t.Errorf("a site not offered opened: %d", rec.Code)
 	}
 }

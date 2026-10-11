@@ -95,6 +95,7 @@ sites:
   - dir: /srv/sites/example.org      # the site's source: site.yaml, forms/
     public: /var/www/example.org     # the built site, for search
     store: /var/lib/hotdog-cms/forms/example.org
+    recipients: [hello@example.org, "@team.example.org"]   # the only addresses its forms may email
 ```
 
 ```sh

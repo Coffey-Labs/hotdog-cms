@@ -17,6 +17,7 @@ import (
 	"sort"
 	"strings"
 	"text/template"
+	"text/template/parse"
 	"unicode/utf8"
 
 	"gopkg.in/yaml.v3"
@@ -176,6 +177,9 @@ func (f *Form) check() error {
 	if err != nil {
 		return fmt.Errorf("subject: %w", err)
 	}
+	if err := plainFields(t.Tree.Root); err != nil {
+		return fmt.Errorf("subject: %w", err)
+	}
 	f.subject = t
 	if f.Submit == "" {
 		f.Submit = "Send"
@@ -297,6 +301,31 @@ func (f *Form) Check(values map[string][]string) (*Submission, []Problem) {
 		return nil, problems
 	}
 	return sub, nil
+}
+
+// plainFields allows a subject only text and {{ .field }}: no loops, no
+// conditions, no functions. The endpoint fills it in for every submission,
+// for every site it serves, so it mustn't be able to do work.
+func plainFields(n parse.Node) error {
+	list, ok := n.(*parse.ListNode)
+	if !ok {
+		return fmt.Errorf("only text and {{ .field }} are allowed")
+	}
+	for _, c := range list.Nodes {
+		switch c := c.(type) {
+		case *parse.TextNode:
+		case *parse.ActionNode:
+			if len(c.Pipe.Decl) > 0 || len(c.Pipe.Cmds) != 1 || len(c.Pipe.Cmds[0].Args) != 1 {
+				return fmt.Errorf("only {{ .field }} is allowed, not %s", c)
+			}
+			if f, ok := c.Pipe.Cmds[0].Args[0].(*parse.FieldNode); !ok || len(f.Ident) != 1 {
+				return fmt.Errorf("only {{ .field }} is allowed, not %s", c)
+			}
+		default:
+			return fmt.Errorf("only text and {{ .field }} are allowed, not %s", c)
+		}
+	}
+	return nil
 }
 
 // Subject renders the email subject from the values, on one line.

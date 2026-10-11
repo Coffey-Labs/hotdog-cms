@@ -83,11 +83,20 @@ func (sr *searcher) index(file string) ([]*searchEntry, error) {
 
 var querySplit = regexp.MustCompile(`[^\p{L}\p{N}+#._-]+`)
 
+// maxTerms bounds the work one search does: each term is looked for in
+// every page.
+const maxTerms = 8
+
 func queryTerms(q string) []string {
 	var out []string
+	seen := map[string]bool{}
 	for _, t := range querySplit.Split(strings.ToLower(strings.TrimSpace(q)), -1) {
-		if utf8.RuneCountInString(t) >= 2 {
+		if utf8.RuneCountInString(t) >= 2 && !seen[t] {
+			seen[t] = true
 			out = append(out, t)
+			if len(out) == maxTerms {
+				break
+			}
 		}
 	}
 	return out
@@ -132,7 +141,7 @@ func search(entries []*searchEntry, q string, limit int) []searchResult {
 		if matched == len(terms) {
 			score += 20
 		}
-		out = append(out, searchResult{URL: e.URL, Title: e.Title, Date: e.Date, Terms: e.Terms, Snippet: snippet(e.Text, terms), score: score})
+		out = append(out, searchResult{URL: e.URL, Title: e.Title, Date: e.Date, Terms: e.Terms, Snippet: e.Text, score: score})
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if out[i].score != out[j].score {
@@ -142,6 +151,11 @@ func search(entries []*searchEntry, q string, limit int) []searchResult {
 	})
 	if len(out) > limit {
 		out = out[:limit]
+	}
+	// Snippets are the costly part (each renders the page's Markdown), so
+	// only the results kept get one.
+	for i := range out {
+		out[i].Snippet = snippet(out[i].Snippet, terms)
 	}
 	return out
 }
@@ -176,6 +190,10 @@ func snippet(md string, terms []string) string {
 func (s *Server) handleSearch(w http.ResponseWriter, r *http.Request, rt *siteRuntime, collection string) {
 	if rt.cfg.Public == "" || !collectionRe.MatchString(collection) {
 		http.NotFound(w, r)
+		return
+	}
+	if !s.searchLimit.allow(limitKey(s.clientIP(r)), s.now()) {
+		http.Error(w, "too many searches; wait a minute", http.StatusTooManyRequests)
 		return
 	}
 	entries, err := s.search.index(filepath.Join(rt.cfg.Public, collection, "search.json"))

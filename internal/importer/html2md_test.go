@@ -42,3 +42,17 @@ func TestLossy(t *testing.T) {
 		}
 	}
 }
+
+func TestSafeImportPaths(t *testing.T) {
+	for in, want := range map[string]string{"../../x": "x", "/a//b/": "a/b", `..\..\etc`: "etc", "news/2026": "news/2026"} {
+		if got := safeDir(in); got != want {
+			t.Errorf("safeDir(%q) = %q, want %q", in, got, want)
+		}
+	}
+	if s := slugify("../../../x/README"); strings.Contains(s, "/") || strings.Contains(s, "..") {
+		t.Errorf("slugify kept a path: %q", s)
+	}
+	if s := slugify("Café Ñandú 日本"); s != "café-ñandú-日本" {
+		t.Errorf("letters lost: %q", s)
+	}
+}

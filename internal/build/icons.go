@@ -2,11 +2,11 @@ package build
 
 import (
 	"fmt"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/markup"
 	"html"
 	"html/template"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 )
 
@@ -16,8 +16,6 @@ import (
 // templates, but still checked when loaded: an icon is a picture, and nothing
 // in one may run, fetch, or link anywhere.
 type Icons map[string]string
-
-var iconForbidden = regexp.MustCompile(`(?i)<script|<foreignobject|\son[a-z]+\s*=|javascript:|(?:xlink:)?href\s*=\s*["']?\s*(?:https?:|//|data:)|<iframe|<object|<embed`)
 
 func loadIcons(dir string) (Icons, error) {
 	icons := Icons{}
@@ -43,8 +41,8 @@ func loadIcons(dir string) (Icons, error) {
 		if !strings.HasPrefix(s, "<svg") {
 			return nil, fmt.Errorf("icons/%s: not an SVG", e.Name())
 		}
-		if m := iconForbidden.FindString(s); m != "" {
-			return nil, fmt.Errorf("icons/%s: contains %q; icons can't run code or load anything", e.Name(), m)
+		if found := markup.SVG(s); len(found) > 0 {
+			return nil, fmt.Errorf("icons/%s: %s; an icon is a picture, nothing that runs or loads other files", e.Name(), strings.Join(found, "; "))
 		}
 		icons[strings.TrimSuffix(e.Name(), ".svg")] = s
 	}

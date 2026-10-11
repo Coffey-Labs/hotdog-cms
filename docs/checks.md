@@ -28,6 +28,7 @@ check:
 | `privacy-contact` | warning | The privacy notice has no email address to write to. |
 | `inline-script`, `inline-style` | warning (error with `csp: strict`) | What a strict Content-Security-Policy would block. |
 | `inline-handler` | error | `onclick=` and friends. |
+| `script-link` | error | A link that runs code when followed (`javascript:`, `vbscript:`, `data:text/html`). |
 | `mixed-content` | error | Scripts, frames, images or stylesheets over plain `http://`. |
 | `broken-link` | error | Links and images that point at nothing in the site. |
 | `forbidden-string` | error | Anything matching `forbid`, in the source or the build. |

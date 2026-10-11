@@ -67,7 +67,7 @@ func Pull(o PullOptions) error {
 			return errors.New("a webhook needs a secret (HOTDOG_HOOK_SECRET)")
 		}
 		go func() {
-			srv := &http.Server{Addr: o.HookAddr, Handler: hookHandler(o, kick), ReadHeaderTimeout: 10 * time.Second}
+			srv := &http.Server{Addr: o.HookAddr, Handler: hookHandler(o, kick), ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, MaxHeaderBytes: 16 << 10}
 			fmt.Fprintf(o.Log, "listening for %s webhooks on %s/_hotdog/hook\n", o.HookKind, o.HookAddr)
 			if err := srv.ListenAndServe(); err != nil {
 				fmt.Fprintf(o.Log, "webhook listener: %v\n", err)

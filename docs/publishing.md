@@ -111,7 +111,9 @@ Any web server that serves files works. What HotDog CMS output expects:
 - a folder's `index.html` for its address (`/about/` serves `about/index.html`);
 - `404.html` for a missing page, with status 404;
 - long caching for fingerprinted assets (names like `styles.3f9a1c2b07.css`)
-  and revalidation for pages.
+  and revalidation for pages;
+- calendar feeds (`.ics`) sent as `text/calendar`;
+- HotDog CMS's own bookkeeping files (`/.hotdog-cms-*`) not served.
 
 nginx, for bare metal or a VPS:
 
@@ -130,7 +132,8 @@ server {
     location ~ "\.[0-9a-f]{10}\.[A-Za-z0-9]+$" {
         add_header Cache-Control "public, max-age=31536000, immutable";
     }
-    location = /.hotdog-cms-build { return 404; }
+    location ~ "\.ics$" { default_type "text/calendar; charset=utf-8"; }
+    location ~ "^/\.hotdog-cms-" { return 404; }
     error_page 404 /404.html;
 }
 ```
@@ -142,6 +145,9 @@ example.org {
 	root * /var/www/example.org
 	@hashed path_regexp \.[0-9a-f]{10}\.[A-Za-z0-9]+$
 	header @hashed Cache-Control "public, max-age=31536000, immutable"
+	@ics path *.ics
+	header @ics Content-Type "text/calendar; charset=utf-8"
+	respond /.hotdog-cms-* 404
 	file_server
 	handle_errors {
 		rewrite * /404.html

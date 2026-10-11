@@ -10,9 +10,12 @@ import (
 
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/text"
+	"github.com/yuin/goldmark/util"
 )
 
 // Markdown renders page bodies. Raw HTML is dropped unless the site turns it
@@ -41,6 +44,11 @@ func NewMarkdown(c MarkdownConfig, host string) *Markdown {
 		goldmark.WithExtensions(exts...),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID(), parser.WithAttribute()),
 	}
+	if !c.TrustHTML {
+		// {#id .class} after a heading is handy; {style=…} or {onclick=…}
+		// would be raw HTML by another name.
+		rendererOpts = append(rendererOpts, goldmark.WithParserOptions(parser.WithASTTransformers(util.Prioritized(idClassOnly{}, 1000))))
+	}
 	m := &Markdown{trust: c.TrustHTML, emailOff: c.EmailOff, newTab: c.ExternalLinks == "new_tab", host: strings.ToLower(host), imageSizes: c.ImageSizes}
 	if m.imageSizes == "" {
 		m.imageSizes = defaultImageSizes
@@ -59,6 +67,32 @@ func NewMarkdown(c MarkdownConfig, host string) *Markdown {
 	}
 	m.md = goldmark.New(rendererOpts...)
 	return m
+}
+
+// idClassOnly drops every Markdown attribute but id and class.
+type idClassOnly struct{}
+
+func (idClassOnly) Transform(doc *ast.Document, _ text.Reader, _ parser.Context) {
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if !entering {
+			return ast.WalkContinue, nil
+		}
+		attrs := n.Attributes()
+		if len(attrs) == 0 {
+			return ast.WalkContinue, nil
+		}
+		var keep []ast.Attribute
+		for _, a := range attrs {
+			if k := string(a.Name); k == "id" || k == "class" {
+				keep = append(keep, a)
+			}
+		}
+		n.RemoveAttributes()
+		for _, a := range keep {
+			n.SetAttribute(a.Name, a.Value)
+		}
+		return ast.WalkContinue, nil
+	})
 }
 
 // protectAddresses puts Cloudflare's email_off markers around everything its

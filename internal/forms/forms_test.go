@@ -99,3 +99,14 @@ func TestRenderEscapes(t *testing.T) {
 		}
 	}
 }
+
+func TestSubjectIsPlain(t *testing.T) {
+	for _, bad := range []string{`{{ range 100000000 }}x{{ end }}`, `{{ printf "%099999999d" 1 }}`, `{{ if .a }}x{{ end }}`, `{{ $x := .a }}`, `{{ .a.b }}`, `{{ template "x" }}`} {
+		if _, err := Parse("contact", []byte("to: a@example.org\nsubject: '"+bad+"'\nfields:\n  - name: a\n")); err == nil {
+			t.Errorf("subject %s was accepted", bad)
+		}
+	}
+	if _, err := Parse("contact", []byte("to: a@example.org\nsubject: 'Contact: {{ .a }} ({{.a}})'\nfields:\n  - name: a\n")); err != nil {
+		t.Errorf("a plain subject was refused: %v", err)
+	}
+}

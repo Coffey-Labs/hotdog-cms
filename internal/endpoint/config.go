@@ -64,6 +64,26 @@ type SiteConfig struct {
 	Public string   `yaml:"public"` // the built site, for search indexes
 	Hosts  []string `yaml:"hosts"`  // default: the host in site.yaml's url, and www.
 	Store  string   `yaml:"store"`  // folder for forms with store: true; JSON lines, one file per form
+	// Recipients are the only addresses this site's forms may email:
+	// "hello@example.org", or "@example.org" for any address there. The
+	// forms themselves live in the site, which anyone who can write to it
+	// can change; this list is yours.
+	Recipients []string `yaml:"recipients"`
+}
+
+// allowed says whether a form may send to addr.
+func (sc SiteConfig) allowed(addr string) bool {
+	if len(sc.Recipients) == 0 {
+		return true
+	}
+	addr = strings.ToLower(strings.TrimSpace(addr))
+	for _, r := range sc.Recipients {
+		r = strings.ToLower(strings.TrimSpace(r))
+		if addr == r || (strings.HasPrefix(r, "@") && strings.HasSuffix(addr, r)) {
+			return true
+		}
+	}
+	return false
 }
 
 type siteRuntime struct {
@@ -140,6 +160,9 @@ func LoadConfig(file string) (*Config, map[string]*siteRuntime, error) {
 			hosts = []string{h, "www." + h}
 		}
 		for _, f := range fs {
+			if f.To != "" && !sc.allowed(f.To) {
+				return nil, nil, fmt.Errorf("%s: %s: form %s sends to %s, which isn't in this site's recipients", file, sc.Dir, f.Name, f.To)
+			}
 			if f.Store && sc.Store == "" {
 				return nil, nil, fmt.Errorf("%s: %s: form %s has store: true but the site has no store folder", file, sc.Dir, f.Name)
 			}

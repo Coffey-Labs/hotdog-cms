@@ -48,3 +48,14 @@ func TestNoLinks(t *testing.T) {
 		t.Errorf("loaded a site with a link in it: %v", err)
 	}
 }
+
+func TestMarkdownAttributes(t *testing.T) {
+	md := NewMarkdown(MarkdownConfig{}, "example.org")
+	h, err := md.Render([]byte(`## Hi {#top .big style="background:url(https://evil.example/x)" onclick="x"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s := string(h); !strings.Contains(s, `id="top"`) || !strings.Contains(s, `class="big"`) || strings.Contains(s, "style") || strings.Contains(s, "onclick") {
+		t.Errorf("attributes: %s", s)
+	}
+}

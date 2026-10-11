@@ -30,6 +30,7 @@ type page struct {
 	inlineJS     []string // executable inline scripts (their first line)
 	inlineStyles int      // <style> elements and style="" attributes
 	handlers     []string // on* attributes
+	scriptLinks  []string // javascript: (and vbscript:, data:text/html) links
 	frames       []string
 	styles       []string // external stylesheets
 	images       []string // img/source/video sources
@@ -232,6 +233,9 @@ func parsePage(data []byte, file, u string) *page {
 				}
 			case "a", "area":
 				if href, ok := attr(t, "href"); ok {
+					if scriptURL(href) {
+						pg.scriptLinks = append(pg.scriptLinks, href)
+					}
 					pg.links = append(pg.links, href)
 					if strings.HasPrefix(strings.ToLower(href), "mailto:") {
 						pg.mailtos = append(pg.mailtos, href)
@@ -321,4 +325,16 @@ type Meta struct {
 func PageMeta(html []byte) Meta {
 	pg := parsePage(html, "", "/")
 	return Meta{Title: strings.TrimSpace(pg.title), Description: pg.description, Canonical: pg.canonical, Image: pg.ogImage, ImageAlt: pg.ogImageAlt, NoIndex: pg.noindex}
+}
+
+// scriptURL: a link that runs code when followed. The tokenizer has already
+// decoded entities; browsers also ignore tabs, newlines and leading spaces.
+func scriptURL(href string) bool {
+	h := strings.ToLower(strings.Map(func(r rune) rune {
+		if r == '\t' || r == '\n' || r == '\r' {
+			return -1
+		}
+		return r
+	}, strings.TrimSpace(href)))
+	return strings.HasPrefix(h, "javascript:") || strings.HasPrefix(h, "vbscript:") || strings.HasPrefix(h, "data:text/html")
 }

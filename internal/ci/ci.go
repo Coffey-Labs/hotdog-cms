@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/about"
 )
 
 // Template is one pipeline file.
@@ -21,7 +23,16 @@ type Template struct {
 	Note string // what to set up on the platform
 }
 
-const install = `go install git.coffeylabs.org/coffey-labs/hotdog-cms/cmd/hotdog-cms@latest`
+// install puts hotdog-cms on the runner: the version that wrote the file, so
+// a pipeline doesn't change under you, or the latest from a development
+// build.
+var install = func() string {
+	v := about.Version
+	if v == "" || v == "dev" {
+		v = "latest"
+	}
+	return "go install git.coffeylabs.org/coffey-labs/hotdog-cms/cmd/hotdog-cms@" + v
+}()
 
 // sshSetup loads a deploy key for rsync targets; a no-op without one.
 const sshSetup = `if [ -n "${DEPLOY_KEY:-}" ]; then
@@ -39,6 +50,14 @@ func indent(s string, n int) string {
 // GitHub-syntax workflows (GitHub, Gitea and Forgejo Actions). Actions are
 // pinned to commits; tags can be moved, commits can't.
 func actions(platform, checkout, setupGo string) string {
+	// On GitHub the deploy secrets live in an environment that only the
+	// publishing branch can use: anyone who can push a branch can change
+	// this file in it, so secrets the whole repository can use would be
+	// theirs too.
+	env := ""
+	if platform == "github" {
+		env = "\n    environment: production"
+	}
 	return `# Written by ` + "`hotdog-cms ci " + platform + "`" + `. Checks the site on every pull request and
 # publishes it to the targets in publish.yaml when {{BRANCH}} moves.
 name: site
@@ -52,7 +71,7 @@ on:
 permissions:
   contents: read
 jobs:
-  site:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: ` + checkout + `
@@ -63,8 +82,20 @@ jobs:
         run: ` + install + `
       - name: Check
         run: hotdog-cms check -site {{SITE}}
+  publish:
+    needs: check
+    if: (github.event_name == 'push' || github.event_name == 'schedule') && github.ref == 'refs/heads/{{BRANCH}}'
+    runs-on: ubuntu-latest` + env + `
+    steps:
+      - uses: ` + checkout + `
+      - uses: ` + setupGo + `
+        with:
+          go-version: stable
+      - name: Install hotdog-cms
+        run: ` + install + `
+      - name: Build
+        run: hotdog-cms check -site {{SITE}}
       - name: Publish
-        if: (github.event_name == 'push' || github.event_name == 'schedule') && github.ref == 'refs/heads/{{BRANCH}}'
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
@@ -82,17 +113,17 @@ var templates = map[string]Template{
 	"github": {
 		Path: ".github/workflows/site.yml",
 		Body: actions("github", ghCheckout, ghSetupGo),
-		Note: "Add the secrets publish.yaml reads (DEPLOY_HOST, and DEPLOY_KEY + DEPLOY_KNOWN_HOSTS for rsync) under Settings › Secrets and variables › Actions.",
+		Note: "Create an environment named production under Settings › Environments, limit it to the {{BRANCH}} branch (Deployment branches), and add the secrets publish.yaml reads there (DEPLOY_HOST, and DEPLOY_KEY + DEPLOY_KNOWN_HOSTS for rsync), not as repository secrets: anyone who can push a branch can read repository secrets from it.",
 	},
 	"gitea": {
 		Path: ".gitea/workflows/site.yml",
 		Body: actions("gitea", "https://github.com/"+ghCheckout, "https://github.com/"+ghSetupGo),
-		Note: "Needs Actions enabled on the repository and a runner with the ubuntu-latest label. Add the secrets under Settings › Actions › Secrets.",
+		Note: "Needs Actions enabled on the repository and a runner with the ubuntu-latest label. Add the secrets under Settings › Actions › Secrets. Anyone who can push a branch to this repository can read those secrets from it; if people who aren't maintainers can push, publish with the pull agent instead (no secrets in CI).",
 	},
 	"forgejo": {
 		Path: ".forgejo/workflows/site.yml",
 		Body: actions("forgejo", "https://github.com/"+ghCheckout, "https://github.com/"+ghSetupGo),
-		Note: "Needs Actions enabled on the repository and a runner with the ubuntu-latest label (on Codeberg, request access to its runners). Add the secrets under Settings › Actions › Secrets.",
+		Note: "Needs Actions enabled on the repository and a runner with the ubuntu-latest label (on Codeberg, request access to its runners). Add the secrets under Settings › Actions › Secrets. Anyone who can push a branch to this repository can read those secrets from it; if people who aren't maintainers can push, publish with the pull agent instead (no secrets in CI).",
 	},
 	"gitlab": {
 		Path: ".gitlab-ci.yml",
@@ -124,7 +155,7 @@ site:publish:
   rules:
     - if: $CI_COMMIT_BRANCH == "{{BRANCH}}"
 `,
-		Note: "Add DEPLOY_HOST (and DEPLOY_KEY + DEPLOY_KNOWN_HOSTS for rsync) as masked, protected variables under Settings › CI/CD › Variables.",
+		Note: "Add DEPLOY_HOST (and DEPLOY_KEY + DEPLOY_KNOWN_HOSTS for rsync) as masked, protected variables under Settings › CI/CD › Variables, and protect {{BRANCH}}: protected variables reach only pipelines on protected branches, not branches anyone can push.",
 	},
 	"bitbucket": {
 		Path: "bitbucket-pipelines.yml",
@@ -189,7 +220,7 @@ steps:
 ` + indent(sshSetup, 8) + `
       - hotdog-cms publish -site {{SITE}} -all
 `,
-		Note: "Add deploy_host (and deploy_key + deploy_known_hosts for rsync) as repository secrets in Woodpecker.",
+		Note: "Add deploy_host (and deploy_key + deploy_known_hosts for rsync) as repository secrets in Woodpecker, limited to the push and cron events on {{BRANCH}}, and leave them unavailable to pull requests.",
 	},
 	"git": {
 		Path: "post-receive",
@@ -238,5 +269,6 @@ func Get(platform, site, branch string) (Template, error) {
 	}
 	r := strings.NewReplacer("{{SITE}}", site, "{{BRANCH}}", branch)
 	t.Body = r.Replace(t.Body)
+	t.Note = r.Replace(t.Note)
 	return t, nil
 }

@@ -62,8 +62,9 @@ const nginxConf = `server {
         add_header X-Content-Type-Options "nosniff" always;
     }
 
-    location = /` + build.Marker + ` { return 404; }
-    location = /` + build.RedirectsFile + ` { return 404; }
+    # hotdog-cms's own bookkeeping (.hotdog-cms-build, -redirects, -pages):
+    # not for visitors.
+    location ~ "^/\.hotdog-cms-" { return 404; }
 {{REDIRECTS}}    error_page 404 /404.html;
 }
 `
@@ -88,8 +89,7 @@ const caddyFile = `:8080 {
 	header ?Cache-Control "no-cache"
 	@ics path *.ics
 	header @ics Content-Type "text/calendar; charset=utf-8"
-	respond /` + build.Marker + ` 404
-	respond /` + build.RedirectsFile + ` 404
+	respond /.hotdog-cms-* 404
 {{REDIRECTS}}	file_server
 	handle_errors {
 		@404 expression {err.status_code} == 404

@@ -21,17 +21,20 @@ import (
 
 // Server answers /_hotdog/... for every configured site.
 type Server struct {
-	cfg       *Config
-	sites     map[string]*siteRuntime
-	tokens    tokens
-	limit     *limiter
-	mail      *mailer
-	store     store
-	trusted   []*net.IPNet
-	turnstile string // HOTDOG_TURNSTILE_SECRET
-	search    *searcher
-	now       func() time.Time
-	log       *log.Logger
+	cfg    *Config
+	sites  map[string]*siteRuntime
+	tokens tokens
+	limit  *limiter
+	// searchLimit: searches are cheap but not free; 120 a minute per
+	// connection is far beyond anyone typing.
+	searchLimit *limiter
+	mail        *mailer
+	store       store
+	trusted     []*net.IPNet
+	turnstile   string // HOTDOG_TURNSTILE_SECRET
+	search      *searcher
+	now         func() time.Time
+	log         *log.Logger
 }
 
 // New builds a server from endpoint.yaml. The form secret must be at least 32
@@ -47,8 +50,9 @@ func New(configFile string, logw io.Writer) (*Server, error) {
 	}
 	s := &Server{
 		cfg: cfg, sites: sites, tokens: tokens{secret: []byte(secret)},
-		limit: newLimiter(cfg.RateLimit.Count, cfg.RateLimit.Window),
-		mail:  newMailer(cfg.SMTP), turnstile: os.Getenv("HOTDOG_TURNSTILE_SECRET"),
+		limit:       newLimiter(cfg.RateLimit.Count, cfg.RateLimit.Window),
+		searchLimit: newLimiter(120, time.Minute),
+		mail:        newMailer(cfg.SMTP), turnstile: os.Getenv("HOTDOG_TURNSTILE_SECRET"),
 		now: time.Now, log: log.New(logw, "", log.LstdFlags),
 	}
 	for _, p := range cfg.TrustedProxies {
@@ -135,6 +139,17 @@ func (s *Server) clientIP(r *http.Request) string {
 	return peer
 }
 
+// limitKey is what the rate limit counts by: an IPv4 address, or an IPv6
+// address's /64, since one connection is usually given a whole /64 and could
+// otherwise use a new address for every message.
+func limitKey(ip string) string {
+	p := net.ParseIP(ip)
+	if p == nil || p.To4() != nil {
+		return ip
+	}
+	return p.Mask(net.CIDRMask(64, 128)).String() + "/64"
+}
+
 func (s *Server) isTrusted(ip string) bool {
 	p := net.ParseIP(ip)
 	if p == nil {
@@ -194,7 +209,7 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request, rt *siteRuntime,
 		return
 	}
 	ip := s.clientIP(r)
-	if !s.limit.allow(host+"|"+ip, s.now()) {
+	if !s.limit.allow(host+"|"+limitKey(ip), s.now()) {
 		answer(http.StatusTooManyRequests, reply{Message: "Too many messages from your connection. Please wait a few minutes and try again."})
 		return
 	}

@@ -34,6 +34,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/markup"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/siteyaml"
 	bundled "git.coffeylabs.org/coffey-labs/hotdog-cms/packs"
@@ -56,12 +57,22 @@ type Manifest struct {
 }
 
 var (
-	nameRe   = regexp.MustCompile(`^[a-z][a-z0-9-]{0,39}$`)
-	assetExt = map[string]bool{".css": true, ".png": true, ".jpg": true, ".jpeg": true, ".webp": true, ".gif": true, ".avif": true, ".woff2": true, ".woff": true, ".ttf": true, ".otf": true}
-	// What would make a template run code in visitors' browsers.
-	codeInTemplate = regexp.MustCompile(`(?i)<script\b|\son[a-z]+\s*=|javascript:|<iframe\b|<object\b|<embed\b`)
-	metaFiles      = map[string]bool{"pack.yaml": true, "README.md": true, "LICENSE": true, "LICENSE.md": true, "LICENSE.txt": true, "CHANGELOG.md": true}
+	nameRe    = regexp.MustCompile(`^[a-z][a-z0-9-]{0,39}$`)
+	assetExt  = map[string]bool{".css": true, ".png": true, ".jpg": true, ".jpeg": true, ".webp": true, ".gif": true, ".avif": true, ".woff2": true, ".woff": true, ".ttf": true, ".otf": true}
+	metaFiles = map[string]bool{"pack.yaml": true, "README.md": true, "LICENSE": true, "LICENSE.md": true, "LICENSE.txt": true, "CHANGELOG.md": true}
 )
+
+func dedupe(xs []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, x := range xs {
+		if !seen[x] {
+			seen[x] = true
+			out = append(out, x)
+		}
+	}
+	return out
+}
 
 // File is one file a pack puts in a site.
 type File struct {
@@ -128,8 +139,13 @@ func Check(dir string) (*Manifest, []File, error) {
 			if err != nil {
 				return err
 			}
-			if m := codeInTemplate.FindString(string(src)); m != "" {
-				problems = append(problems, fmt.Sprintf("%s: %q: a pack can't carry code that runs in visitors' browsers", rel, strings.TrimSpace(m)))
+			found, err := markup.Template(string(src))
+			if err != nil {
+				problems = append(problems, rel+": "+err.Error())
+				return nil
+			}
+			if len(found) > 0 {
+				problems = append(problems, fmt.Sprintf("%s: %s; a pack can't carry code that runs in visitors' browsers", rel, strings.Join(dedupe(found), "; ")))
 				return nil
 			}
 			files = append(files, File{From: rel, To: rel})
@@ -217,11 +233,14 @@ func fetch(src, tmp string) (string, string, error) {
 		return "", "", fmt.Errorf("%s is neither a folder nor a git repository address", src)
 	}
 	dir := filepath.Join(tmp, "pack")
-	args := []string{"clone", "--quiet", "--depth", "1"}
+	args := []string{"-c", "core.symlinks=false", "-c", "protocol.ext.allow=never", "-c", "protocol.file.allow=never", "clone", "--quiet", "--depth", "1"}
 	if ref != "" {
+		if strings.HasPrefix(ref, "-") {
+			return "", "", fmt.Errorf("%q isn't a tag or branch", ref)
+		}
 		args = append(args, "--branch", ref)
 	}
-	cmd := exec.Command("git", append(args, repo, dir)...)
+	cmd := exec.Command("git", append(args, "--end-of-options", repo, dir)...)
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return "", "", fmt.Errorf("git clone %s: %s", src, strings.TrimSpace(string(out)))

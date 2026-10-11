@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/markup"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/starter"
 )
@@ -183,5 +184,44 @@ func TestBundledCalendar(t *testing.T) {
 	// Installing again keeps the site's own settings for the collection.
 	if ref, err := Add(dir, "calendar", false); err != nil || len(ref.AddedCollections) != 0 {
 		t.Errorf("reinstall: %v %+v", err, ref)
+	}
+}
+
+func TestMarkupTricks(t *testing.T) {
+	for _, bad := range []string{
+		`<img src="x"onerror="alert(1)">`,
+		`<svg/onload=alert(2)>`,
+		`<a href="jav&#x61;script:alert(3)">x</a>`,
+		`<scri{{/**/}}pt>alert(4)</script>`,
+		`<a on{{/**/}}click="x">x</a>`,
+		`<a on{{ .x }}click="x">x</a>`,
+		`<a href="java{{/**/}}script:alert(5)">x</a>`,
+		`<a href="java{{ .x }}script:alert(5)">x</a>`,
+		`<base href="https://evil.example/">`,
+		`<meta http-equiv="refresh" content="0;url=https://evil.example/">`,
+		`<link rel="stylesheet" href="https://evil.example/x.css">`,
+		`<link rel="import" href="/x.html">`,
+		`<iframe srcdoc="<script>x</script>"></iframe>`,
+		`<div {{ .attrs }}>x</div>`,
+		`{{ if .x }}<script>x</script>{{ end }}`,
+		`<form action="javascript:alert(6)"></form>`,
+		`<a href="data:text/html,<script>x</script>">x</a>`,
+	} {
+		found, err := markup.Template(bad)
+		if err != nil || len(found) == 0 {
+			t.Errorf("not caught: %s (%v)", bad, err)
+		}
+	}
+	for _, ok := range []string{
+		`<link rel="stylesheet" href="{{ asset "packs/faq/faq.css" }}">`,
+		`<a href="{{ .Href }}">{{ .Title }}</a>`,
+		`<a href="/about/">About</a> <a href="https://example.org/">x</a> <a href="mailto:a@example.org">m</a>`,
+		`<img src="{{ asset "packs/x/a.png" }}" alt="">`,
+		`<a href="img/x.png">x</a>`,
+		`<section class="faq">{{ range .Data.items }}<details><summary>{{ .q }}</summary>{{ markdownify .a }}</details>{{ end }}</section>`,
+	} {
+		if found, err := markup.Template(ok); err != nil || len(found) > 0 {
+			t.Errorf("refused a fine template: %s: %v %v", ok, found, err)
+		}
 	}
 }

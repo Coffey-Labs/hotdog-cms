@@ -39,9 +39,6 @@ func isTracker(h string) bool {
 var paginated = regexp.MustCompile(`/page/\d+/$`)
 
 func (c *checker) checkPage(pg *page) {
-	if pg.redirect {
-		return
-	}
 	strict := c.cfg.Check.CSP == "strict"
 	inlineLevel := Warning
 	if strict {
@@ -79,6 +76,14 @@ func (c *checker) checkPage(pg *page) {
 	}
 	for _, h := range pg.handlers {
 		c.add(Error, "inline-handler", pg.file, "event handler attribute %s; attach it from a script file", h)
+	}
+	for _, h := range pg.scriptLinks {
+		c.add(Error, "script-link", pg.file, "a link that runs code (%.60s); link to a page instead", h)
+	}
+	// A redirect page has nothing else to check: it isn't meant to be read
+	// or found. (The security rules above still apply to it.)
+	if pg.redirect {
+		return
 	}
 	for _, u := range pg.insecure {
 		c.add(Error, "mixed-content", pg.file, "loads %s over plain http", u)
