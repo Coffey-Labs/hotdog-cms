@@ -374,7 +374,7 @@ pre.diff .h { color: var(--muted); display: block; }
 .provider-pick { display: grid; gap: .45rem; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); margin-bottom: .5rem; }
 .provider { display: grid; gap: .15rem; padding: .55rem .65rem; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
 .provider.on { border-color: var(--accent); background: var(--accent-soft); }
-.provider input { justify-self: start; }
+.provider input[type="radio"] { justify-self: start; width: 16px; height: 16px; margin: 0; padding: 0; accent-color: var(--accent); }
 
 /* ---- Forms (Forms.tsx) -------------------------------------------------- */
 .form-list { display: grid; gap: .2rem; margin: .4rem 0 1rem; }
