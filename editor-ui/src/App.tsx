@@ -8,6 +8,7 @@ import { useCommands } from './Commands'
 import { Console, showConsole } from './Console'
 import { FilesView } from './Files'
 import { FormsView } from './Forms'
+import { HistoryView } from './History'
 import { LookPanel } from './Look'
 import { Palette, showPalette } from './Palette'
 import { PrivacyView } from './Privacy'
@@ -57,6 +58,7 @@ export function App() {
       {route.view === 'privacy' && <PrivacyView id={route.id} branch={route.branch} />}
       {route.view === 'search' && <SearchView id={route.id} branch={route.branch} />}
       {route.view === 'forms' && <FormsView id={route.id} branch={route.branch} form={route.form} />}
+      {route.view === 'history' && <HistoryView id={route.id} />}
     </Shell>
   )
 }
@@ -170,6 +172,7 @@ function SiteView({ id, branch }: { id: string; branch?: string }) {
           <Link to={{ view: 'sites' }} className="back">← Sites</Link>
           <h1>{d.name}</h1>
           <p className="muted mono small">{d.branch === d.publishBranch ? `${d.branch} · published branch` : `${d.branch} · draft`}</p>
+          {d.role && <p className="muted small role-line" title="From the platform's permissions">{{ reader: 'You can read this site.', writer: 'You can save drafts and open reviews; the platform decides who may publish.', maintainer: 'You maintain this site: drafts, reviews and publishing.' }[d.role]}</p>}
           {d.accounts.length > 1 && (
             <label className="working-as">
               Working as
@@ -202,6 +205,7 @@ function SiteView({ id, branch }: { id: string; branch?: string }) {
           <Link to={{ view: 'look', id, branch }} className="side-item">Look</Link>
           <Link to={{ view: 'files', id, branch }} className="side-item">Files</Link>
           <Link to={{ view: 'redirects', id, branch }} className="side-item">Redirects</Link>
+          <Link to={{ view: 'history', id }} className="side-item">History</Link>
           <Link to={{ view: 'privacy', id, branch }} className="side-item">Privacy &amp; statistics</Link>
           <Link to={{ view: 'search', id, branch }} className="side-item">Search engines</Link>
         </nav>
@@ -342,6 +346,7 @@ function GlobalCommands({ session }: { session: SessionInfo }) {
           { id: 'go-files', title: 'Files', group: 'Go to', run: () => go({ view: 'files', id, branch }) },
           { id: 'go-pictures', title: 'Pictures', group: 'Go to', run: () => go({ view: 'media', id, branch }) },
           { id: 'go-look', title: 'Look', group: 'Go to', run: () => go({ view: 'look', id, branch }) },
+          { id: 'go-history', title: 'History (undo a published change)', group: 'Go to', run: () => go({ view: 'history', id }) },
           { id: 'go-forms', title: 'Forms and submissions', group: 'Go to', run: () => go({ view: 'forms', id, branch }) },
           { id: 'go-redirects', title: 'Redirects', group: 'Go to', run: () => go({ view: 'redirects', id, branch }) },
           { id: 'go-search', title: 'Search engines (verification, IndexNow)', group: 'Go to', run: () => go({ view: 'search', id, branch }) },

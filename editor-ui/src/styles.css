@@ -360,3 +360,7 @@ pre.diff .h { color: var(--muted); display: block; }
 label.inline { display: inline-flex; align-items: center; gap: .4rem; font-weight: 500; }
 label.inline input { width: 6rem; }
 .sub-cell { max-width: 22rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.reviewer-pick { display: grid; gap: .3rem; }
+.commit-list { list-style: none; margin: 1rem 0 0; padding: 0; display: grid; gap: .4rem; }
+.commit-list li { display: flex; justify-content: space-between; align-items: center; gap: .8rem; padding: .55rem .7rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.role-line { margin: .3rem 0 0; }

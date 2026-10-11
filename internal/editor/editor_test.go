@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"gopkg.in/yaml.v3"
 
@@ -37,6 +38,7 @@ type fakeForge struct {
 	expiring  bool                // hand out tokens that expire in a minute, with a refresh token
 	refreshes int                 // refresh-token renewals served
 	refuse    bool                // refuse renewals
+	requested []string            // reviewers asked for
 }
 
 func newFakeForge(t *testing.T) *fakeForge {
@@ -121,6 +123,14 @@ func newFakeForge(t *testing.T) *fakeForge {
 			json.NewEncoder(w).Encode(map[string]any{"number": 8, "html_url": "https://forge.test/owner/site/pulls/8"})
 		case r.URL.Path == "/api/v1/repos/owner/site/pulls":
 			json.NewEncoder(w).Encode([]map[string]any{{"number": 7, "title": "New hello", "html_url": "https://forge.test/owner/site/pulls/7", "head": map[string]string{"ref": "draft/hello"}, "user": map[string]string{"login": "ada"}}})
+		case r.URL.Path == "/api/v1/repos/owner/site/reviewers":
+			json.NewEncoder(w).Encode([]map[string]string{{"login": "ada", "full_name": "Ada Lovelace"}, {"login": "carol", "full_name": "Carol"}})
+		case r.URL.Path == "/api/v1/repos/owner/site/pulls/8/requested_reviewers" && r.Method == "POST":
+			var body map[string][]string
+			json.NewDecoder(r.Body).Decode(&body)
+			ff.requested = append(ff.requested, body["reviewers"]...)
+			w.WriteHeader(201)
+			w.Write([]byte("{}"))
 		case r.URL.Path == "/api/v1/repos/owner/site/pulls/7/merge" && r.Method == "POST":
 			ff.merged = append(ff.merged, "7")
 			w.WriteHeader(200)
@@ -1154,5 +1164,79 @@ func TestFormBuilder(t *testing.T) {
 	bob := addAccount(t, s, ff, nil, "bob-code")
 	if rec := do(s, "GET", "/api/sites/site/submissions?form=contact&as=forge.test/bob", bob, nil); rec.Code != 403 {
 		t.Errorf("reader: %d", rec.Code)
+	}
+}
+
+func TestPeopleAndUndo(t *testing.T) {
+	s, ff, repo := newTestServerRepo(t)
+	jar := []*http.Cookie{signIn(t, s, ff)}
+
+	var people struct{ People []Person }
+	json.NewDecoder(do(s, "GET", "/api/sites/site/people", jar, nil).Body).Decode(&people)
+	if len(people.People) != 1 || people.People[0].Login != "carol" {
+		t.Fatalf("people: %+v", people.People)
+	}
+	var d struct{ Role string }
+	json.NewDecoder(do(s, "GET", "/api/sites/site", jar, nil).Body).Decode(&d)
+	if d.Role != "writer" {
+		t.Errorf("role: %q", d.Role)
+	}
+
+	// A review that asks Carol: the platform is asked to notify her.
+	git(t, repo, "checkout", "-q", "-b", "draft/x")
+	git(t, repo, "commit", "-q", "--allow-empty", "-m", "x")
+	git(t, repo, "checkout", "-q", "main")
+	rec := post(s, "/api/sites/site/review", jar, map[string]any{"branch": "draft/x", "title": "X", "description": "", "reviewers": []string{"carol"}})
+	if rec.Code != 200 || len(ff.requested) != 1 || ff.requested[0] != "carol" {
+		t.Fatalf("review with reviewers: %d %s %v", rec.Code, rec.Body, ff.requested)
+	}
+
+	// A published change, then undone on a draft.
+	before := git(t, repo, "show", "main:content/about.md")
+	os.WriteFile(filepath.Join(repo, "content", "about.md"), []byte(before+"\nA line that was a mistake.\n"), 0o644)
+	git(t, repo, "commit", "-q", "-am", "Oops")
+	bad := git(t, repo, "rev-parse", "HEAD")
+	mainTip := bad
+	rec = post(s, "/api/sites/site/revert", jar, map[string]any{"sha": bad})
+	var rv map[string]any
+	json.NewDecoder(rec.Body).Decode(&rv)
+	if rec.Code != 200 || !strings.HasPrefix(rv["branch"].(string), "draft/undo-") {
+		t.Fatalf("revert: %d %v", rec.Code, rv)
+	}
+	if got := git(t, repo, "show", rv["branch"].(string)+":content/about.md"); got != strings.TrimRight(before, "\n") {
+		t.Errorf("undone file:\n%s", got)
+	}
+	if git(t, repo, "rev-parse", "main") != mainTip {
+		t.Error("undo reached the publishing branch")
+	}
+	if subj := git(t, repo, "log", "-1", "--format=%s", rv["branch"].(string)); !strings.HasPrefix(subj, `Revert "Oops"`) {
+		t.Errorf("subject: %s", subj)
+	}
+	if rec := post(s, "/api/sites/site/revert", jar, map[string]any{"sha": "not-a-sha"}); rec.Code != 400 {
+		t.Errorf("bad sha: %d", rec.Code)
+	}
+}
+
+func TestDiscoverFindsNewRepos(t *testing.T) {
+	s, ff, _ := newTestServerWith(t, `, discover: { owners: [owner] }`)
+	jar := []*http.Cookie{signIn(t, s, ff)}
+	do(s, "GET", "/api/sites", jar, nil) // caches the listing
+	if ff.listed != 1 {
+		t.Fatalf("listed %d", ff.listed)
+	}
+	// Age the cached listing past 30 seconds: an unknown id looks again.
+	s.found.mu.Lock()
+	for k, d := range s.found.seen {
+		d.at = d.at.Add(-time.Minute)
+		s.found.seen[k] = d
+	}
+	s.found.mu.Unlock()
+	if rec := do(s, "GET", "/api/sites/owner-newsite", jar, nil); rec.Code != 404 || ff.listed != 2 {
+		t.Errorf("unknown id: %d, listed %d", rec.Code, ff.listed)
+	}
+	// Straight after, it doesn't ask again.
+	do(s, "GET", "/api/sites/owner-newsite", jar, nil)
+	if ff.listed != 2 {
+		t.Errorf("asked again at once: listed %d", ff.listed)
 	}
 }

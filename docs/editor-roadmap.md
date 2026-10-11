@@ -431,15 +431,23 @@ below):
 
 ### E8 · People and workflow
 
-- Roles (writer, editor, publisher) mapped to the platform's own
-  permissions: who can push to drafts, who can merge. One source of truth,
-  and the editor stores none of it.
-- Notifications for review requests and published changes, sent by the
-  platform's own notifications or email.
-- History is `git log`. An audit trail can't be edited by whoever it
-  records.
-- Passkeys and two-factor sign-in, provided by the platform or the OIDC
-  provider.
+*Built 2026-10-10* (see [editor.md](editor.md)):
+- **Roles from the platform:** reader, writer or maintainer, from its
+  permissions, shown in the site view. The editor stores none of it, and the
+  platform still decides who may merge.
+- **Review requests:** submitting a draft can ask people to review, chosen
+  from those the platform says can (Gitea's and Forgejo's reviewers, GitHub's
+  collaborators). The platform notifies them.
+- **History:** the published branch's changes, newest first, from git.
+  **Undo** makes a revert on a new draft, with merges reverted against their
+  first parent, and says so when later changes overlap instead of guessing.
+- **Passkeys and two-factor:** provided by the platform's sign-in, nothing
+  to build.
+- **Fixed on the way:** the site finder now looks again (at most every 30
+  seconds) when asked for a site it doesn't know, so a repository made a
+  minute ago isn't invisible for ten.
+- **Tried** on a throwaway repository on the Coffey Labs Gitea (since
+  deleted).
 
 ### E9 · Importers
 

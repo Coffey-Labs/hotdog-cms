@@ -229,6 +229,8 @@ func (s *Server) apiRoute(w http.ResponseWriter, r *http.Request) {
 		s.apiSite(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "page":
 		s.apiPage(w, r, sess, f, parts[1])
+	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "people":
+		s.apiPeople(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "forms":
 		s.apiForms(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "submissions":
@@ -485,7 +487,7 @@ func (s *Server) apiSite(w http.ResponseWriter, r *http.Request, sess *Session, 
 		"commit": commit, "canWrite": acc.Write, "siteName": loaded.Config.Name, "siteURL": loaded.Config.URL,
 		"collections": cols, "pages": pages, "drafts": drafts, "reviews": reviews, "build": result,
 		"preview": st.Preview.url(preview.Slug(branch)), "notYet": notYet,
-		"as": sess.ID(), "accounts": s.accountsFor(w, r, infoFrom(r).accts, st),
+		"as": sess.ID(), "accounts": s.accountsFor(w, r, infoFrom(r).accts, st), "role": role(acc),
 	})
 }
 
@@ -547,4 +549,15 @@ func trimErr(err error) string {
 		msg = msg[:200] + "…"
 	}
 	return msg
+}
+
+// role names what the platform lets someone do with a site.
+func role(a Access) string {
+	switch {
+	case a.Admin:
+		return "maintainer"
+	case a.Write:
+		return "writer"
+	}
+	return "reader"
 }

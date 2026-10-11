@@ -13,6 +13,7 @@ export type Route =
   | { view: 'privacy'; id: string; branch?: string }
   | { view: 'search'; id: string; branch?: string }
   | { view: 'forms'; id: string; branch?: string; form?: string }
+  | { view: 'history'; id: string }
   | { view: 'files'; id: string; branch?: string; path?: string }
 
 export function parse(loc: Location): Route {
@@ -26,6 +27,7 @@ export function parse(loc: Location): Route {
     if (parts[2] === 'redirects') return { view: 'redirects', id: parts[1], branch }
     if (parts[2] === 'privacy') return { view: 'privacy', id: parts[1], branch }
     if (parts[2] === 'search') return { view: 'search', id: parts[1], branch }
+    if (parts[2] === 'history') return { view: 'history', id: parts[1] }
     if (parts[2] === 'forms') return { view: 'forms', id: parts[1], branch, form: q.get('form') || undefined }
     if (parts[2] === 'files') return { view: 'files', id: parts[1], branch, path: q.get('path') || undefined }
     if (parts[2] === 'present' && q.get('url')) return { view: 'present', id: parts[1], url: q.get('url')!, branch }
@@ -48,6 +50,8 @@ export function href(r: Route): string {
     case 'files':
       if (r.path) q.set('path', r.path)
       return `/sites/${encodeURIComponent(r.id)}/files${q.size ? `?${q}` : ''}`
+    case 'history':
+      return `/sites/${encodeURIComponent(r.id)}/history`
     case 'forms':
       if (r.form) q.set('form', r.form)
       return `/sites/${encodeURIComponent(r.id)}/forms${q.size ? `?${q}` : ''}`

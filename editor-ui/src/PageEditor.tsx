@@ -479,11 +479,17 @@ export function ReviewForm({ id, branch, title, onDone, onError }: { id: string;
   const [t, setT] = useState(`Update ${title}`)
   const [d, setD] = useState('')
   const [busy, setBusy] = useState(false)
+  const [people, setPeople] = useState<{ login: string; name?: string }[]>()
+  const [ask, setAsk] = useState<string[]>([])
+  useEffect(() => {
+    api.people(id).then((r) => setPeople(r.people), () => setPeople([]))
+  }, [id])
   const submit = async () => {
     setBusy(true)
     try {
-      const r = await api.review(id, { branch, title: t, description: d })
-      onDone(`Submitted for review as #${r.number}. The review links to this draft's preview.`)
+      const r = await api.review(id, { branch, title: t, description: d, reviewers: ask })
+      const who = r.reviewers?.length ? ` ${r.reviewers.map((x) => '@' + x).join(', ')} ${r.reviewers.length === 1 ? 'was' : 'were'} asked to review; the platform lets them know.` : ''
+      onDone(`Submitted for review as #${r.number}. The review links to this draft's preview.${who}${r.reviewersError ? ' ' + r.reviewersError : ''}`)
     } catch (e) {
       onError((e as Error).message)
     } finally {
@@ -494,6 +500,19 @@ export function ReviewForm({ id, branch, title, onDone, onError }: { id: string;
     <div className="form review-form">
       <label>Review title<input value={t} onChange={(e) => setT(e.target.value)} /></label>
       <label>What changed, for the reviewer<textarea rows={3} value={d} onChange={(e) => setD(e.target.value)} /></label>
+      {people && people.length > 0 && (
+        <fieldset className="field group">
+          <legend>Ask for a review from</legend>
+          <div className="reviewer-pick">
+            {people.map((p) => (
+              <label key={p.login} className="check">
+                <input type="checkbox" checked={ask.includes(p.login)} onChange={(e) => setAsk(e.target.checked ? [...ask, p.login] : ask.filter((x) => x !== p.login))} />
+                {p.name || p.login} <span className="muted small">@{p.login}</span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
       <div className="actions"><button type="button" className="button primary" disabled={busy || !t.trim()} onClick={submit}>Open the review</button></div>
     </div>
   )

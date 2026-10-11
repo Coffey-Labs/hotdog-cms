@@ -276,3 +276,50 @@ func (s *Server) merge(ctx context.Context, f *ForgeConfig, token string, site *
 	}
 	return s.send(ctx, f, token, http.MethodPost, u, map[string]any{"Do": "merge", "delete_branch_after_merge": true}, nil)
 }
+
+// Person is someone on the site's platform.
+type Person struct {
+	Login string `json:"login"`
+	Name  string `json:"name,omitempty"`
+}
+
+// reviewers lists who can be asked to review: Gitea and Forgejo say so
+// directly; on GitHub, the repository's collaborators.
+func (s *Server) reviewers(ctx context.Context, f *ForgeConfig, token string, site *SiteConfig) ([]Person, error) {
+	base := s.apiBase(f)
+	if base == "" {
+		return nil, errNotYet
+	}
+	p, err := repoPath(site)
+	if err != nil {
+		return nil, err
+	}
+	var raw []struct {
+		Login    string `json:"login"`
+		FullName string `json:"full_name"`
+		Name     string `json:"name"`
+	}
+	u := base + "/repos/" + p + "/reviewers"
+	if f.Kind == forge.GitHub {
+		u = base + "/repos/" + p + "/collaborators?per_page=100"
+	}
+	if err := s.api(ctx, f, token, u, &raw); err != nil {
+		return nil, err
+	}
+	out := []Person{}
+	for _, r := range raw {
+		out = append(out, Person{Login: r.Login, Name: firstNonEmpty(r.FullName, r.Name)})
+	}
+	return out, nil
+}
+
+// requestReviewers asks people to review a pull request; the platform
+// notifies them, by its own notifications and email.
+func (s *Server) requestReviewers(ctx context.Context, f *ForgeConfig, token string, site *SiteConfig, number int, logins []string) error {
+	base := s.apiBase(f)
+	p, err := repoPath(site)
+	if err != nil {
+		return err
+	}
+	return s.send(ctx, f, token, http.MethodPost, fmt.Sprintf("%s/repos/%s/pulls/%d/requested_reviewers", base, p, number), map[string][]string{"reviewers": logins}, nil)
+}

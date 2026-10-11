@@ -18,7 +18,7 @@ export type SiteDetail = {
   id: string; name: string; repo: string; branch: string; publishBranch: string; commit: string; canWrite: boolean
   siteName: string; siteURL: string; collections: CollectionInfo[] | null; pages: PageInfo[] | null
   drafts: Draft[] | null; reviews: Review[] | null; build: BuildResult; preview?: string; notYet?: string
-  as: string; accounts: SiteAccount[]
+  as: string; accounts: SiteAccount[]; role?: 'reader' | 'writer' | 'maintainer'
 }
 export type PageDetail = { source: string; frontMatter: Record<string, unknown>; frontMatterRaw: string; body: string; branch: string; commit: string }
 export type Edit = { set?: Record<string, unknown>; frontMatter?: string; body: string }
@@ -120,7 +120,10 @@ export const api = {
   newPage: (id: string, b: { collection: string; title: string }) => post<{ branch: string; commit: string; source: string }>(site(id, 'new'), b),
   live: (id: string, b: { source: string; branch: string; edit: Edit | null }) =>
     post<{ url?: string; path?: string; error?: string; seo?: Seo; siteURL?: string }>(site(id, 'live'), b),
-  review: (id: string, b: { branch: string; title: string; description: string }) => post<Review>(site(id, 'review'), b),
+  review: (id: string, b: { branch: string; title: string; description: string; reviewers?: string[] }) =>
+    post<Review & { reviewers?: string[]; reviewersError?: string }>(site(id, 'review'), b),
+  people: (id: string) => get<{ people: { login: string; name?: string }[]; note?: string }>(siteURL(id, 'people')),
+  revert: (id: string, sha: string) => post<{ branch: string; commit: string; created: boolean }>(site(id, 'revert'), { sha }),
   publish: (id: string, b: { branch: string }) => post<{ published: boolean; number: number }>(site(id, 'publish'), b),
   upload: (id: string, file: File, b: { branch: string; baseCommit: string; source: string }) => upload(id, file, b),
   look: (id: string, branch?: string) => get<LookInfo>(siteURL(id, 'look', { branch })),

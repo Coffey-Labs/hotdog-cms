@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -49,6 +50,8 @@ func (s *Server) apiWrite(w http.ResponseWriter, r *http.Request, sess *Session,
 		s.newPage(w, r, sess, f, st)
 	case "live":
 		s.liveRender(w, r, sess, f, st)
+	case "revert":
+		s.revertCommit(w, r, sess, f, st)
 	case "form-live":
 		s.formLive(w, r, sess, f, st)
 	case "form-save":
@@ -283,9 +286,10 @@ func (s *Server) liveRender(w http.ResponseWriter, r *http.Request, sess *Sessio
 }
 
 type reviewRequest struct {
-	Branch      string `json:"branch"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
+	Branch      string   `json:"branch"`
+	Title       string   `json:"title"`
+	Description string   `json:"description"`
+	Reviewers   []string `json:"reviewers"`
 }
 
 func (s *Server) review(w http.ResponseWriter, r *http.Request, sess *Session, f *ForgeConfig, st *SiteConfig) {
@@ -326,7 +330,15 @@ func (s *Server) review(w http.ResponseWriter, r *http.Request, sess *Session, f
 		return
 	}
 	s.log.Printf("%s opened review #%d for %s@%s", sess.Login, rv.Number, st.ID, req.Branch)
-	writeJSON(w, http.StatusOK, rv)
+	out := map[string]any{"number": rv.Number, "title": rv.Title, "branch": rv.Branch, "url": rv.URL}
+	if len(req.Reviewers) > 0 {
+		if err := s.requestReviewers(r.Context(), f, sess.Token, st, rv.Number, req.Reviewers); err != nil {
+			out["reviewersError"] = "The review is open, but asking for reviewers didn't work: " + trimErr(err)
+		} else {
+			out["reviewers"] = req.Reviewers
+		}
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 type publishRequest struct {
@@ -379,4 +391,59 @@ func (s *Server) publish(w http.ResponseWriter, r *http.Request, sess *Session, 
 	}
 	s.log.Printf("%s published %s@%s (review #%d, %s)", sess.Login, st.ID, req.Branch, number, shortSHA(commit))
 	writeJSON(w, http.StatusOK, map[string]any{"published": true, "number": number})
+}
+
+type revertRequest struct {
+	SHA string `json:"sha"`
+}
+
+// revertCommit undoes a published change on a new draft.
+func (s *Server) revertCommit(w http.ResponseWriter, r *http.Request, sess *Session, f *ForgeConfig, st *SiteConfig) {
+	var req revertRequest
+	if !decode(w, r, &req) {
+		return
+	}
+	if !regexp.MustCompile(`^[0-9a-f]{7,40}$`).MatchString(req.SHA) {
+		apiError(w, http.StatusBadRequest, "That isn't a commit.")
+		return
+	}
+	target := s.draftName(r, sess, f, st, "undo-"+req.SHA[:7]+".md")
+	commit, err := s.ws.revert(sess, f.Kind, st, s.cloneURL(st), req.SHA, target)
+	if errors.Is(err, errRevertConflict) {
+		apiError(w, http.StatusConflict, err.Error())
+		return
+	}
+	if err != nil {
+		s.writeError(w, r, err)
+		return
+	}
+	s.log.Printf("%s undid %s on %s@%s (%s)", sess.Login, shortSHA(req.SHA), st.ID, target, shortSHA(commit))
+	writeJSON(w, http.StatusOK, map[string]any{"branch": target, "commit": commit, "created": true, "preview": st.Preview.url(preview.Slug(target))})
+}
+
+// apiPeople lists who can be asked to review.
+func (s *Server) apiPeople(w http.ResponseWriter, r *http.Request, sess *Session, f *ForgeConfig, id string) {
+	st, _, err := s.siteByID(r.Context(), sess, f, id)
+	if s.signedOut(w, r, err) {
+		return
+	}
+	if err != nil || st == nil {
+		apiError(w, http.StatusNotFound, "No such site, or you can't open it.")
+		return
+	}
+	people, err := s.reviewers(r.Context(), f, sess.Token, st)
+	if s.signedOut(w, r, err) {
+		return
+	}
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"people": []Person{}, "note": trimErr(err)})
+		return
+	}
+	others := []Person{}
+	for _, p := range people {
+		if p.Login != sess.Login {
+			others = append(others, p)
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"people": others})
 }

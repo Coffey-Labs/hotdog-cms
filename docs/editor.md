@@ -158,3 +158,21 @@ is signed out.
   - the sitemap address to give each console.
 
 All of them save to `site.yaml` on a draft, changing only their own block.
+
+## People and workflow
+
+The platform is the one source of truth for who may do what. The editor
+stores none of it.
+- **Roles:** the site view says what you can do there (read, write drafts and
+  open reviews, or maintain), from the platform's permissions. Who may
+  publish (merge) is the platform's decision, branch protection included.
+- **Asking for a review:** submitting a draft can ask people to review it,
+  chosen from those the platform says can review. The platform notifies
+  them, by its own notifications and email.
+- **History:** every change that reached the published site, newest first,
+  from git, so the record can't be edited by whoever it records. **Undo on a
+  draft** makes a revert, which is reviewed and published like any change.
+  If later changes overlap the one being undone, it says so instead of
+  guessing.
+- **Two-factor sign-in and passkeys** come with the platform: whatever it
+  asks for at sign-in applies to the editor too.

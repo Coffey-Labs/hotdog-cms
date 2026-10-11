@@ -280,14 +280,38 @@ func repoKey(repo string) string {
 }
 
 // findSite looks a site up by id among everything the accounts are offered.
+// An id it doesn't know may be a repository made since the accounts were
+// last looked through, so it looks again, at most every 30 seconds.
 func (s *Server) findSite(ctx context.Context, accts []*Session, id string) *SiteConfig {
 	if st := s.cfg.site(id); st != nil {
 		return st
 	}
-	for _, st := range s.allSites(ctx, accts) {
-		if st.ID == id {
-			return st
+	for try := 0; try < 2; try++ {
+		for _, st := range s.allSites(ctx, accts) {
+			if st.ID == id {
+				return st
+			}
+		}
+		if try == 0 && !s.forgetStale(accts, 30*time.Second) {
+			break
 		}
 	}
 	return nil
+}
+
+// forgetStale drops the accounts' found sites older than age, and reports
+// whether it dropped any.
+func (s *Server) forgetStale(accts []*Session, age time.Duration) bool {
+	s.found.mu.Lock()
+	defer s.found.mu.Unlock()
+	dropped := false
+	for _, a := range accts {
+		sum := sha256.Sum256([]byte(a.Token))
+		key := hex.EncodeToString(sum[:])
+		if d, ok := s.found.seen[key]; ok && time.Since(d.at) > age {
+			delete(s.found.seen, key)
+			dropped = true
+		}
+	}
+	return dropped
 }

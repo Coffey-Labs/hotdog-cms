@@ -248,3 +248,49 @@ func (ws *workspaces) save(sess *Session, kind forge.Kind, sc *SiteConfig, repo,
 	}
 	return commit, nil
 }
+
+// errRevertConflict means later changes overlap the one being undone.
+var errRevertConflict = errors.New("later changes touch the same lines, so this can't be undone by itself; change it back in the editor instead")
+
+// revert undoes a commit of the publishing branch on a new draft branch: a
+// git revert, made as the person, pushed with their token, reviewed and
+// published like any other change. A merge (as publishing makes) is undone
+// against its first parent.
+func (ws *workspaces) revert(sess *Session, kind forge.Kind, sc *SiteConfig, repo, sha, target string) (string, error) {
+	dir := ws.dir(sess, sc, sc.Branch)
+	defer ws.lock(dir)()
+	if err := os.MkdirAll(filepath.Dir(dir), 0o700); err != nil {
+		return "", err
+	}
+	auth := gitx.Auth{User: kind.TokenUser(), Token: sess.Token}
+	tip, err := gitx.Checkout(auth, repo, sc.Branch, dir)
+	if err != nil {
+		return "", err
+	}
+	if _, err := gitx.Run(auth, dir, "fetch", "--quiet", "--depth", "300", "origin", sc.Branch); err != nil {
+		return "", err
+	}
+	if _, err := gitx.Run(auth, dir, "cat-file", "-e", sha+"^{commit}"); err != nil {
+		return "", fmt.Errorf("no commit %s on %s (only the last 300 can be undone here)", shortSHA(sha), sc.Branch)
+	}
+	args := []string{"-c", "user.name=" + sess.Name, "-c", "user.email=" + sess.Email, "-c", "commit.gpgsign=false", "revert", "--no-edit"}
+	if parents, _ := gitx.Run(auth, dir, "rev-list", "--parents", "-n", "1", sha); len(strings.Fields(parents)) > 2 {
+		args = append(args, "-m", "1")
+	}
+	defer func() { _, _ = gitx.Run(auth, dir, "reset", "--quiet", "--hard", tip) }()
+	if _, err := gitx.Run(auth, dir, append(args, sha)...); err != nil {
+		_, _ = gitx.Run(auth, dir, "revert", "--abort")
+		if strings.Contains(err.Error(), "conflict") || strings.Contains(err.Error(), "could not revert") {
+			return "", errRevertConflict
+		}
+		return "", err
+	}
+	commit, err := gitx.Run(auth, dir, "rev-parse", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	if _, err := gitx.Run(auth, dir, "push", "--quiet", "origin", "HEAD:refs/heads/"+target); err != nil {
+		return "", err
+	}
+	return commit, nil
+}
