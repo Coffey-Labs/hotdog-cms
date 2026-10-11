@@ -264,11 +264,15 @@ func (s *Server) reviews(ctx context.Context, f *ForgeConfig, token string, site
 
 // send makes a write call to the platform API as the signed-in person.
 func (s *Server) send(ctx context.Context, f *ForgeConfig, token, method, u string, body, out any) error {
-	b, err := json.Marshal(body)
-	if err != nil {
-		return err
+	var rd io.Reader
+	if body != nil {
+		b, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+		rd = bytes.NewReader(b)
 	}
-	req, err := http.NewRequestWithContext(ctx, method, u, bytes.NewReader(b))
+	req, err := http.NewRequestWithContext(ctx, method, u, rd)
 	if err != nil {
 		return err
 	}
@@ -339,7 +343,24 @@ func (s *Server) merge(ctx context.Context, f *ForgeConfig, token string, site *
 	}
 	u := fmt.Sprintf("%s/repos/%s/pulls/%d/merge", base, p, number)
 	if f.Kind == forge.GitHub {
-		return s.send(ctx, f, token, http.MethodPut, u, map[string]string{"merge_method": "merge"}, nil)
+		if err := s.send(ctx, f, token, http.MethodPut, u, map[string]string{"merge_method": "merge"}, nil); err != nil {
+			return err
+		}
+		// GitHub leaves the branch; remove a merged draft as Gitea does. A
+		// failure here (a protected branch, say) doesn't undo the publish.
+		var pr struct {
+			Head struct {
+				Ref  string `json:"ref"`
+				Repo struct {
+					FullName string `json:"full_name"`
+				} `json:"repo"`
+			} `json:"head"`
+		}
+		if err := s.api(ctx, f, token, fmt.Sprintf("%s/repos/%s/pulls/%d", base, p, number), &pr); err == nil &&
+			strings.EqualFold(pr.Head.Repo.FullName, p) && strings.HasPrefix(pr.Head.Ref, "draft/") {
+			_ = s.send(ctx, f, token, http.MethodDelete, base+"/repos/"+p+"/git/refs/heads/"+pr.Head.Ref, nil, nil)
+		}
+		return nil
 	}
 	return s.send(ctx, f, token, http.MethodPost, u, map[string]any{"Do": "merge", "delete_branch_after_merge": true}, nil)
 }

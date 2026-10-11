@@ -69,6 +69,18 @@ editor entirely. Over https the editor's cookies are `__Host-` cookies,
 which a page on a sibling subdomain can't set or replace, but a separate
 domain is the stronger line.
 
+### Platforms
+
+The editor works fully with **GitHub, Gitea and Forgejo**: signing in,
+finding sites, drafts, reviews (pull requests), publishing and undo. Tested
+live on GitHub and Gitea.
+
+GitLab and Bitbucket can be configured for signing in, and the editor reads
+each person's permissions there, but it doesn't open or merge their merge
+requests yet, and that support hasn't been tried live. For sites on GitLab
+or Bitbucket, the rest of HotDog CMS (building, checks, previews, publishing,
+CI files) works in full.
+
 ### Signing in
 
 Each platform needs an OAuth application, registered by whoever runs the

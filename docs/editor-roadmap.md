@@ -556,3 +556,22 @@ Everything the editor builds on is done and tested:
 - the check that gates every route.
 
 The editor is a new front end over these, not a new system.
+
+## Live tests on GitHub (2026-10-10)
+
+Sign-in (OAuth app, expiring tokens), the site finder, a page edit to a
+draft, a pull request with the check summary, publishing (merge), a quick
+post published in one step, history and undo all worked against a private
+GitHub repository. Fixed on the way:
+- the site finder skipped new repositories (GitHub reports size 0 for a
+  while after the first push);
+- merged drafts are now deleted, as on Gitea;
+- commits use GitHub's numbered no-reply address, which stays tied to the
+  account.
+
+Not yet tried live: renewing an expired GitHub token (eight hours), and a
+second account with write but not admin access.
+
+Next for GitHub: sign-in through a GitHub App instead of an OAuth app, so an
+editor can be limited to chosen repositories. OAuth apps can only ask for
+every repository the person can reach.

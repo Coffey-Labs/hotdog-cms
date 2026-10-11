@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -290,6 +291,7 @@ func (s *Server) whoami(ctx context.Context, f *ForgeConfig, token string) (logi
 		FullName    string `json:"full_name"`
 		DisplayName string `json:"display_name"`
 		Email       string `json:"email"`
+		ID          int64  `json:"id"`
 	}
 	if err := s.api(ctx, f, token, f.endpoints().user, &d); err != nil {
 		return "", "", "", err
@@ -304,7 +306,12 @@ func (s *Server) whoami(ctx context.Context, f *ForgeConfig, token string) (logi
 	email = d.Email
 	if email == "" {
 		if f.Kind == forge.GitHub {
+			// GitHub's no-reply form with the account's number, which it
+			// ties to the account even after a rename.
 			email = login + "@users.noreply.github.com"
+			if d.ID > 0 {
+				email = strconv.FormatInt(d.ID, 10) + "+" + email
+			}
 		} else {
 			email = login + "@noreply." + f.Host
 		}

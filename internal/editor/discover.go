@@ -155,7 +155,9 @@ func (s *Server) discover(ctx context.Context, f *ForgeConfig, sess *Session, ke
 	for _, r := range repos {
 		u, err := url.Parse(r.CloneURL)
 		switch {
-		case r.Archived, r.Empty, f.Kind == forge.GitHub && r.Size == 0, !r.Permissions.Pull, r.DefaultBranch == "":
+		// (Not GitHub's size: it's worked out later, and reads 0 for a while
+		// after the first push. An empty repository has no site.yaml anyway.)
+		case r.Archived, r.Empty, !r.Permissions.Pull, r.DefaultBranch == "":
 		case err != nil || !strings.EqualFold(u.Hostname(), f.Host): // only clone from the platform itself
 		case len(owners) > 0 && !owners[strings.ToLower(r.Owner.Login)]:
 		default:
