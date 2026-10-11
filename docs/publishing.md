@@ -119,3 +119,25 @@ example.org {
 ```
 
 The `container` target writes the same rules into its image.
+
+## Telling search engines what changed (IndexNow)
+
+With `indexnow: { key: … }` in `site.yaml`, the build publishes the key as
+`/<key>.txt`. A target with `indexnow: true` then pings IndexNow after each
+successful publish, with the pages that changed, were added or went away
+since that target's last publish. Bing, Yandex, Seznam and the others that
+share IndexNow then re-read just those pages.
+
+```yaml
+live:
+  type: rsync
+  host: deploy@web.example.org
+  path: /var/www/example.org
+  indexnow: true        # the live site only; staging targets leave it off
+```
+
+- **The pull agent:** takes `-indexnow` for the same thing.
+- **What it remembers:** each build carries a manifest of its pages and a
+  hash of each. What was last sent is kept per target in the user's cache
+  folder, so a rebuild that changes nothing sends nothing.
+- **When a ping fails:** it's reported, and the publish itself still counts.

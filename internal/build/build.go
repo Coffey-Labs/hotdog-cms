@@ -180,6 +180,9 @@ func Run(opt Options) (*Result, error) {
 			return nil, err
 		}
 	}
+	if err := writeSearchFiles(work, s.Config); err != nil {
+		return nil, err
+	}
 	if err := os.WriteFile(filepath.Join(work, marker), []byte(s.BuildTime.Format(time.RFC3339)+"\n"), 0o644); err != nil {
 		return nil, err
 	}
@@ -254,6 +257,7 @@ func prepare(siteDir string, s *site.Site, out string) (*Templates, error) {
 		return u
 	}
 	fm["consent"] = func() template.HTML { return consentTags(s.Config, assets) }
+	fm["verificationTags"] = func() template.HTML { return verificationTags(s.Config) }
 	fm["consentActive"] = func() bool { return s.Config.Analytics != nil }
 	fm["privacyFacts"] = func() []site.PrivacyFact { return privacyFacts(s.Config, siteForms) }
 	fm["look"] = func(name string) string {

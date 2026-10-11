@@ -31,6 +31,8 @@ type PullOptions struct {
 	Git     gitx.Auth
 	Log     io.Writer
 	OnBuild func(*build.Result)
+	// IndexNow tells search engines which pages changed after each publish.
+	IndexNow bool
 
 	// Optional: listen for the platform's push webhook and rebuild at once.
 	// This opens a port on the server, so it is off unless asked for, and it
@@ -92,6 +94,9 @@ func Pull(o PullOptions) error {
 				fmt.Fprintln(o.Log, err)
 			} else {
 				fmt.Fprintf(o.Log, "published %s: %d pages to %s in %s\n", short(head), res.Pages, res.Out, res.Duration.Round(time.Millisecond))
+				if o.IndexNow {
+					indexNow("pull", Target{Type: "dir", Path: o.Out}, o.Out, o.Log)
+				}
 				last = head
 				due = res.Site.NextScheduled
 				if !due.IsZero() {

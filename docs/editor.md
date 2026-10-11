@@ -140,3 +140,21 @@ default, GitLab's after two. The editor renews them shortly before they
 expire, using the refresh token the platform gave at sign-in (sealed in the
 account's cookie like the rest). If the platform refuses, that account alone
 is signed out.
+
+## Search, social and the rest
+
+- **Search and social,** on every page: the page as a search result and as a
+  link preview, from what it actually renders, with what's missing or too
+  long said plainly. Every check finding comes with how to fix it.
+- **Move…:** renames a page's file and redirects its old address to the new
+  one, in one commit. Redirects that pointed at the old address are updated,
+  so there are no chains.
+- **Redirects:** the site's redirects as a table.
+- **Privacy & statistics:** the analytics wizard and who answers for
+  visitors' data (see [privacy.md](privacy.md)).
+- **Search engines:**
+  - the verification codes for Google, Bing and Yandex;
+  - an IndexNow key (see [publishing.md](publishing.md));
+  - the sitemap address to give each console.
+
+All of them save to `site.yaml` on a draft, changing only their own block.

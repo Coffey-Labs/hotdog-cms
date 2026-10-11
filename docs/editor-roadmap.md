@@ -360,39 +360,48 @@ platform or several, with sites spread across them):
 
 ### E6 · Helpers
 
-- **SEO panel:**
-  - a search-result and social-card preview per page;
-  - the check's SEO findings as a checklist (title and description length,
-    duplicates, missing alt text, canonical, noindex);
-  - redirects managed in a table, with a redirect added automatically when a
-    page moves.
-- **Social:**
-  - a social card generated for every page from a template, like coffeylabs'
-    `cards.py`;
-  - per-platform previews (Mastodon, LinkedIn, Bluesky);
-  - optional share-on-publish, per post, with nothing automatic;
-  - fediverse author tags.
-- **Analytics wizard:**
-  - Google Analytics, Plausible or Matomo, set up consent-gated by default:
-    the script loads only after "Accept";
-  - the privacy page updated to match;
-  - ungated analytics needs an explicit, recorded choice, and `check` still
-    warns about it.
-- **GDPR and cookie helper:**
-  - the consent banner our sites use, as a built-in: in the accessibility tree
-    and not a wall, Decline first and equally prominent, a "Cookie settings"
-    reopen link (Article 7(3)), and declining deletes the cookies;
-  - a privacy page generator that lists what the site actually loads, the
-    lawful basis for each, the controller contact and the date, regenerated
-    when that list changes.
-- **Search consoles:**
-  - Google Search Console, Bing Webmaster Tools and Yandex: guided
-    verification by meta tag, file or DNS TXT record (shown, not changed);
-  - sitemap submission;
-  - IndexNow pings on publish.
-- **The gotchas:** every `check` rule shown where it applies, with its fix.
-  Examples: an address Cloudflare will mangle, an image missing alt text, a
-  third-party script with no consent, a `security.txt` about to expire.
+*Built 2026-10-10*, except share-on-publish, which waits on John (see
+below):
+- **Search and social:** a search-result and link-preview panel on every
+  page, from what the page actually renders (title and description lengths,
+  missing picture or alt text, noindex).
+- **The gotchas:** every check finding now says how to fix it (`Fix`, shown
+  in the editor and by `hotdog-cms check -fix`). A test fails if a new rule
+  ships without a fix.
+- **Redirects:** a table over `site.yaml`'s `redirects:`, validated (no
+  duplicates, nothing that would hide a page). **Moving a page** renames it
+  and redirects its old address in one commit, and collapses chains.
+- **Social cards:** `cards: true` draws a 1200×630 link-preview picture for
+  every page without its own.
+  - The title and summary, in the site's look, drawn in Go, so nothing needs
+    installing.
+  - The file name changes with the content, so previews refresh.
+  - The starter turns cards on, which clears its social-image warnings. It
+    also writes `og:image:alt`, and `fediverse:creator` from `fediverse:` in
+    `site.yaml`.
+- **Analytics wizard and consent** (see [privacy.md](privacy.md)):
+  - Plausible, Matomo or Google Analytics, loaded only after a visitor
+    accepts a banner.
+  - The banner is a region, not a wall. Decline comes first and looks the
+    same as Accept, a "Cookie settings" link reopens it, declining deletes
+    the counter's cookies, and Global Privacy Control counts as no.
+  - Counting without asking needs `gated: false` in `site.yaml`, and `check`
+    warns about it (`analytics-ungated`).
+- **The privacy notice** lists what the site uses (`privacyFacts`), from its
+  own settings at every build, so it can't fall behind. The starter has a
+  privacy page that uses it.
+- **Search consoles:** verification codes for Google, Bing and Yandex
+  (paste the tag or the code), and the sitemap address to give each.
+  **IndexNow:**
+  - a key generated in the editor;
+  - only changed pages pinged after each publish, per target, opt-in
+    (`indexnow: true`, or the pull agent's `-indexnow`);
+  - a failed ping never fails a publish.
+- **Found and fixed on the way:** `x/net`, `x/text` and `x/sys` releases
+  under two weeks old were back to older ones.
+- **Not yet, needs John:** share-on-publish (which networks, and where their
+  tokens live, given the editor holds no publishing credentials). Per-platform
+  previews are one shared card for now.
 
 ### E7 · Forms
 

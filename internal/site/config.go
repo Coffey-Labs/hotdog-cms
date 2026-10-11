@@ -37,6 +37,12 @@ type Config struct {
 	// the build). Privacy is who answers for the site's data, for the notice.
 	Analytics *AnalyticsConfig `yaml:"analytics"`
 	Privacy   PrivacyConfig    `yaml:"privacy"`
+	// Verify holds search consoles' site-verification codes, written as
+	// meta tags by {{ verificationTags }}. IndexNow tells search engines
+	// which pages changed when the site is published (publish targets with
+	// indexnow: true).
+	Verify   VerifyConfig   `yaml:"verify"`
+	IndexNow IndexNowConfig `yaml:"indexnow"`
 	// Fediverse is the author's handle (@name@instance), which Mastodon
 	// credits in link previews: <meta name="fediverse:creator">.
 	Fediverse string `yaml:"fediverse"`
@@ -183,6 +189,14 @@ func LoadConfig(dir string) (*Config, error) {
 	if err := c.Analytics.Validate(); err != nil {
 		return nil, fmt.Errorf("site.yaml: analytics: %w", err)
 	}
+	if k := c.IndexNow.Key; k != "" && !indexNowKey.MatchString(k) {
+		return nil, fmt.Errorf("site.yaml: indexnow.key should be 8 to 128 letters, digits or dashes")
+	}
+	for name, v := range map[string]string{"google": c.Verify.Google, "bing": c.Verify.Bing, "yandex": c.Verify.Yandex} {
+		if v != "" && !verifyCode.MatchString(v) {
+			return nil, fmt.Errorf("site.yaml: verify.%s should be the code only (the content of the meta tag), not the whole tag", name)
+		}
+	}
 	if c.Fediverse != "" && !fediverseRe.MatchString(c.Fediverse) {
 		return nil, fmt.Errorf("site.yaml: fediverse %q should be a handle like @name@instance.social", c.Fediverse)
 	}
@@ -320,3 +334,21 @@ type PrivacyFact struct {
 	Why   string `yaml:"why"`
 	Basis string `yaml:"basis"` // the lawful basis: consent, legitimate interest, contract…
 }
+
+// VerifyConfig is what each search console gave for its meta-tag method.
+type VerifyConfig struct {
+	Google string `yaml:"google" json:"google,omitempty"` // google-site-verification
+	Bing   string `yaml:"bing" json:"bing,omitempty"`     // msvalidate.01
+	Yandex string `yaml:"yandex" json:"yandex,omitempty"` // yandex-verification
+}
+
+// IndexNowConfig holds the site's IndexNow key; the build publishes it as
+// /<key>.txt, which is how search engines know a ping is the site's own.
+type IndexNowConfig struct {
+	Key string `yaml:"key" json:"key,omitempty"`
+}
+
+var (
+	indexNowKey = regexp.MustCompile(`^[A-Za-z0-9-]{8,128}$`)
+	verifyCode  = regexp.MustCompile(`^[A-Za-z0-9_.=+/-]{4,200}$`)
+)

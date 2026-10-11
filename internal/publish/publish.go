@@ -51,6 +51,10 @@ type Target struct {
 
 	// command: argv, run without a shell. {out} is replaced with the build folder.
 	Command []string `yaml:"command"`
+
+	// IndexNow tells search engines which pages changed, after each publish
+	// here (indexnow.go). For the live site's target, not a staging one.
+	IndexNow bool `yaml:"indexnow"`
 }
 
 // Load reads a targets file.
@@ -143,6 +147,16 @@ func Run(name string, t Target, out string, log io.Writer) error {
 		return fmt.Errorf("%s is not a hotdog-cms build; run hotdog-cms build first", out)
 	}
 	fmt.Fprintf(log, "publishing to %s (%s)\n", name, t.Type)
+	if err := run(t, out, log); err != nil {
+		return err
+	}
+	if t.IndexNow {
+		indexNow(name, t, out, log)
+	}
+	return nil
+}
+
+func run(t Target, out string, log io.Writer) error {
 	switch t.Type {
 	case "dir":
 		return build.Install(out, t.Path)

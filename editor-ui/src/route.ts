@@ -11,6 +11,7 @@ export type Route =
   | { view: 'look'; id: string; branch?: string }
   | { view: 'redirects'; id: string; branch?: string }
   | { view: 'privacy'; id: string; branch?: string }
+  | { view: 'search'; id: string; branch?: string }
   | { view: 'files'; id: string; branch?: string; path?: string }
 
 export function parse(loc: Location): Route {
@@ -23,6 +24,7 @@ export function parse(loc: Location): Route {
     if (parts[2] === 'look') return { view: 'look', id: parts[1], branch }
     if (parts[2] === 'redirects') return { view: 'redirects', id: parts[1], branch }
     if (parts[2] === 'privacy') return { view: 'privacy', id: parts[1], branch }
+    if (parts[2] === 'search') return { view: 'search', id: parts[1], branch }
     if (parts[2] === 'files') return { view: 'files', id: parts[1], branch, path: q.get('path') || undefined }
     if (parts[2] === 'present' && q.get('url')) return { view: 'present', id: parts[1], url: q.get('url')!, branch }
     return { view: 'site', id: parts[1], branch }
@@ -44,6 +46,8 @@ export function href(r: Route): string {
     case 'files':
       if (r.path) q.set('path', r.path)
       return `/sites/${encodeURIComponent(r.id)}/files${q.size ? `?${q}` : ''}`
+    case 'search':
+      return `/sites/${encodeURIComponent(r.id)}/search${q.size ? `?${q}` : ''}`
     case 'privacy':
       return `/sites/${encodeURIComponent(r.id)}/privacy${q.size ? `?${q}` : ''}`
     case 'redirects':

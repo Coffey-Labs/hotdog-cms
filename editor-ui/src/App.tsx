@@ -11,6 +11,7 @@ import { LookPanel } from './Look'
 import { Palette, showPalette } from './Palette'
 import { PrivacyView } from './Privacy'
 import { RedirectsView } from './Redirects'
+import { SearchView } from './Search'
 import { MediaLibrary } from './Media'
 import { PageEditor } from './PageEditor'
 import { Present } from './Present'
@@ -53,6 +54,7 @@ export function App() {
       {route.view === 'files' && <FilesView id={route.id} branch={route.branch} path={route.path} />}
       {route.view === 'redirects' && <RedirectsView id={route.id} branch={route.branch} />}
       {route.view === 'privacy' && <PrivacyView id={route.id} branch={route.branch} />}
+      {route.view === 'search' && <SearchView id={route.id} branch={route.branch} />}
     </Shell>
   )
 }
@@ -198,6 +200,7 @@ function SiteView({ id, branch }: { id: string; branch?: string }) {
           <Link to={{ view: 'files', id, branch }} className="side-item">Files</Link>
           <Link to={{ view: 'redirects', id, branch }} className="side-item">Redirects</Link>
           <Link to={{ view: 'privacy', id, branch }} className="side-item">Privacy &amp; statistics</Link>
+          <Link to={{ view: 'search', id, branch }} className="side-item">Search engines</Link>
         </nav>
         <nav aria-label="Drafts">
           <h2 className="side-label">Drafts</h2>
@@ -337,6 +340,7 @@ function GlobalCommands({ session }: { session: SessionInfo }) {
           { id: 'go-pictures', title: 'Pictures', group: 'Go to', run: () => go({ view: 'media', id, branch }) },
           { id: 'go-look', title: 'Look', group: 'Go to', run: () => go({ view: 'look', id, branch }) },
           { id: 'go-redirects', title: 'Redirects', group: 'Go to', run: () => go({ view: 'redirects', id, branch }) },
+          { id: 'go-search', title: 'Search engines (verification, IndexNow)', group: 'Go to', run: () => go({ view: 'search', id, branch }) },
           { id: 'go-privacy', title: 'Privacy and statistics (analytics)', group: 'Go to', run: () => go({ view: 'privacy', id, branch }) },
         ]
       : []),

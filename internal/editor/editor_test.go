@@ -1049,3 +1049,23 @@ func TestPrivacySettings(t *testing.T) {
 		t.Errorf("read back: %+v", got.Analytics)
 	}
 }
+
+func TestSearchEngineSettings(t *testing.T) {
+	s, ff, repo := newTestServerRepo(t)
+	jar := []*http.Cookie{signIn(t, s, ff)}
+	mainTip := git(t, repo, "rev-parse", "main")
+	orig := git(t, repo, "show", "main:site.yaml")
+	// Pasting the whole tag is fine: the code is taken out of it.
+	rec := post(s, "/api/sites/site/search-save", jar, map[string]any{"branch": "main", "baseCommit": mainTip,
+		"verify": map[string]string{"google": `<meta name="google-site-verification" content="abc123XYZ">`, "bing": "B1NG2"}, "indexnow": "0123456789abcdef"})
+	if rec.Code != 200 {
+		t.Fatalf("save: %d %s", rec.Code, rec.Body)
+	}
+	cfg := git(t, repo, "show", "draft/search-engines:site.yaml")
+	if cfg != orig+"\nverify:\n  bing: B1NG2\n  google: abc123XYZ\nindexnow:\n  key: 0123456789abcdef" {
+		t.Errorf("site.yaml:\n%s", cfg)
+	}
+	if rec := post(s, "/api/sites/site/search-save", jar, map[string]any{"branch": "main", "baseCommit": mainTip, "indexnow": "short"}); rec.Code != 422 {
+		t.Errorf("short key: %d", rec.Code)
+	}
+}

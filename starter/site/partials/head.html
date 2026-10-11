@@ -4,6 +4,7 @@
 {{ $desc := default .Site.Config.Description .Summary }}
 {{ with $desc }}<meta name="description" content="{{ . }}">{{ end }}
 <link rel="canonical" href="{{ .Permalink }}">
+{{ if .IsHome }}{{ verificationTags }}{{ end }}
 {{ if .NoIndex }}<meta name="robots" content="noindex">{{ end }}
 <meta property="og:site_name" content="{{ .Site.Config.Name }}">
 <meta property="og:title" content="{{ .Title }}">

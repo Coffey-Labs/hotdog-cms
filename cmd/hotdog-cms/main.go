@@ -281,6 +281,7 @@ func cmdPull(args []string) error {
 	every := fl.Duration("every", 0, "keep checking at this interval (e.g. 1m); 0 checks once and exits")
 	platform := fl.String("platform", "", "github, gitlab, gitea, forgejo, gogs, bitbucket or git (default: guessed from the repository URL)")
 	hook := fl.String("hook", "", "also listen here for push webhooks, e.g. 127.0.0.1:8170 behind a proxy (needs HOTDOG_HOOK_SECRET)")
+	indexnow := fl.Bool("indexnow", false, "after each publish, tell search engines which pages changed (needs indexnow.key in site.yaml)")
 	_ = fl.Parse(args)
 	if *repo == "" || *out == "" {
 		return errors.New("usage: hotdog-cms pull -repo URL -out DIR [-branch main] [-every 1m] [-hook ADDR]")
@@ -292,7 +293,7 @@ func cmdPull(args []string) error {
 	if *subdir != "" && (filepath.IsAbs(*subdir) || strings.Contains(*subdir, "..")) {
 		return errors.New("-subdir must be a relative path inside the repository")
 	}
-	return publish.Pull(publish.PullOptions{Repo: *repo, Branch: *branch, Subdir: *subdir, Out: *out, Cache: *cache, Every: *every,
+	return publish.Pull(publish.PullOptions{IndexNow: *indexnow, Repo: *repo, Branch: *branch, Subdir: *subdir, Out: *out, Cache: *cache, Every: *every,
 		Git: gitx.FromEnv(fr.Kind.TokenUser()), Log: os.Stdout,
 		HookAddr: *hook, HookSecret: os.Getenv("HOTDOG_HOOK_SECRET"), HookKind: fr.Kind})
 }

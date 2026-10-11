@@ -140,6 +140,10 @@ export const api = {
     get<{ analytics: Analytics | null; privacy: { controller: string; contact: string; updated: string }; commit: string; branch: string; canWrite: boolean }>(siteURL(id, 'privacy', { branch })),
   privacySave: (id: string, b: { branch: string; baseCommit: string; analytics: Analytics | null; privacy: Record<string, string> }) =>
     post<{ branch: string; commit: string; created: boolean }>(site(id, 'privacy-save'), b),
+  search: (id: string, branch?: string) =>
+    get<{ verify: { google?: string; bing?: string; yandex?: string }; indexnow: string; siteURL: string; sitemap: string; commit: string; branch: string; canWrite: boolean }>(siteURL(id, 'search', { branch })),
+  searchSave: (id: string, b: { branch: string; baseCommit: string; verify: Record<string, string>; indexnow: string }) =>
+    post<{ branch: string; commit: string; created: boolean }>(site(id, 'search-save'), b),
   sections: (id: string, branch?: string) => get<SectionLib>(siteURL(id, 'sections', { branch })),
   media: (id: string, branch?: string) => get<MediaItem[]>(siteURL(id, 'media', { branch })),
   mediaFile: (id: string, url: string, branch?: string) => siteURL(id, 'media-file', { url, branch }),
