@@ -256,3 +256,46 @@ table.contrast { width: 100%; border-collapse: collapse; margin: .5rem 0; font-s
 table.contrast th, table.contrast td { text-align: left; padding: .25rem .4rem; border-bottom: 1px solid var(--line); }
 table.contrast td.fail { color: var(--bad); font-weight: 600; }
 table.contrast td.pass { color: var(--good); }
+
+/* ---- Power interface (Palette, Console, Files, Diff) -------------------- */
+kbd { font: .72rem/1 var(--mono); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: .15rem .3rem; color: var(--muted); background: var(--raised); }
+.kbd-hint { display: inline-flex; align-items: center; gap: .4rem; }
+.palette { width: min(640px, calc(100vw - 32px)); margin-top: 12vh; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.palette::backdrop { background: rgba(10, 12, 16, .5); }
+.palette-input { width: 100%; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--text); font: 1rem var(--font); padding: .9rem 1rem; outline: none; }
+.palette-list { list-style: none; margin: 0; padding: .3rem; max-height: 50vh; overflow: auto; }
+.palette-list li { display: flex; align-items: baseline; gap: .6rem; padding: .45rem .6rem; border-radius: 8px; cursor: pointer; }
+.palette-list li.on { background: var(--accent-soft); }
+.palette-group { flex: none; width: 7.5rem; }
+.palette-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.palette-empty { padding: .8rem; }
+.palette-foot { margin: 0; padding: .5rem 1rem; border-top: 1px solid var(--line); }
+.console { position: fixed; left: 0; right: 0; bottom: 0; height: min(42vh, 380px); z-index: 30; display: flex; flex-direction: column; background: #0d1117; color: #d7dde5; border-top: 2px solid var(--accent); font: .84rem/1.45 var(--mono); }
+.console-head { display: flex; align-items: center; gap: .8rem; padding: .35rem .8rem; border-bottom: 1px solid #222a35; font-family: var(--font); }
+.console-head .muted { color: #8b95a3; }
+.console-head button { margin-left: auto; color: #d7dde5; border-color: #2c3542; }
+.console-out { flex: 1; overflow: auto; padding: .5rem .8rem; }
+.console-line { margin: 0 0 .25rem; white-space: pre-wrap; font: inherit; }
+.console-line.in { color: #f4be2c; }
+.console-line.err { color: #ff8a80; }
+.console-line.hint { color: #8b95a3; }
+.console-in { display: flex; align-items: center; gap: .5rem; padding: .4rem .8rem; border-top: 1px solid #222a35; }
+.console-in input { flex: 1; background: transparent; border: 0; color: #fff; font: inherit; outline: none; }
+.console-in span { color: #f4be2c; }
+.file-filter { margin: 0 8px .5rem; width: calc(100% - 16px); padding: .35rem .5rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); }
+.file-new { margin: 0 8px .4rem; }
+.file-new-form { display: flex; gap: .3rem; margin: 0 8px .5rem; }
+.file-new-form input { flex: 1; min-width: 0; padding: .3rem .4rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--text); }
+.file-list { list-style: none; margin: 0; padding: 0; }
+.file-list .side-item { width: 100%; text-align: left; overflow: hidden; }
+.file-list .side-item .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-list .side-item:disabled { opacity: .5; cursor: default; }
+.file-pane { display: flex; flex-direction: column; gap: .6rem; min-height: 0; }
+.file-edit { flex: 1; min-height: 50vh; width: 100%; font: .85rem/1.5 var(--mono); tab-size: 2; }
+pre.diff { margin: 0; padding: .6rem .8rem; background: var(--raised); border: 1px solid var(--line); border-radius: 8px; font: .8rem/1.45 var(--mono); overflow: auto; max-height: 50vh; }
+pre.diff .add { color: var(--good); background: var(--good-soft); display: block; }
+pre.diff .del { color: var(--bad); background: var(--bad-soft); display: block; }
+pre.diff .at { color: var(--accent); display: block; }
+pre.diff .h { color: var(--muted); display: block; }
+.review-box { display: grid; gap: .6rem; }
+.commits { margin: 0; padding-left: 1.2rem; display: grid; gap: .25rem; font-size: .9rem; }

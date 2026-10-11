@@ -2,7 +2,7 @@
 name: {{SITE_NAME}}
 url: https://example.org
 language: en
-description: A site built with hotdog-cms.
+description: A site built with HotDog CMS.
 author: Your Name
 
 # Every folder in content/ is a collection. Settings here change its defaults.

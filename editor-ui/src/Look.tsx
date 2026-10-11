@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api, type LookFile, type LookInfo, type LookToken, type LookValue, type SiteDetail } from './api'
+import { useShortcut } from './Commands'
 import { ReviewForm } from './PageEditor'
 import { go } from './route'
 import { ImageField } from './Sections'
@@ -131,6 +132,8 @@ export function LookPanel({ id, branch }: { id: string; branch?: string }) {
       setBusy(false)
     }
   }
+
+  useShortcut('mod+s', () => dirty && !busy && info?.canWrite && save(), !!info)
 
   if (error) return <p className="pad notice bad" role="alert">{error}</p>
   if (!info) return <p className="pad muted">Loading the look…</p>

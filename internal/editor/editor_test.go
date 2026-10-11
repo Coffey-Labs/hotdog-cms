@@ -785,3 +785,84 @@ func TestSetTopLevel(t *testing.T) {
 		t.Error("a one-line look: was rewritten")
 	}
 }
+
+func TestFilesPowerTools(t *testing.T) {
+	s, ff, repo := newTestServerRepo(t)
+	jar := []*http.Cookie{signIn(t, s, ff)}
+	mainTip := git(t, repo, "rev-parse", "main")
+
+	var list struct{ Files []FileInfo }
+	json.NewDecoder(do(s, "GET", "/api/sites/site/files", jar, nil).Body).Decode(&list)
+	paths := map[string]FileInfo{}
+	for _, f := range list.Files {
+		paths[f.Path] = f
+	}
+	if !paths["site.yaml"].Text || !paths["layouts/base.html"].Text {
+		t.Fatalf("files: %v", list.Files)
+	}
+	for p := range paths {
+		if p == ".git" || strings.HasPrefix(p, ".git/") || strings.HasPrefix(p, "public/") {
+			t.Errorf("listed %s", p)
+		}
+	}
+
+	var file struct {
+		Content string
+		Exists  bool
+	}
+	json.NewDecoder(do(s, "GET", "/api/sites/site/file?path=site.yaml", jar, nil).Body).Decode(&file)
+	if !file.Exists || !strings.Contains(file.Content, "name: Test") {
+		t.Fatalf("file: %+v", file)
+	}
+	edited := strings.Replace(file.Content, "name: Test", "name: Renamed", 1)
+
+	// The diff before saving.
+	var df struct{ Diff string }
+	json.NewDecoder(post(s, "/api/sites/site/file-diff", jar, map[string]any{"path": "site.yaml", "content": edited}).Body).Decode(&df)
+	if !strings.Contains(df.Diff, "--- a/site.yaml") || !strings.Contains(df.Diff, "-name: Test") || !strings.Contains(df.Diff, "+name: Renamed") {
+		t.Fatalf("diff:\n%s", df.Diff)
+	}
+
+	// Saving starts a draft; adding and deleting files are commits on it.
+	var sv map[string]any
+	json.NewDecoder(post(s, "/api/sites/site/file-save", jar, map[string]any{"path": "site.yaml", "branch": "main", "baseCommit": mainTip, "content": edited}).Body).Decode(&sv)
+	if sv["branch"] != "draft/site" || sv["created"] != true {
+		t.Fatalf("save: %v", sv)
+	}
+	tip := git(t, repo, "rev-parse", "draft/site")
+	if rec := post(s, "/api/sites/site/file-save", jar, map[string]any{"path": "data/team.yaml", "branch": "draft/site", "baseCommit": tip, "content": "- Ada\n"}); rec.Code != 200 {
+		t.Fatalf("add: %d %s", rec.Code, rec.Body)
+	}
+	tip = git(t, repo, "rev-parse", "draft/site")
+	if rec := post(s, "/api/sites/site/file-save", jar, map[string]any{"path": "content/contact.md", "branch": "draft/site", "baseCommit": tip, "delete": true}); rec.Code != 200 {
+		t.Fatalf("delete: %d %s", rec.Code, rec.Body)
+	}
+	tree := git(t, repo, "ls-tree", "-r", "--name-only", "draft/site")
+	if !strings.Contains(tree, "data/team.yaml") || strings.Contains(tree, "content/contact.md") || !strings.Contains(git(t, repo, "show", "draft/site:site.yaml"), "name: Renamed") {
+		t.Errorf("draft tree:\n%s", tree)
+	}
+	if git(t, repo, "rev-parse", "main") != mainTip {
+		t.Error("a file save reached the publishing branch")
+	}
+	for _, bad := range []string{".git/config", "public/index.html", "../outside", "/etc/passwd", "a/../../b"} {
+		if rec := post(s, "/api/sites/site/file-save", jar, map[string]any{"path": bad, "branch": "draft/site", "content": "x"}); rec.Code != 400 {
+			t.Errorf("%s: %d", bad, rec.Code)
+		}
+	}
+
+	// What publishing the draft would change, and its history.
+	var cmp struct{ Diff, Stat string }
+	json.NewDecoder(do(s, "GET", "/api/sites/site/compare?branch=draft/site", jar, nil).Body).Decode(&cmp)
+	if !strings.Contains(cmp.Diff, "+name: Renamed") || !strings.Contains(cmp.Diff, "data/team.yaml") || !strings.Contains(cmp.Stat, "content/contact.md") {
+		t.Errorf("compare:\n%s\n%s", cmp.Stat, cmp.Diff)
+	}
+	var lg struct{ Commits []Commit }
+	json.NewDecoder(do(s, "GET", "/api/sites/site/log?branch=draft/site&n=5", jar, nil).Body).Decode(&lg)
+	if len(lg.Commits) < 4 || lg.Commits[0].Subject != "Delete content/contact.md" || lg.Commits[1].Subject != "Add data/team.yaml" || lg.Commits[2].Subject != "Edit site.yaml" || lg.Commits[0].Author != "Ada Lovelace" {
+		t.Errorf("log: %+v", lg.Commits)
+	}
+	json.NewDecoder(do(s, "GET", "/api/sites/site/log?branch=draft/site&path=site.yaml", jar, nil).Body).Decode(&lg)
+	if len(lg.Commits) != 2 || lg.Commits[0].Subject != "Edit site.yaml" {
+		t.Errorf("file log: %+v", lg.Commits)
+	}
+}

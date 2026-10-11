@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, CheckFailed, Conflict, type Edit, type PageDetail, type Problem, type SiteDetail, type Uploaded } from './api'
 import { go, href } from './route'
+import { useCommands, useShortcut } from './Commands'
 import { ACCEPT, InsertPicture } from './Media'
 import { liveChannel } from './Present'
 import { fromFrontMatter, SectionsEditor, toFrontMatter, type Sec } from './Sections'
@@ -236,6 +237,22 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
       setBusy(false)
     }
   }
+
+  // Keyboard first: Ctrl+S saves, and the palette has the rest.
+  useShortcut('mod+s', () => dirty && !busy && canWrite && save(), !!page)
+  useCommands(() =>
+    !page
+      ? []
+      : [
+          ...(canWrite && dirty ? [{ id: 'page-save', title: onDraft ? 'Save' : 'Save as draft', group: 'Page', keys: 'Ctrl+S', run: save }] : []),
+          ...(canWrite ? [{ id: 'page-picture', title: 'Insert picture', group: 'Page', run: () => setPicture({}) }] : []),
+          { id: 'page-yaml', title: yamlMode ? 'Edit front matter as fields' : 'Edit front matter as YAML', group: 'Page', run: () => setYamlMode(!yamlMode) },
+          ...(onDraft && !review && canWrite && !dirty ? [{ id: 'page-review', title: 'Submit for review', group: 'Page', run: () => setReviewOpen(true) }] : []),
+          ...(onDraft && review && canWrite && !dirty ? [{ id: 'page-publish', title: 'Publish', group: 'Page', run: publish }] : []),
+          ...(previewURL ? [{ id: 'page-present', title: 'Present in a new tab', group: 'Page', run: () => window.open(href({ view: 'present', id, url: previewURL, branch }), '_blank', 'noopener') }] : []),
+          { id: 'page-file', title: `Edit ${source} as a raw file`, group: 'Page', run: () => go({ view: 'files', id, branch, path: source }) },
+        ],
+  )
 
   if (loadError) return <div className="pad notice bad" role="alert">{loadError}</div>
   if (!page || !fields) return <p className="pad muted">Loading the page…</p>

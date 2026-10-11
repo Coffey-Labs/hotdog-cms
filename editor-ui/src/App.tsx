@@ -4,7 +4,11 @@ import logoLight from '../../brand/svg/logo-header-light.svg'
 import { AccountsMenu, label } from './Accounts'
 import { api, chooseAccount, signInURL, SignedOut, type SessionInfo, type SiteDetail, type SiteSummary } from './api'
 import { go, href, useRoute, type Route } from './route'
+import { useCommands } from './Commands'
+import { Console, showConsole } from './Console'
+import { FilesView } from './Files'
 import { LookPanel } from './Look'
+import { Palette, showPalette } from './Palette'
 import { MediaLibrary } from './Media'
 import { PageEditor } from './PageEditor'
 import { Present } from './Present'
@@ -44,6 +48,7 @@ export function App() {
       {route.view === 'present' && <Present id={route.id} url={route.url} branch={route.branch} />}
       {route.view === 'media' && <MediaLibrary id={route.id} branch={route.branch} />}
       {route.view === 'look' && <LookPanel id={route.id} branch={route.branch} />}
+      {route.view === 'files' && <FilesView id={route.id} branch={route.branch} path={route.path} />}
     </Shell>
   )
 }
@@ -58,11 +63,15 @@ function Shell({ children, session, onAccountsChanged }: { children: ReactNode; 
           <span className="brand-sub">Editor</span>
         </Link>
         <div className="who">
+          {session?.signedIn && <button type="button" className="ghost small kbd-hint" onClick={showPalette} title="Every action, by name">Commands <kbd>Ctrl K</kbd></button>}
           <ThemePicker />
         {session?.signedIn && onAccountsChanged && <AccountsMenu session={session} onChanged={onAccountsChanged} />}
         </div>
       </header>
       <main id="main">{children}</main>
+      {session?.signedIn && <GlobalCommands session={session} />}
+      {session?.signedIn && <Palette />}
+      {session?.signedIn && <Console />}
     </div>
   )
 }
@@ -130,6 +139,15 @@ function Sites() {
 
 function SiteView({ id, branch }: { id: string; branch?: string }) {
   const site = useLoad(() => api.site(id, branch), [id, branch])
+  useCommands(() => {
+    const d = site.data
+    if (!d) return []
+    return [
+      ...(d.pages || []).filter((p) => p.source).map((p) => ({ id: `page:${p.source}`, title: `${p.title}  ${p.path}`, group: 'Open page', run: () => go({ view: 'page', id, source: p.source!, branch }) })),
+      ...(d.drafts || []).map((b) => ({ id: `draft:${b.branch}`, title: b.branch, group: 'Switch to draft', run: () => go({ view: 'site', id, branch: b.branch }) })),
+      ...(branch ? [{ id: 'draft:back', title: `Back to ${d.publishBranch}`, group: 'Switch to draft', run: () => go({ view: 'site', id }) }] : []),
+    ]
+  })
   const [collection, setCollection] = useState<string>('')
   const d = site.data
   const pages = useMemo(() => (d?.pages || []).filter((p) => (collection === '' ? true : collection === '-' ? !p.collection : p.collection === collection)), [d, collection])
@@ -173,6 +191,7 @@ function SiteView({ id, branch }: { id: string; branch?: string }) {
           <h2 className="side-label">Files</h2>
           <Link to={{ view: 'media', id, branch }} className="side-item">Pictures</Link>
           <Link to={{ view: 'look', id, branch }} className="side-item">Look</Link>
+          <Link to={{ view: 'files', id, branch }} className="side-item">Files</Link>
         </nav>
         <nav aria-label="Drafts">
           <h2 className="side-label">Drafts</h2>
@@ -286,4 +305,38 @@ function NewPage({ id, collections }: { id: string; collections: SiteDetail['col
       {err && <p className="notice bad">{err}</p>}
     </div>
   )
+}
+
+// Commands that are always there: going places, the editor itself.
+function GlobalCommands({ session }: { session: SessionInfo }) {
+  const route = useRoute()
+  const id = 'id' in route ? route.id : undefined
+  const branch = 'branch' in route ? route.branch : undefined
+  const theme = (t: 'light' | 'dark' | 'auto') => () => {
+    try {
+      if (t === 'auto') localStorage.removeItem('hotdog-theme')
+      else localStorage.setItem('hotdog-theme', t)
+    } catch {
+      /* still applied */
+    }
+    if (t === 'auto') delete document.documentElement.dataset.theme
+    else document.documentElement.dataset.theme = t
+  }
+  useCommands(() => [
+    { id: 'go-sites', title: 'All sites', group: 'Go to', run: () => go({ view: 'sites' }) },
+    ...(id
+      ? [
+          { id: 'go-site', title: 'This site\'s pages', group: 'Go to', run: () => go({ view: 'site', id, branch }) },
+          { id: 'go-files', title: 'Files', group: 'Go to', run: () => go({ view: 'files', id, branch }) },
+          { id: 'go-pictures', title: 'Pictures', group: 'Go to', run: () => go({ view: 'media', id, branch }) },
+          { id: 'go-look', title: 'Look', group: 'Go to', run: () => go({ view: 'look', id, branch }) },
+        ]
+      : []),
+    { id: 'console-open', title: 'Open the console', group: 'Editor', keys: 'Ctrl+`', run: showConsole },
+    { id: 'theme-light', title: 'Light theme', group: 'Editor', run: theme('light') },
+    { id: 'theme-dark', title: 'Dark theme', group: 'Editor', run: theme('dark') },
+    { id: 'theme-auto', title: 'Automatic theme', group: 'Editor', run: theme('auto') },
+    ...session.forges.map((f) => ({ id: `add-${f.host}`, title: `Add an account: ${label(f.kind)} · ${f.host}`, group: 'Accounts', run: () => { location.href = signInURL(f.host, location.pathname + location.search, session.accounts.some((a) => a.forge === f.host)) } })),
+  ])
+  return null
 }

@@ -82,3 +82,29 @@ person couldn't read anyway.
   with its preview settings, wins.
 - A site in a subfolder of its repository isn't found; list it under `sites`
   with `subdir`.
+
+## For people who'd rather type
+
+- **Commands (Ctrl+K, ⌘K on a Mac):** every action by name, from anywhere:
+  - open any page by typing part of its title;
+  - switch drafts;
+  - go to Files, Pictures or Look;
+  - save, submit for review, publish;
+  - change the theme, add an account.
+
+  What's offered depends on where you are. Ctrl+S saves in the page editor,
+  the Look panel and the Files view.
+- **Files:** every file of the site, any text file edited as raw text.
+  - Ctrl+S shows the diff first, and Ctrl+S again saves it, with a commit
+    message you can change.
+  - Files can be added and deleted. Each has its own history, and a draft can
+    be compared with the published branch.
+  - Like everything else, a save is a commit on a draft. `.git` and `public/`
+    can't be written.
+- **Console (Ctrl+`):** a command line that speaks HotDog CMS: `status`,
+  `pages`, `edit site.yaml`, `cat`, `new articles "Title"`, `check`,
+  `drafts`, `branch draft/about`, `diff`, `log`, `review "Title"`, `publish`,
+  `as <login>`, `theme dark`. Type `help` for the rest.
+
+  It runs nothing on the server: every command is a call the editor's buttons
+  make too. The editor host is not a shell.

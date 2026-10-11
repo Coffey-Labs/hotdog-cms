@@ -301,15 +301,30 @@ platform or several, with sites spread across them):
 
 ### E4 · Power interface
 
-- Keyboard-first throughout, with a command palette (`Ctrl K`): new article,
-  open, preview, check, submit, publish.
-- A command line in the browser that speaks HotDog CMS (`new article "Title"`,
-  `check`, `publish`), plus git-shaped commands for branches, diffs and
-  history. It doesn't run arbitrary shell commands: the editor host is not a
-  shell.
-- Any file in the site is editable as raw text, with diffs before saving.
-- Everything the editor does is something `hotdog-cms` on a laptop can do too.
-  The power interface is a convenience, never a requirement.
+*Built 2026-10-10* (see [editor.md](editor.md)):
+- **Command palette (Ctrl+K):** every action by name, from anywhere:
+  - open any page by typing part of its title;
+  - switch drafts, go to Files, Pictures or Look;
+  - save, review, publish, theme, accounts.
+
+  Views add their own commands while they're on screen. Ctrl+S saves in the
+  page editor, the Look panel and the Files view.
+- **Files:** any text file in the site edited as raw text, with git's diff
+  shown before every save, and a commit message. Files can be added and
+  deleted, each has its own history, and a draft can be compared with the
+  published branch. Saves are commits on drafts; `.git` and `public/` are
+  off limits. Commits can now delete files too, which also opens the way to
+  deleting unused pictures.
+- **Console (Ctrl+`):** a command line in the browser that speaks HotDog CMS
+  and git (`status`, `pages`, `edit`, `cat`, `new`, `check`, `drafts`,
+  `branch`, `diff`, `log`, `review`, `publish`, `as`, `theme`). Every command
+  is a call the interface makes too, with the laptop equivalent where there
+  is one. It runs no shell commands.
+- **Works on any git host:** history and comparisons fetch only the depth
+  they need into the shallow checkouts, so they work on plain git as well as
+  the platforms.
+- **Tried** on a throwaway repository on the Coffey Labs Gitea (since
+  deleted).
 
 ### E5 · WYSIWYG interface
 

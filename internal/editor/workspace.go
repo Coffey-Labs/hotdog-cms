@@ -203,6 +203,12 @@ func (ws *workspaces) save(sess *Session, kind forge.Kind, sc *SiteConfig, repo,
 			return "", fmt.Errorf("refusing to write %q", rel)
 		}
 		p := filepath.Join(dir, filepath.FromSlash(clean))
+		if data == nil { // nil: delete the file
+			if _, err := gitx.Run(auth, dir, "rm", "--quiet", "--ignore-unmatch", "--", clean); err != nil {
+				return "", err
+			}
+			continue
+		}
 		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 			return "", err
 		}

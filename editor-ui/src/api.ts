@@ -28,6 +28,8 @@ export type LookToken = { name: string; label?: string; type: 'color' | 'font' |
 export type LookFile = { tokens: LookToken[]; contrast: string[][] | null }
 export type LookValue = string | { light?: string; dark?: string }
 export type LookInfo = { look: LookFile | null; values: Record<string, LookValue>; branch: string; commit: string; canWrite: boolean; minContrast: number }
+export type FileInfo = { path: string; size: number; text: boolean }
+export type Commit = { sha: string; author: string; when: string; subject: string }
 export type MediaItem = { url: string; width: number; height: number; thumb: string; bytes: number; files: number; usedBy: string[]; alt: string }
 export type Uploaded = { branch: string; commit: string; created: boolean; url: string; width: number; height: number; notes: string[] | null; files: string[] }
 
@@ -119,6 +121,13 @@ export const api = {
   lookLive: (id: string, b: { branch: string; look: Record<string, LookValue> }) => post<{ url?: string; error?: string }>(site(id, 'look-live'), b),
   lookSave: (id: string, b: { branch: string; baseCommit: string; look: Record<string, LookValue> }) =>
     post<{ branch: string; commit: string; created: boolean }>(site(id, 'look-save'), b),
+  files: (id: string, branch?: string) => get<{ files: FileInfo[]; commit: string }>(siteURL(id, 'files', { branch })),
+  file: (id: string, path: string, branch?: string) => get<{ path: string; exists: boolean; content: string; commit: string }>(siteURL(id, 'file', { path, branch })),
+  fileSave: (id: string, b: { branch: string; baseCommit: string; path: string; content?: string; delete?: boolean; message?: string }) =>
+    post<{ branch: string; commit: string; created: boolean }>(site(id, 'file-save'), b),
+  fileDiff: (id: string, b: { branch: string; path: string; content?: string; delete?: boolean }) => post<{ diff: string }>(site(id, 'file-diff'), b),
+  compare: (id: string, branch: string) => get<{ diff: string; stat: string; base: string; branch: string }>(siteURL(id, 'compare', { branch })),
+  log: (id: string, branch?: string, path?: string, n = 30) => get<{ branch: string; commits: Commit[] }>(siteURL(id, 'log', { branch, path, n: String(n) })),
   sections: (id: string, branch?: string) => get<SectionLib>(siteURL(id, 'sections', { branch })),
   media: (id: string, branch?: string) => get<MediaItem[]>(siteURL(id, 'media', { branch })),
   mediaFile: (id: string, url: string, branch?: string) => siteURL(id, 'media-file', { url, branch }),

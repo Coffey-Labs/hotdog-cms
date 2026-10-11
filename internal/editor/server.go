@@ -221,6 +221,14 @@ func (s *Server) apiRoute(w http.ResponseWriter, r *http.Request) {
 		s.apiSite(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "page":
 		s.apiPage(w, r, sess, f, parts[1])
+	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "files":
+		s.apiFiles(w, r, sess, f, parts[1])
+	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "file":
+		s.apiFile(w, r, sess, f, parts[1])
+	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "compare":
+		s.apiCompare(w, r, sess, f, parts[1])
+	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "log":
+		s.apiLog(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "look":
 		s.apiLook(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "sections":

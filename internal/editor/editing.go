@@ -30,7 +30,7 @@ func (s *Server) apiWrite(w http.ResponseWriter, r *http.Request, sess *Session,
 		apiError(w, http.StatusNotFound, "No such site, or you can't open it.")
 		return
 	}
-	if !acc.Write && action != "live" && action != "look-live" {
+	if !acc.Write && action != "live" && action != "look-live" && action != "file-diff" {
 		apiError(w, http.StatusForbidden, "The platform gives you read-only access to this site.")
 		return
 	}
@@ -48,6 +48,10 @@ func (s *Server) apiWrite(w http.ResponseWriter, r *http.Request, sess *Session,
 		s.newPage(w, r, sess, f, st)
 	case "live":
 		s.liveRender(w, r, sess, f, st)
+	case "file-save":
+		s.fileSave(w, r, sess, f, st)
+	case "file-diff":
+		s.fileDiff(w, r, sess, f, st)
 	case "look-live":
 		s.lookLive(w, r, sess, f, st)
 	case "look-save":
@@ -77,7 +81,7 @@ func repoFile(st *SiteConfig, source string) string {
 
 // draftName picks an unused draft branch name for a page.
 func (s *Server) draftName(r *http.Request, sess *Session, f *ForgeConfig, st *SiteConfig, source string) string {
-	base := "draft/" + slug(strings.TrimSuffix(path.Base(source), ".md"))
+	base := "draft/" + slug(strings.TrimSuffix(path.Base(source), path.Ext(source)))
 	if strings.HasSuffix(source, "/index.md") || strings.HasSuffix(source, "/_index.md") {
 		base = "draft/" + slug(path.Base(path.Dir(source)))
 		if path.Dir(source) == "content" { // the site's front page
