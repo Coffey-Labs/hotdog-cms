@@ -36,6 +36,11 @@ looking at a change before it's published, and `docs/platforms.md` covers
 GitHub, GitLab, Gitea, Forgejo, Bitbucket and plain git. `DESIGN.md` has the plan and what
 comes next.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Contributors accept the
+[contributor agreement](CLA.md) once, in their first pull request.
+
 ## License
 
 Copyright (C) 2026 Coffey Labs LLC.
