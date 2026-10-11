@@ -79,7 +79,7 @@ jobs:
     needs: [release]
     runs-on: light
     steps:
-      - uses: coffey-labs/actions/discourse-release@9282c6f27303f4eb9d61d6aee6daa444c11d7268
+      - uses: coffey-labs/actions/discourse-release@bce140cdbc2e876fe3439f22439e579c59ab5106
         with:
           api-key: ${{ secrets.DISCOURSE_RELEASE_KEY }}
           discord-webhook: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
