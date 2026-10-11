@@ -47,6 +47,7 @@ button { font: inherit; cursor: pointer; }
 button.ghost { border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 8px; padding: .3rem .7rem; }
 .pill { display: inline-block; margin-left: .4rem; padding: .05rem .5rem; border-radius: 999px; background: var(--accent-soft); color: var(--text); font-size: .75rem; font-weight: 600; }
 .pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.good { background: var(--good-soft); color: var(--good); }
 
 .app { display: flex; flex-direction: column; height: 100%; }
 .top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .7rem 1.2rem; background: var(--surface); border-bottom: 1px solid var(--line); }
@@ -61,6 +62,16 @@ button.ghost { border: 1px solid var(--line); background: transparent; color: va
 .who { display: flex; align-items: center; gap: .8rem; font-size: .9rem; }
 main { flex: 1; min-height: 0; overflow: auto; }
 
+.quick { max-width: 860px; }
+.quick-kinds { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 0 0 1.2rem; }
+.quick-kind { display: grid; gap: .25rem; text-align: left; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+.quick-kind.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.quick-form { margin-bottom: 1rem; }
+.banner-preview { padding: 10px 14px; border-radius: 8px; background: var(--accent-soft); color: var(--text); }
+.banner-preview.alert { background: var(--accent); color: var(--accent-text); }
+.quick-banners { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.quick-banners li { display: flex; flex-wrap: wrap; gap: .3rem .7rem; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.quick-banners li button { margin-left: auto; }
 .bottom { display: flex; justify-content: space-between; align-items: center; gap: .4rem 1.2rem; flex-wrap: wrap; padding: .35rem 1.2rem; background: var(--surface); border-top: 1px solid var(--line); color: var(--muted); font-size: .78rem; }
 .bottom a { color: var(--muted); }
 .bottom a:hover { color: var(--text); }

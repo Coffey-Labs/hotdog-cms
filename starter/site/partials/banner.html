@@ -1,0 +1,7 @@
+{{/* Notices across the top of every page (or just the home page), from
+     data/banners.yaml: the editor's quick posts write it. */}}
+{{ range banners . }}
+<div class="site-banner{{ if eq .Tone "alert" }} alert{{ end }}" role="region" aria-label="{{ if eq .Tone "alert" }}Alert{{ else }}Announcement{{ end }}">
+  <p class="wrap">{{ if eq .Tone "alert" }}<strong>{{ .Text }}</strong>{{ else }}{{ .Text }}{{ end }}{{ if .Link }} <a href="{{ .Link }}">{{ default "More" .LinkText }}</a>{{ end }}</p>
+</div>
+{{ end }}

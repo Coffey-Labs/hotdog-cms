@@ -5,6 +5,7 @@
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
+{{ template "banner" . }}
 {{ template "nav" . }}
 <main id="main">
 {{ block "main" . }}{{ end }}

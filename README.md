@@ -33,8 +33,9 @@ A site is a folder:
 The output is plain files for any web server, on bare metal, a VPS or in a
 container; `docs/publishing.md` covers each, `docs/previews.md` covers
 looking at a change before it's published, and `docs/platforms.md` covers
-GitHub, GitLab, Gitea, Forgejo, Bitbucket and plain git. `DESIGN.md` has the plan and what
-comes next.
+GitHub, GitLab, Gitea, Forgejo, Bitbucket and plain git. The editor is in
+`docs/editor.md`, quick posts in `docs/quick-posts.md`, events and calendar
+feeds in `docs/events.md`. `DESIGN.md` has the plan and what comes next.
 
 ## Contributing
 

@@ -76,6 +76,8 @@ func (s *Server) apiWrite(w http.ResponseWriter, r *http.Request, sess *Session,
 		s.review(w, r, sess, f, st)
 	case "publish":
 		s.publish(w, r, sess, f, st)
+	case "quick":
+		s.quickPost(w, r, sess, f, st)
 	default:
 		apiError(w, http.StatusNotFound, "no such thing")
 	}
@@ -311,20 +313,8 @@ func (s *Server) review(w http.ResponseWriter, r *http.Request, sess *Session, f
 		return
 	}
 	res := s.ws.buildAndCheck(siteDir, commit)
-	body := strings.TrimSpace(req.Description)
-	if u := st.Preview.url(preview.Slug(req.Branch)); u != "" {
-		body += "\n\nPreview: " + u
-	}
-	switch {
-	case res.Failed != "":
-		body += "\n\nThis branch doesn't build yet: " + res.Failed
-	case res.Errors > 0:
-		body += fmt.Sprintf("\n\nChecks: %d error(s), %d warning(s). It can't be published until the errors are fixed.", res.Errors, res.Warnings)
-	default:
-		body += fmt.Sprintf("\n\nChecks: passing, %d warning(s).", res.Warnings)
-	}
-	body += "\n\nOpened from the HotDog CMS editor by @" + sess.Login + "."
-	rv, err := s.openReview(r.Context(), f, sess.Token, st, req.Branch, strings.TrimSpace(req.Title), strings.TrimSpace(body))
+	body := reviewBody(st, req.Branch, res, req.Description, sess.Login)
+	rv, err := s.openReview(r.Context(), f, sess.Token, st, req.Branch, strings.TrimSpace(req.Title), body)
 	if err != nil {
 		s.writeError(w, r, err)
 		return
@@ -339,6 +329,25 @@ func (s *Server) review(w http.ResponseWriter, r *http.Request, sess *Session, f
 		}
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+// reviewBody is what a review says: the person's description, the
+// preview, and how the checks went.
+func reviewBody(st *SiteConfig, branch string, res *BuildResult, desc, login string) string {
+	body := strings.TrimSpace(desc)
+	if u := st.Preview.url(preview.Slug(branch)); u != "" {
+		body += "\n\nPreview: " + u
+	}
+	switch {
+	case res.Failed != "":
+		body += "\n\nThis branch doesn't build yet: " + res.Failed
+	case res.Errors > 0:
+		body += fmt.Sprintf("\n\nChecks: %d error(s), %d warning(s). It can't be published until the errors are fixed.", res.Errors, res.Warnings)
+	default:
+		body += fmt.Sprintf("\n\nChecks: passing, %d warning(s).", res.Warnings)
+	}
+	body += "\n\nOpened from the HotDog CMS editor by @" + login + "."
+	return strings.TrimSpace(body)
 }
 
 type publishRequest struct {

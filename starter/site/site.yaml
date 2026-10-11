@@ -4,6 +4,8 @@ url: https://example.org
 language: en
 description: A site built with HotDog CMS.
 author: Your Name
+# Where the site's events happen; event and banner times are read in it.
+# timezone: America/Phoenix
 
 # Long lists (a collection's page, a tag's page) split into pages of this
 # many: /articles/, /articles/page/2/, ... A collection can set its own.

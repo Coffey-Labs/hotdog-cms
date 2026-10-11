@@ -119,7 +119,13 @@ function siteURL(id: string, action = '', params: Record<string, string | undefi
 
 const site = (id: string, action: string) => siteURL(id, action)
 
+export type Banner = { text: string; link?: string; linkText?: string; tone?: string; show?: string; from?: string; until?: string; showing: boolean; expired: boolean }
+export type QuickInfo = { timezone: string; now: string; banners: Banner[]; collections: CollectionInfo[]; calendars: CollectionInfo[]; commit: string }
+export type QuickResult = { branch: string; commit: string; source: string; preview?: string; review?: { number: number; url: string }; published?: boolean; message?: string; problems?: Problem[] }
+
 export const api = {
+  quickInfo: (id: string) => get<QuickInfo>(siteURL(id, 'quick')),
+  quick: (id: string, b: Record<string, unknown>) => post<QuickResult>(site(id, 'quick'), b),
   save: (id: string, b: { source: string; branch: string; baseCommit: string; edit: Edit; message?: string }) =>
     post<{ branch: string; commit: string; created: boolean; preview?: string }>(site(id, 'save'), b),
   newPage: (id: string, b: { collection: string; title: string }) => post<{ branch: string; commit: string; source: string }>(site(id, 'new'), b),

@@ -161,6 +161,13 @@ func (p *Page) resolveEvent(loc *time.Location) error {
 	return nil
 }
 
+// CheckEvent checks event front matter (start, end, status, link) the way a
+// build will.
+func CheckEvent(fm map[string]any, loc *time.Location) error {
+	p := &Page{Params: fm, eventStart: str(fm["start"]), eventEnd: str(fm["end"])}
+	return p.resolveEvent(loc)
+}
+
 // EventICS is where the page's own calendar file is: "Add to calendar".
 func (p *Page) EventICS() string {
 	if p.Event == nil || !strings.HasSuffix(p.Path, "/") {

@@ -29,17 +29,18 @@ import (
 
 // fakeForge plays a Gitea: OAuth authorize/token endpoints and the API.
 type fakeForge struct {
-	t         *testing.T
-	challenge string
-	srv       *httptest.Server
-	opened    []map[string]string // pull requests opened
-	merged    []string            // merge calls
-	bobGone   bool                // the platform stops taking bob's token
-	listed    int                 // repository listings served
-	expiring  bool                // hand out tokens that expire in a minute, with a refresh token
-	refreshes int                 // refresh-token renewals served
-	refuse    bool                // refuse renewals
-	requested []string            // reviewers asked for
+	t           *testing.T
+	challenge   string
+	srv         *httptest.Server
+	opened      []map[string]string // pull requests opened
+	merged      []string            // merge calls
+	refuseMerge bool                // answer merges as a writer without merge rights
+	bobGone     bool                // the platform stops taking bob's token
+	listed      int                 // repository listings served
+	expiring    bool                // hand out tokens that expire in a minute, with a refresh token
+	refreshes   int                 // refresh-token renewals served
+	refuse      bool                // refuse renewals
+	requested   []string            // reviewers asked for
 }
 
 func newFakeForge(t *testing.T) *fakeForge {
@@ -134,6 +135,14 @@ func newFakeForge(t *testing.T) *fakeForge {
 			w.Write([]byte("{}"))
 		case r.URL.Path == "/api/v1/repos/owner/site/pulls/7/merge" && r.Method == "POST":
 			ff.merged = append(ff.merged, "7")
+			w.WriteHeader(200)
+		case r.URL.Path == "/api/v1/repos/owner/site/pulls/8/merge" && r.Method == "POST":
+			if ff.refuseMerge {
+				w.WriteHeader(405)
+				w.Write([]byte(`{"message":"not allowed to merge"}`))
+				return
+			}
+			ff.merged = append(ff.merged, "8")
 			w.WriteHeader(200)
 		default:
 			w.WriteHeader(404)
@@ -1270,5 +1279,59 @@ func TestAboutBeforeSignIn(t *testing.T) {
 	json.NewDecoder(rec.Body).Decode(&a)
 	if rec.Code != 200 || a.License != "AGPL-3.0-or-later" || !strings.HasPrefix(a.Source, about.DefaultSource) || a.CompanyURL != "https://coffeylabs.org" || len(a.Links) != 1 {
 		t.Errorf("about: %d %+v", rec.Code, a)
+	}
+}
+
+func TestQuickPosts(t *testing.T) {
+	s, ff, repo := newTestServerRepo(t)
+	jar := []*http.Cookie{signIn(t, s, ff)}
+
+	var info QuickInfo
+	json.NewDecoder(do(s, "GET", "/api/sites/site/quick", jar, nil).Body).Decode(&info)
+	if info.Timezone != "UTC" || len(info.Collections) == 0 || info.Collections[0].Name != "articles" {
+		t.Fatalf("quick info: %+v", info)
+	}
+
+	// A banner, posted and published in one go.
+	var out map[string]any
+	rec := post(s, "/api/sites/site/quick", jar, map[string]any{"kind": "banner", "publish": true, "text": "Closed Monday.", "tone": "alert", "link": "/about/", "linkText": "Hours", "until": "2099-01-01 00:00"})
+	json.NewDecoder(rec.Body).Decode(&out)
+	if rec.Code != 200 || out["published"] != true || len(ff.merged) != 1 {
+		t.Fatalf("banner: %d %v merged %v", rec.Code, out, ff.merged)
+	}
+	branch := out["branch"].(string)
+	banners := git(t, repo, "show", branch+":data/banners.yaml")
+	if !strings.Contains(banners, "text: Closed Monday.") || !strings.Contains(banners, "tone: alert") || !strings.Contains(banners, "until: 2099-01-01 00:00") {
+		t.Errorf("banners.yaml:\n%s", banners)
+	}
+	if !strings.HasPrefix(ff.opened[len(ff.opened)-1]["title"], "Quick post: Banner: Closed Monday.") {
+		t.Errorf("review title: %v", ff.opened[len(ff.opened)-1])
+	}
+
+	// A news post, left for review when the platform won't let this person merge.
+	ff.refuseMerge = true
+	out = map[string]any{}
+	rec = post(s, "/api/sites/site/quick", jar, map[string]any{"kind": "post", "publish": true, "collection": "articles", "title": "Holiday hours", "summary": "When we're open.", "body": "Closed **Monday**."})
+	json.NewDecoder(rec.Body).Decode(&out)
+	if rec.Code != 200 || out["published"] == true || !strings.Contains(out["message"].(string), "couldn't be published from here") {
+		t.Fatalf("post: %d %v", rec.Code, out)
+	}
+	page := git(t, repo, "show", out["branch"].(string)+":content/articles/holiday-hours.md")
+	if !strings.HasPrefix(page, "---\ntitle: Holiday hours\ndate: ") || !strings.Contains(page, "summary: When we're open.\n---\nClosed **Monday**.") {
+		t.Errorf("post:\n%s", page)
+	}
+
+	// Mistakes are caught before anything is committed.
+	for _, bad := range []map[string]any{
+		{"kind": "banner", "text": ""},
+		{"kind": "banner", "text": "x", "link": "javascript:alert(1)"},
+		{"kind": "banner", "text": "x", "until": "2000-01-01 00:00"},
+		{"kind": "post", "collection": "articles", "title": ""},
+		{"kind": "post", "collection": "../etc", "title": "x"},
+		{"kind": "event", "collection": "articles", "title": "x", "date": "2026-11-07"},
+	} {
+		if rec := post(s, "/api/sites/site/quick", jar, bad); rec.Code != 400 {
+			t.Errorf("%v: %d %s", bad, rec.Code, rec.Body)
+		}
 	}
 }

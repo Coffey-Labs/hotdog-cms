@@ -164,6 +164,13 @@ expire, using the refresh token the platform gave at sign-in (sealed in the
 account's cookie like the rest). If the platform refuses, that account alone
 is signed out.
 
+## Quick posts
+
+A banner or alert across the top of the site, a news post, an event, or the
+front page, each with one form and a **Post now** button that commits,
+reviews, checks and publishes in one go. If the platform doesn't let you
+publish, the review is left open. See [quick-posts.md](quick-posts.md).
+
 ## Search, social and the rest
 
 - **Search and social,** on every page: the page as a search result and as a

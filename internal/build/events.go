@@ -63,6 +63,8 @@ func eventFuncs(s *site.Site) map[string]any {
 			u.Scheme = "webcal"
 			return template.URL(u.String())
 		},
+		// banners .: the notices showing on this page now (data/banners.yaml).
+		"banners": func(p *site.Page) []site.Banner { return s.BannersFor(p) },
 		// eventData .: the event as schema.org data, for a JSON-LD script tag.
 		"eventData": func(p *site.Page) map[string]any { return eventData(p) },
 	}

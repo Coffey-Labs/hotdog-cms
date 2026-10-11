@@ -1,3 +1,4 @@
+import { QuickPost } from './QuickPost'
 import { Footer } from './Footer'
 import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
 import logoDark from '../../brand/svg/logo-header-dark.svg'
@@ -60,6 +61,7 @@ export function App() {
       {route.view === 'search' && <SearchView id={route.id} branch={route.branch} />}
       {route.view === 'forms' && <FormsView id={route.id} branch={route.branch} form={route.form} />}
       {route.view === 'history' && <HistoryView id={route.id} />}
+      {route.view === 'quick' && <QuickPost id={route.id} kind={route.kind} />}
     </Shell>
   )
 }
@@ -236,6 +238,7 @@ function SiteView({ id, branch }: { id: string; branch?: string }) {
         <div className="toolbar">
           <h2>{collection === '' ? 'All pages' : collection === '-' ? 'Pages' : (d.collections || []).find((c) => c.name === collection)?.title}</h2>
           <span className="toolbar-actions">
+            {d.canWrite && <Link to={{ view: 'quick', id }} className="button primary">Quick post</Link>}
             {d.canWrite && <NewPage id={id} collections={d.collections} />}
             {d.preview && <button type="button" className="button" onClick={() => go({ view: 'present', id, url: d.preview!, branch })}>Present</button>}
             {d.preview && <a className="button" href={d.preview} target="_blank" rel="noopener noreferrer">Open preview ↗</a>}
@@ -352,6 +355,10 @@ function GlobalCommands({ session }: { session: SessionInfo }) {
           { id: 'go-pictures', title: 'Pictures', group: 'Go to', run: () => go({ view: 'media', id, branch }) },
           { id: 'go-look', title: 'Look', group: 'Go to', run: () => go({ view: 'look', id, branch }) },
           { id: 'go-history', title: 'History (undo a published change)', group: 'Go to', run: () => go({ view: 'history', id }) },
+          { id: 'quick-banner', title: 'Quick post: banner or alert', group: 'Post', run: () => go({ view: 'quick', id, kind: 'banner' }) },
+          { id: 'quick-post', title: 'Quick post: news post', group: 'Post', run: () => go({ view: 'quick', id, kind: 'post' }) },
+          { id: 'quick-event', title: 'Quick post: event', group: 'Post', run: () => go({ view: 'quick', id, kind: 'event' }) },
+          { id: 'quick-home', title: 'Quick post: front page', group: 'Post', run: () => go({ view: 'quick', id, kind: 'home' }) },
           { id: 'go-forms', title: 'Forms and submissions', group: 'Go to', run: () => go({ view: 'forms', id, branch }) },
           { id: 'go-redirects', title: 'Redirects', group: 'Go to', run: () => go({ view: 'redirects', id, branch }) },
           { id: 'go-search', title: 'Search engines (verification, IndexNow)', group: 'Go to', run: () => go({ view: 'search', id, branch }) },

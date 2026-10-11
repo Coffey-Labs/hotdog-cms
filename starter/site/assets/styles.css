@@ -113,6 +113,11 @@ pre code { background: none; padding: 0; color: inherit; }
 .meta { color: var(--muted); margin: 0; }
 .tags { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
 .tags a { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--text); text-decoration: none; font-size: .85rem; }
+.site-banner { background: var(--accent-soft); color: var(--text); border-bottom: 1px solid var(--line); font-size: .95rem; }
+.site-banner p { margin: 0; padding: 10px 0; }
+.site-banner a { font-weight: 650; margin-left: .4em; }
+.site-banner.alert { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.site-banner.alert a { color: var(--accent-text); }
 .pages { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 40px; flex-wrap: wrap; }
 .pages ol { display: flex; gap: 6px; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; justify-content: center; }
 .pages a { display: inline-block; min-width: 2.4em; padding: 8px 12px; text-align: center; border: 1px solid var(--line); border-radius: var(--radius); text-decoration: none; color: var(--text); background: var(--surface); }

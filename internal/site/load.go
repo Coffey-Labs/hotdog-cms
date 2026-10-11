@@ -38,6 +38,8 @@ type Site struct {
 	// events. Location is the site's time zone.
 	Now      time.Time
 	Location *time.Location
+	// Banners are the notices from data/banners.yaml (banner.go).
+	Banners  []Banner
 	Markdown *Markdown
 	terms    map[string]*termIndex
 }
@@ -91,6 +93,13 @@ func Load(dir string, opt Options) (*Site, error) {
 		return nil, err
 	}
 	s.Now = now
+	if s.Banners, err = LoadBanners(dir, s.Location); err != nil {
+		return nil, err
+	}
+	for _, b := range s.Banners {
+		s.schedule(b.Start, now)
+		s.schedule(b.End, now)
+	}
 	if s.Data, err = loadData(filepath.Join(dir, "data")); err != nil {
 		return nil, err
 	}

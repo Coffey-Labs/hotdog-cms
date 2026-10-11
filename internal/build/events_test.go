@@ -83,3 +83,38 @@ func TestEvents(t *testing.T) {
 		t.Errorf("mixed all-day and timed: %v", err)
 	}
 }
+
+func TestBanners(t *testing.T) {
+	dir := writeStarter(t)
+	os.WriteFile(filepath.Join(dir, "data", "banners.yaml"), []byte(`- text: Closed Thursday for Thanksgiving.
+  link: /about/
+  link_text: Hours
+  tone: alert
+  from: 2026-11-20 00:00
+  until: 2026-11-27 00:00
+- text: New on the home page only.
+  show: home
+- text: Over already.
+  until: 2026-11-01 00:00
+`), 0o644)
+	now := time.Date(2026, 11, 21, 12, 0, 0, 0, time.UTC)
+	res, err := Run(Options{SiteDir: dir, Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	read := func(p string) string { b, _ := os.ReadFile(filepath.Join(res.Out, p)); return string(b) }
+	home, about := read("index.html"), read("about/index.html")
+	if !strings.Contains(home, `<strong>Closed Thursday for Thanksgiving.</strong> <a href="/about/">Hours</a>`) || !strings.Contains(home, "New on the home page only.") {
+		t.Errorf("home banners:\n%s", home)
+	}
+	if !strings.Contains(about, "Closed Thursday") || strings.Contains(about, "home page only") || strings.Contains(home+about, "Over already") {
+		t.Error("banners on the wrong pages")
+	}
+	if want := time.Date(2026, 11, 27, 0, 0, 0, 0, time.UTC); !res.Site.NextScheduled.Equal(want) {
+		t.Errorf("next scheduled %v, want %v (the banner coming down)", res.Site.NextScheduled, want)
+	}
+	os.WriteFile(filepath.Join(dir, "data", "banners.yaml"), []byte("- text: \"\"\n"), 0o644)
+	if _, err := Run(Options{SiteDir: dir, Now: now}); err == nil {
+		t.Error("an empty banner built")
+	}
+}

@@ -234,6 +234,8 @@ func (s *Server) apiRoute(w http.ResponseWriter, r *http.Request) {
 		s.apiSite(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "page":
 		s.apiPage(w, r, sess, f, parts[1])
+	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "quick":
+		s.apiQuick(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "people":
 		s.apiPeople(w, r, sess, f, parts[1])
 	case len(parts) == 3 && parts[0] == "sites" && parts[2] == "forms":

@@ -121,15 +121,27 @@ interface first, because the other two are built on its plumbing.
   the build and the pull agent; previews show what will appear when. **No
   data store.**
 
-### Quick posts (wanted, not yet designed)
+### Quick posts
 
-John, 2026-10-10: a "5 minute" tool for pushing something out in a hurry:
-events, announcements, specials, whatever an operator needs up now. To be
-workshopped; for now it only holds a place on the list. Whatever shape it
-takes, it keeps the rules above: a quick post is still a commit, still checked,
-still previewable, with no faster path to the live site.
+*Built 2026-10-10* (see [quick-posts.md](quick-posts.md)). John: "fast front
+page edits, alerts, top banner postings, quick to turn out", and good for
+calendars too.
+- **Banner or alert:** a line across the top of every page, or the home page
+  only. It can be scheduled to go up and come down, in the site's time zone.
+  It lives in `data/banners.yaml`, and the starter shows it.
+- **News post,** dated today; **event,** into a calendar (see
+  [events.md](events.md)); **front page,** its sections, from the library.
+- **Post now:** one button commits, opens the review, runs the checks and
+  publishes, when the platform lets that person merge. Otherwise the review
+  waits for someone who can. A quick post is still a commit, still checked,
+  still reviewed. There's no faster path to the live site.
+- **Calendar pack** bundled (`hotdog-cms pack add calendar`): event pages,
+  an upcoming-events section, and an iCalendar feed people subscribe to
+  (webcal), checked against ical.js and Python's icalendar.
 
-### Cloudflare (wanted, not yet designed)
+### Cloudflare (on hold)
+
+*On hold, John 2026-10-10.*
 
 John, 2026-10-10: manage DNS, certificates and domain registration, and
 deploy to Cloudflare (Workers with static assets, and Pages, which Cloudflare
@@ -163,7 +175,9 @@ the rules it has to keep:
 - **Possible data-store point:** none expected. Tokens live in the operator's
   environment or CI secrets, as deploy credentials do today.
 
-### Mail servers: inbuxa and others (wanted, not yet designed)
+### Mail servers: inbuxa and others (on hold)
+
+*On hold, John 2026-10-10.*
 
 John, 2026-10-10: plug straight into inbuxa, or a similar mail server, to set
 up email for forms and the rest, securely. Today the forms endpoint sends
@@ -492,6 +506,19 @@ platform or several, with sites spread across them):
 - **Not built:** a WebAssembly sandbox for third-party build steps. It
   comes back only if a real need turns up that packs and operator steps
   can't meet.
+
+### Also built 2026-10-10
+
+- **Pagination** in the starter: numbered page links, `rel="prev"` and
+  `rel="next"`, page numbers in titles (see [themes.md](themes.md)).
+- **The footer bar:** copyright, coffeylabs.org, the version, and links to
+  the source and the AGPL on every screen, signed in or not, plus the
+  operator's own links. The endpoint answers `/_hotdog/source` (see
+  [editor.md](editor.md)).
+- **The contributor agreement** ([CLA.md](../CLA.md)): a license to Coffey
+  Labs, not an assignment, with a promise that contributions stay open
+  source. Signed once by adding yourself to CONTRIBUTORS.md;
+  `tools/cla-check.sh` checks a pull request.
 
 ## Decisions (John, 2026-10-10)
 
