@@ -40,6 +40,7 @@ type Server struct {
 
 	accessMu   sync.Mutex
 	accessSeen map[string]accessHit
+	found      discoverCache
 }
 
 // New builds the editor from editor.yaml. HOTDOG_EDITOR_SECRET seals sessions.
@@ -187,7 +188,8 @@ func (s *Server) apiRoute(w http.ResponseWriter, r *http.Request) {
 		apiError(w, http.StatusNotFound, "no such thing")
 		return
 	}
-	sess := s.accountFor(r, accts, s.cfg.site(parts[1]))
+	st := s.findSite(r.Context(), accts, parts[1])
+	sess := s.accountFor(r, accts, st)
 	if sess == nil {
 		apiError(w, http.StatusNotFound, "No such site, or you can't open it.")
 		return
@@ -197,7 +199,7 @@ func (s *Server) apiRoute(w http.ResponseWriter, r *http.Request) {
 		apiError(w, http.StatusNotFound, "No such site, or you can't open it.")
 		return
 	}
-	r = r.WithContext(context.WithValue(r.Context(), reqKey{}, &reqInfo{sess: sess, accts: accts}))
+	r = r.WithContext(context.WithValue(r.Context(), reqKey{}, &reqInfo{sess: sess, accts: accts, site: st}))
 	if r.Method == http.MethodPost {
 		if !s.sameOrigin(r) {
 			apiError(w, http.StatusForbidden, "That request didn't come from the editor.")
@@ -250,6 +252,7 @@ type reqKey struct{}
 type reqInfo struct {
 	sess  *Session
 	accts []*Session
+	site  *SiteConfig // the site the request is about
 }
 
 func infoFrom(r *http.Request) *reqInfo {
@@ -355,8 +358,7 @@ func (s *Server) accountsFor(w http.ResponseWriter, r *http.Request, accts []*Se
 // which accounts can.
 func (s *Server) apiSites(w http.ResponseWriter, r *http.Request, accts []*Session) {
 	out := []map[string]any{}
-	for i := range s.cfg.Sites {
-		st := &s.cfg.Sites[i]
+	for _, st := range s.allSites(r.Context(), accts) {
 		who := s.accountsFor(w, r, accts, st)
 		if len(who) == 0 {
 			continue
@@ -365,7 +367,7 @@ func (s *Server) apiSites(w http.ResponseWriter, r *http.Request, accts []*Sessi
 		for _, a := range who {
 			canWrite = canWrite || a.CanWrite
 		}
-		out = append(out, map[string]any{"id": st.ID, "name": st.Name, "repo": st.Repo, "branch": st.Branch, "canWrite": canWrite, "accounts": who})
+		out = append(out, map[string]any{"id": st.ID, "name": st.Name, "repo": st.Repo, "branch": st.Branch, "canWrite": canWrite, "accounts": who, "discovered": st.discovered})
 	}
 	writeJSON(w, http.StatusOK, out)
 }
@@ -387,6 +389,9 @@ func (s *Server) signedOut(w http.ResponseWriter, r *http.Request, err error) bo
 
 func (s *Server) siteByID(ctx context.Context, sess *Session, f *ForgeConfig, id string) (*SiteConfig, Access, error) {
 	st := s.cfg.site(id)
+	if i, _ := ctx.Value(reqKey{}).(*reqInfo); i != nil && i.site != nil && i.site.ID == id {
+		st = i.site // a site found in an account's repositories
+	}
 	if st == nil {
 		return nil, Access{}, nil
 	}

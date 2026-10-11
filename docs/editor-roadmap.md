@@ -149,8 +149,12 @@ platform or several, with sites spread across them):
   The default is the first account that can write.
 - **Separate per account:** commits, checkouts and the live preview. When a
   platform stops taking one account's token, only that account is signed out.
-- **Later, maybe:** finding sites in an account's repositories (a repository
-  with a `site.yaml`) instead of listing each one in `editor.yaml`.
+- **Finding sites** (built the same day, John: "let's try the auto finder"):
+  with `discover` on for a platform, every repository a signed-in account can
+  reach that holds a HotDog CMS `site.yaml` is offered beside the listed
+  sites. It can be narrowed to some owners, and results are cached for ten
+  minutes. It's off by default. See [editor.md](editor.md). Tried on the
+  Coffey Labs Gitea with a throwaway repository (since deleted).
 
 ### E2 · Media
 

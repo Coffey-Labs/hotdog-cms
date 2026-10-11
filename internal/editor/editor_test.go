@@ -25,6 +25,7 @@ type fakeForge struct {
 	opened    []map[string]string // pull requests opened
 	merged    []string            // merge calls
 	bobGone   bool                // the platform stops taking bob's token
+	listed    int                 // repository listings served
 }
 
 func newFakeForge(t *testing.T) *fakeForge {
@@ -59,6 +60,34 @@ func newFakeForge(t *testing.T) *fakeForge {
 			json.NewEncoder(w).Encode(map[string]any{"permissions": map[string]bool{"pull": true, "push": true}})
 		case r.URL.Path == "/api/v1/repos/owner/secret":
 			w.WriteHeader(404)
+		case r.URL.Path == "/api/v1/user/repos":
+			ff.listed++
+			repo := func(full string, extra map[string]any) map[string]any {
+				m := map[string]any{"full_name": full, "clone_url": "https://forge.test/" + full + ".git", "default_branch": "main",
+					"owner": map[string]string{"login": strings.Split(full, "/")[0]}, "permissions": map[string]bool{"pull": true, "push": true}}
+				for k, v := range extra {
+					m[k] = v
+				}
+				return m
+			}
+			json.NewEncoder(w).Encode([]map[string]any{
+				repo("owner/site", nil),  // also in editor.yaml
+				repo("owner/blog", nil),  // a site
+				repo("owner/notes", nil), // no site.yaml
+				repo("owner/other", nil), // someone else's site.yaml
+				repo("owner/attic", map[string]any{"archived": true}),
+				repo("stranger/site2", nil), // outside the owners filter
+				repo("owner/mirror", map[string]any{"clone_url": "https://elsewhere.example/owner/mirror.git"}),
+			})
+		case strings.HasSuffix(r.URL.Path, "/raw/site.yaml"):
+			switch r.URL.Path {
+			case "/api/v1/repos/owner/blog/raw/site.yaml", "/api/v1/repos/owner/site/raw/site.yaml", "/api/v1/repos/stranger/site2/raw/site.yaml", "/api/v1/repos/owner/attic/raw/site.yaml", "/api/v1/repos/owner/mirror/raw/site.yaml":
+				w.Write([]byte("name: The Blog\nurl: https://blog.example\n"))
+			case "/api/v1/repos/owner/other/raw/site.yaml":
+				w.Write([]byte("title: Jekyll thing\ntheme: minima\n"))
+			default:
+				w.WriteHeader(404)
+			}
 		case r.URL.Path == "/api/v1/repos/owner/site/branches":
 			json.NewEncoder(w).Encode([]map[string]any{{"name": "main", "commit": map[string]string{"id": "a1"}}, {"name": "draft/hello", "commit": map[string]string{"id": "b2"}}})
 		case r.URL.Path == "/api/v1/repos/owner/site/pulls" && r.Method == "POST":
@@ -113,6 +142,12 @@ func newTestServer(t *testing.T) (*Server, *fakeForge) {
 
 func newTestServerRepo(t *testing.T) (*Server, *fakeForge, string) {
 	t.Helper()
+	return newTestServerWith(t, "")
+}
+
+// newTestServerWith adds settings to the test platform's entry in editor.yaml.
+func newTestServerWith(t *testing.T, forgeExtra string) (*Server, *fakeForge, string) {
+	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
@@ -123,7 +158,7 @@ func newTestServerRepo(t *testing.T) (*Server, *fakeForge, string) {
 public_url: http://editor.test
 cache: ` + filepath.Join(dir, "cache") + `
 forges:
-  - { host: forge.test, kind: gitea, client_id: app, client_secret_env: TEST_SECRET, base: "` + ff.srv.URL + `" }
+  - { host: forge.test, kind: gitea, client_id: app, client_secret_env: TEST_SECRET, base: "` + ff.srv.URL + `"` + forgeExtra + ` }
 sites:
   - { name: Test site, id: site, repo: "https://forge.test/owner/site.git", preview: { domain: localhost, port: "8160", scheme: http } }
   - { name: Secret site, id: secret, repo: "https://forge.test/owner/secret.git" }
@@ -535,5 +570,62 @@ func TestMultiAccount(t *testing.T) {
 	// GitHub is asked to let the person choose; other platforms aren't.
 	if loc := do(s, "GET", "/auth/login?forge=forge.test&select=1", nil, nil).Header().Get("Location"); strings.Contains(loc, "prompt=") {
 		t.Errorf("Gitea got a prompt: %s", loc)
+	}
+}
+
+func TestDiscover(t *testing.T) {
+	s, ff, _ := newTestServerWith(t, `, discover: { owners: [owner] }`)
+	jar := []*http.Cookie{signIn(t, s, ff)}
+
+	var sites []struct {
+		ID, Name, Repo string
+		Discovered     bool
+		CanWrite       bool
+	}
+	json.NewDecoder(do(s, "GET", "/api/sites", jar, nil).Body).Decode(&sites)
+	// The configured site, then the blog: not the repository without a
+	// site.yaml, the other tool's, the archived one, the other owner's, or
+	// one whose clone address is on another host.
+	if len(sites) != 2 || sites[0].ID != "site" || sites[0].Discovered || sites[1].ID != "owner-blog" || sites[1].Name != "The Blog" || !sites[1].Discovered || !sites[1].CanWrite {
+		t.Fatalf("sites: %+v", sites)
+	}
+
+	// A found site opens like any other, by its id.
+	rec := do(s, "GET", "/api/sites/owner-blog", jar, nil)
+	var d struct {
+		Name, Repo, As string
+		CanWrite       bool
+	}
+	json.NewDecoder(rec.Body).Decode(&d)
+	if rec.Code != 200 || d.Repo != "https://forge.test/owner/blog.git" || !d.CanWrite || d.As != "forge.test/ada" {
+		t.Fatalf("found site: %d %+v %s", rec.Code, d, rec.Body)
+	}
+
+	// The listing is remembered, not repeated on every request.
+	if ff.listed != 1 {
+		t.Errorf("listed repositories %d times", ff.listed)
+	}
+
+	// Without discover, only editor.yaml's sites are offered.
+	s2, ff2, _ := newTestServerWith(t, "")
+	jar2 := []*http.Cookie{signIn(t, s2, ff2)}
+	json.NewDecoder(do(s2, "GET", "/api/sites", jar2, nil).Body).Decode(&sites)
+	if len(sites) != 1 || ff2.listed != 0 {
+		t.Errorf("discover off: %+v, listed %d", sites, ff2.listed)
+	}
+	if rec := do(s2, "GET", "/api/sites/owner-blog", jar2, nil); rec.Code != 404 {
+		t.Errorf("a site not offered opened: %d", rec.Code)
+	}
+}
+
+func TestDiscoverSetting(t *testing.T) {
+	for _, c := range []struct {
+		yaml string
+		on   bool
+	}{{"", false}, {", discover: true", true}, {", discover: false", false}, {", discover: { limit: 20 }", true}} {
+		s, _, _ := newTestServerWith(t, c.yaml)
+		if got := s.cfg.Forges[0].Discover.on(); got != c.on {
+			t.Errorf("%q: on = %v", c.yaml, got)
+		}
 	}
 }

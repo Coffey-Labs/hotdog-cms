@@ -111,6 +111,7 @@ function Sites() {
           <li key={s.id}>
             <Link to={{ view: 'site', id: s.id }} className="tile">
               <strong>{s.name}</strong>
+              {s.discovered && <span className="muted small" title="Not listed in editor.yaml: found because it has a site.yaml">Found in your repositories</span>}
               <span className="muted mono">{s.repo.replace(/^https?:\/\//, '').replace(/\.git$/, '')}</span>
               <span className="tile-accounts">
                 {s.accounts.map((a) => (

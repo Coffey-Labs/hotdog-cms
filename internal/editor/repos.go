@@ -115,6 +115,18 @@ func (s *Server) accessCached(ctx context.Context, f *ForgeConfig, token string,
 	return acc, nil
 }
 
+// rememberAccess records an answer already known, such as a repository
+// listing's permissions.
+func (s *Server) rememberAccess(token string, site *SiteConfig, acc Access) {
+	sum := sha256.Sum256([]byte(token + "\x00" + site.Repo))
+	s.accessMu.Lock()
+	if s.accessSeen == nil {
+		s.accessSeen = map[string]accessHit{}
+	}
+	s.accessSeen[hex.EncodeToString(sum[:])] = accessHit{acc: acc, at: time.Now()}
+	s.accessMu.Unlock()
+}
+
 const accessTTL = time.Minute
 
 type accessHit struct {

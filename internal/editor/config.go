@@ -36,6 +36,9 @@ type ForgeConfig struct {
 	ClientSecretEnv string     `yaml:"client_secret_env"` // the variable holding the client secret
 	// Base is the platform's web address if it isn't https://<host>.
 	Base string `yaml:"base"`
+	// Discover also offers the sites found in each signed-in account's
+	// repositories (discover.go). Off unless set.
+	Discover *DiscoverConfig `yaml:"discover"`
 }
 
 // SiteConfig is a site the editor can open.
@@ -46,6 +49,8 @@ type SiteConfig struct {
 	Branch  string        `yaml:"branch"` // the branch the site publishes from; default main
 	Subdir  string        `yaml:"subdir"`
 	Preview PreviewConfig `yaml:"preview"`
+
+	discovered bool // found in an account's repositories, not listed here
 }
 
 // PreviewConfig says where `hotdog-cms preview` serves this repository's branches.
