@@ -134,3 +134,17 @@ func TestFeedBeforeFirstPost(t *testing.T) {
 		t.Errorf("empty news feed: %v\n%s", err, feed)
 	}
 }
+
+func TestFooterCredit(t *testing.T) {
+	dir := writeStarter(t)
+	cfg, _ := os.ReadFile(filepath.Join(dir, "site.yaml"))
+	os.WriteFile(filepath.Join(dir, "site.yaml"), []byte(strings.Replace(string(cfg), "# copyright: Your Name\n", "copyright: Coffey Labs LLC\n", 1)), 0o644)
+	res, err := Run(Options{SiteDir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	home, _ := os.ReadFile(filepath.Join(res.Out, "index.html"))
+	if !strings.Contains(string(home), "Coffey Labs LLC</p>") || !strings.Contains(string(home), `Built with <a href="https://hotdogcms.org/">HotDog CMS</a>`) {
+		t.Errorf("footer:\n%s", home[strings.Index(string(home), "<footer"):])
+	}
+}

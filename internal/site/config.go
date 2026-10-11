@@ -26,6 +26,12 @@ type Config struct {
 	// pages show them in it. Default UTC.
 	Timezone    string                      `yaml:"timezone"`
 	Author      string                      `yaml:"author"`
+	// Copyright is who holds the copyright the footer shows; default the
+	// site's name.
+	Copyright string `yaml:"copyright"`
+	// Credit shows "Built with HotDog CMS" in the footer, linking to
+	// hotdogcms.org.
+	Credit bool `yaml:"credit"`
 	Markdown    MarkdownConfig              `yaml:"markdown"`
 	Collections map[string]CollectionConfig `yaml:"collections"`
 	Taxonomies  []string                    `yaml:"taxonomies"`
@@ -218,6 +224,9 @@ func LoadConfig(dir string) (*Config, error) {
 	}
 	if c.Language == "" {
 		c.Language = "en"
+	}
+	if c.Copyright == "" {
+		c.Copyright = c.Name
 	}
 	if c.Collections == nil {
 		c.Collections = map[string]CollectionConfig{}

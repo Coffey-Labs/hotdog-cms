@@ -1,6 +1,7 @@
 <footer class="foot">
   <div class="wrap foot-in">
-    <p>© {{ (now).Year }} {{ .Site.Config.Name }}</p>
+    <p>© {{ (now).Year }} {{ .Site.Config.Copyright }}</p>
+    {{ if .Site.Config.Credit }}<p class="credit">Built with <a href="https://hotdogcms.org/">HotDog CMS</a></p>{{ end }}
     <ul>
       {{ range menu "footer" }}<li><a href="{{ .URL }}">{{ .Name }}</a></li>{{ end }}
       {{ if consentActive }}<li><button type="button" class="link-btn" data-hotdog-consent-open>Cookie settings</button></li>{{ end }}

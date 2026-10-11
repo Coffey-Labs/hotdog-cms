@@ -157,7 +157,10 @@ pre code { background: none; padding: 0; color: inherit; }
 
 /* ---- Footer -------------------------------------------------------------- */
 .foot { border-top: 1px solid var(--line); color: var(--muted); font-size: .92rem; }
-.foot-in { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; padding: 22px 0; }
+.foot-in { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px 16px; padding: 22px 0; }
+.foot-in > ul { grid-column: 3; justify-self: end; }
+.foot .credit { text-align: center; }
+@media (max-width: 720px) { .foot-in { grid-template-columns: 1fr; justify-items: center; text-align: center; } .foot-in > ul { grid-column: auto; justify-self: center; } }
 .foot p { margin: 0; }
 .foot ul { list-style: none; display: flex; gap: 16px; margin: 0; padding: 0; }
 .foot a { color: var(--muted); }

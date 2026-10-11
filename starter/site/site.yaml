@@ -4,6 +4,10 @@ url: https://example.org
 language: en
 description: A site built with HotDog CMS.
 author: Your Name
+# Who holds the copyright the footer shows (default: the site's name), and
+# whether the footer says "Built with HotDog CMS".
+# copyright: Your Name
+credit: true
 # Where the site's events happen; event and banner times are read in it.
 # timezone: America/Phoenix
 
