@@ -16,7 +16,7 @@ fields:
       <video controls preload="metadata" playsinline{{ with .Data.poster }} poster="{{ . }}"{{ end }}>
         {{ with .Data.webm }}<source src="{{ . }}" type="video/webm">{{ end }}
         <source src="{{ .Data.src }}" type="video/mp4">
-        {{ with .Data.captions }}<track kind="captions" src="{{ . }}" srclang="{{ $.Site.Config.Language }}" label="Captions" default>{{ end }}
+        {{ with .Data.captions }}<track kind="captions" src="{{ . }}" srclang="{{ $.Site.Config.Language }}" label="Captions">{{ end }}
         <a href="{{ .Data.src }}">Download the video</a>
       </video>
       {{ with .Data.caption }}<figcaption>{{ markdownify . }}</figcaption>{{ end }}
