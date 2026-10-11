@@ -22,6 +22,7 @@ import (
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/endpoint"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/gitx"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/importer"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/preview"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/publish"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/serve"
@@ -43,6 +44,7 @@ Usage:
   hotdog-cms preview -repo URL     build every branch as it would be published, each at its own address
   hotdog-cms ci <platform>         write the CI file for github, gitea, forgejo, gitlab, bitbucket, woodpecker, or a git hook
   hotdog-cms endpoint -config FILE the small server for form submissions and search, behind your web server
+  hotdog-cms import <from> ...     bring a site in: wordpress, wxr, ghost, hugo or jekyll (docs/importing.md)
   hotdog-cms editor -config FILE   the editor: sign in with your git platform and work on sites (never on a site's host)
 
 Platforms: GitHub, GitLab, Gitea, Forgejo/Codeberg, Gogs, Bitbucket, or any git server.
@@ -86,6 +88,8 @@ func main() {
 		err = cmdEndpoint(args)
 	case "editor":
 		err = cmdEditor(args)
+	case "import":
+		err = cmdImport(args)
 	case "version", "-v", "--version":
 		fmt.Println("hotdog-cms", version)
 	case "help", "-h", "--help":
@@ -464,4 +468,107 @@ func report(r *build.Result) {
 	for _, f := range r.Feeds {
 		fmt.Printf("  feed: %s\n", f)
 	}
+}
+
+func cmdImport(args []string) error {
+	if len(args) == 0 {
+		return errors.New("usage: hotdog-cms import <wordpress|wxr|ghost|hugo|jekyll> [flags] (hotdog-cms import <from> -h for each)")
+	}
+	from, args := args[0], args[1:]
+	fl := flag.NewFlagSet("import "+from, flag.ExitOnError)
+	siteDir := fl.String("site", ".", "the HotDog CMS site to import into (made with hotdog-cms new)")
+	posts := fl.String("posts", "articles", "the collection posts go into")
+	overwrite := fl.Bool("overwrite", false, "replace pages that are already there")
+	var siteURL, user, file, dir, rename *string
+	switch from {
+	case "wordpress":
+		siteURL = fl.String("url", "", "the WordPress site, e.g. https://example.com (required)")
+		user = fl.String("user", "", "a WordPress user, for drafts and private posts; the Application Password goes in HOTDOG_WP_PASSWORD")
+	case "wxr":
+		file = fl.String("file", "", "the export file from Tools → Export (required)")
+		siteURL = fl.String("url", "", "the old site's address, if pictures are linked relative to it")
+	case "ghost":
+		file = fl.String("file", "", "the export file from Settings → Labs → Export (required)")
+		siteURL = fl.String("url", "", "the old site's address, for its pictures (required)")
+	case "hugo":
+		dir = fl.String("from", "", "the Hugo site's folder (required)")
+		rename = fl.String("rename", "posts=articles", "sections to rename, as from=to,from=to")
+	case "jekyll":
+		dir = fl.String("from", "", "the Jekyll site's folder (required)")
+	default:
+		return fmt.Errorf("can't import from %q: wordpress, wxr, ghost, hugo or jekyll", from)
+	}
+	_ = fl.Parse(args)
+	var items []importer.Item
+	var err error
+	opt := importer.Options{SiteDir: *siteDir, Overwrite: *overwrite, Log: os.Stdout}
+	source := from
+	switch from {
+	case "wordpress":
+		if *siteURL == "" {
+			return errors.New("-url is required")
+		}
+		pass := os.Getenv("HOTDOG_WP_PASSWORD")
+		if *user != "" && pass == "" {
+			return errors.New("set HOTDOG_WP_PASSWORD to an Application Password for that user (Users → Profile → Application Passwords)")
+		}
+		fmt.Printf("reading %s…\n", *siteURL)
+		items, err = importer.FromWordPress(importer.WordPressOptions{URL: *siteURL, User: *user, Password: pass, Posts: *posts})
+		opt.Base, source = *siteURL, *siteURL
+	case "wxr", "ghost":
+		if *file == "" {
+			return errors.New("-file is required")
+		}
+		f, ferr := os.Open(*file)
+		if ferr != nil {
+			return ferr
+		}
+		defer f.Close()
+		if from == "wxr" {
+			var link string
+			items, link, err = importer.FromWXR(f, *posts)
+			opt.Base = *siteURL
+			if opt.Base == "" {
+				opt.Base = link
+			}
+		} else {
+			if *siteURL == "" {
+				return errors.New("-url is required, for the posts' pictures")
+			}
+			items, err = importer.FromGhost(f, *siteURL, *posts)
+			opt.Base = *siteURL
+		}
+		source = *file
+	case "hugo", "jekyll":
+		if *dir == "" {
+			return errors.New("-from is required")
+		}
+		opt.LocalRoot, source = *dir, *dir
+		if from == "hugo" {
+			ren := map[string]string{}
+			for _, pair := range strings.Split(*rename, ",") {
+				if a, b, ok := strings.Cut(pair, "="); ok {
+					ren[strings.TrimSpace(a)] = strings.TrimSpace(b)
+				}
+			}
+			items, err = importer.FromHugo(*dir, ren)
+		} else {
+			items, err = importer.FromJekyll(*dir, *posts)
+		}
+	}
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%d page(s) found; writing…\n", len(items))
+	rep, err := importer.Write(items, opt)
+	if err != nil {
+		return err
+	}
+	report := filepath.Join(*siteDir, "IMPORT-REPORT.md")
+	if err := os.WriteFile(report, []byte(rep.Markdown(source)), 0o644); err != nil {
+		return err
+	}
+	fmt.Printf("\n%d written, %d skipped, %d kept as HTML, %d picture(s), %d redirect(s). Details: %s\nThen: hotdog-cms check\n",
+		len(rep.Written), len(rep.Skipped), len(rep.KeptHTML), rep.Pictures, len(rep.Redirects), report)
+	return nil
 }

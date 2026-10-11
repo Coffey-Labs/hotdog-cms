@@ -451,20 +451,27 @@ below):
 
 ### E9 · Importers
 
-- **WordPress** (`hotdog-cms import wordpress`):
-  - connects to a live site with an Application Password (read-only, over the
-    REST API), or reads a WXR export file;
-  - posts and pages become Markdown, with `format: html` kept where
-    conversion would lose something;
-  - authors, dates, slugs, tags and categories are kept;
-  - media is downloaded and re-encoded;
+*Built 2026-10-10* (see [importing.md](importing.md)):
+- **WordPress:** a live site through its REST API (an Application Password
+  for drafts and private posts, read from the environment and never stored),
+  or an export file (WXR, including classic-editor content and `[caption]`).
+- **Hugo** (YAML or TOML front matter, aliases, page bundles with their
+  pictures), **Jekyll** (dated posts, the site's permalink style worked out
+  for redirects, `redirect_from`) and **Ghost** (its JSON export).
+- **What every import does:**
+  - Markdown where it's faithful, HTML kept (`format: html`) where it isn't,
+    with the reason in the report;
+  - pictures re-encoded like uploads;
   - every old permalink becomes a redirect;
-  - a report lists what didn't convert cleanly (shortcodes, embeds,
-    page-builder markup).
-
-  Credentials are used for the import and never stored.
-- **Hugo, Jekyll, Eleventy:** mostly a front matter mapping. **Ghost:** its
-  JSON export.
+  - page hierarchies are kept;
+  - shortcodes and template code are listed.
+- **Pages that build:** a WordPress import is built and checked in the tests
+  with no errors.
+- **Safety:** pictures beside a Hugo or Jekyll page are read only from inside
+  the folder being imported, so a post's `file://` link can't reach other
+  files. Nothing is overwritten without `-overwrite`.
+- **Not done:** Eleventy (its Markdown and front matter are close to
+  Jekyll's; `import jekyll` handles simple sites).
 
 ### E10 · Extensions without the plugin problem
 
