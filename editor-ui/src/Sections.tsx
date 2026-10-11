@@ -57,7 +57,7 @@ function summary(d: Data): string {
   return ''
 }
 
-type Ctx = { id: string; branch: string; lib: SectionLib }
+export type Ctx = { id: string; branch: string; lib: SectionLib }
 
 export function SectionsEditor({ id, branch, value, onChange, disabled }: { id: string; branch: string; value: Sec[]; onChange: (v: Sec[]) => void; disabled?: boolean }) {
   const [lib, setLib] = useState<SectionLib>()
@@ -271,7 +271,7 @@ function FieldInput({ field: f, value, onChange, ctx, disabled }: { field: Field
   }
 }
 
-function ImageField({ f, label, help, value, onChange, ctx, disabled }: { f: Field; label: React.ReactNode; help: React.ReactNode; value: string; onChange: (v: unknown) => void; ctx: Ctx; disabled?: boolean }) {
+export function ImageField({ f, label, help, value, onChange, ctx, disabled }: { f: Field; label: React.ReactNode; help: React.ReactNode; value: string; onChange: (v: unknown) => void; ctx: Ctx; disabled?: boolean }) {
   const [picking, setPicking] = useState(false)
   const [items, setItems] = useState<MediaItem[]>()
   useEffect(() => {

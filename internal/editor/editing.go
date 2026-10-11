@@ -30,7 +30,7 @@ func (s *Server) apiWrite(w http.ResponseWriter, r *http.Request, sess *Session,
 		apiError(w, http.StatusNotFound, "No such site, or you can't open it.")
 		return
 	}
-	if !acc.Write && action != "live" {
+	if !acc.Write && action != "live" && action != "look-live" {
 		apiError(w, http.StatusForbidden, "The platform gives you read-only access to this site.")
 		return
 	}
@@ -48,6 +48,10 @@ func (s *Server) apiWrite(w http.ResponseWriter, r *http.Request, sess *Session,
 		s.newPage(w, r, sess, f, st)
 	case "live":
 		s.liveRender(w, r, sess, f, st)
+	case "look-live":
+		s.lookLive(w, r, sess, f, st)
+	case "look-save":
+		s.lookSave(w, r, sess, f, st)
 	case "review":
 		s.review(w, r, sess, f, st)
 	case "publish":
@@ -256,7 +260,7 @@ func (s *Server) liveRender(w http.ResponseWriter, r *http.Request, sess *Sessio
 		return
 	}
 	owner := sess.Forge + "|" + sess.Login + "|" + st.ID + "|" + req.Branch
-	url := s.live.show(owner, siteDir+".editor-build", pagePath, html)
+	url := s.live.show(owner, siteDir+".editor-build", pagePath, html, nil)
 	writeJSON(w, http.StatusOK, map[string]any{"url": url, "path": pagePath})
 }
 

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/media"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
 
 // Hosts whose scripts track visitors. Loading one on page view means the
@@ -279,3 +280,23 @@ func (c *checker) images() {
 }
 
 const imageHeavy = 500 << 10
+
+// The look: every pair the theme says must stay readable, with the site's
+// choices applied, in light and in dark mode.
+func (c *checker) look() {
+	lf, err := site.LoadLook(c.siteDir)
+	if err != nil || lf == nil {
+		return // a broken look.yaml fails the build first
+	}
+	vals, _ := lf.Values(c.cfg.Look)
+	for _, r := range lf.Contrasts(vals) {
+		for _, m := range []struct {
+			mode  string
+			ratio float64
+		}{{"light", r.Light}, {"dark", r.Dark}} {
+			if m.ratio < site.MinContrast {
+				c.add(Error, "look-contrast", "site.yaml", "%s on %s is %.2f:1 in %s mode; text needs at least %.1f:1", r.Fore, r.Back, m.ratio, m.mode, site.MinContrast)
+			}
+		}
+	}
+}

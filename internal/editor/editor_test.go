@@ -11,12 +11,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
 	"gopkg.in/yaml.v3"
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/starter"
 )
@@ -694,5 +696,92 @@ func TestSectionsAPI(t *testing.T) {
 	body := rec.Body.String()
 	if i, j := strings.Index(body, `"hero"`), strings.Index(body, `"closing"`); i < 0 || j < i || !strings.Contains(body, `"eyebrow":"Built with HotDog CMS","heading"`) {
 		t.Errorf("front matter order: %s", body)
+	}
+}
+
+func TestLookPanel(t *testing.T) {
+	s, ff, repo := newTestServerRepo(t)
+	jar := []*http.Cookie{signIn(t, s, ff)}
+	mainTip := git(t, repo, "rev-parse", "main")
+
+	var lk struct {
+		Look   *site.LookFile
+		Values map[string]any
+	}
+	rec := do(s, "GET", "/api/sites/site/look", jar, nil)
+	json.NewDecoder(rec.Body).Decode(&lk)
+	if rec.Code != 200 || lk.Look == nil || len(lk.Look.Tokens) < 5 || len(lk.Values) != 0 {
+		t.Fatalf("look: %d %+v", rec.Code, lk)
+	}
+
+	// The preview links the unsaved stylesheet, and serves it.
+	rec = post(s, "/api/sites/site/look-live", jar, map[string]any{"branch": "main", "look": map[string]any{"accent": "#0a7d55"}})
+	var lv map[string]string
+	json.NewDecoder(rec.Body).Decode(&lv)
+	u, err := url.Parse(lv["url"])
+	if rec.Code != 200 || err != nil || lv["error"] != "" {
+		t.Fatalf("look-live: %d %v", rec.Code, lv)
+	}
+	page := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", lv["url"], nil)
+	req.Host = u.Host
+	s.live.ServeHTTP(page, req)
+	m := regexp.MustCompile(`href="(/look\.[0-9a-f]+\.css)"`).FindStringSubmatch(page.Body.String())
+	if m == nil {
+		t.Fatalf("preview page has no look stylesheet:\n%s", page.Body)
+	}
+	cssRec := httptest.NewRecorder()
+	creq := httptest.NewRequest("GET", "http://"+u.Host+m[1], nil)
+	creq.Host = u.Host
+	s.live.ServeHTTP(cssRec, creq)
+	if !strings.Contains(cssRec.Body.String(), "--accent: #0a7d55") || !strings.HasPrefix(cssRec.Header().Get("Content-Type"), "text/css") {
+		t.Errorf("preview stylesheet: %s %s", cssRec.Header().Get("Content-Type"), cssRec.Body)
+	}
+
+	// A choice the theme doesn't allow isn't saved.
+	if rec := post(s, "/api/sites/site/look-save", jar, map[string]any{"branch": "main", "baseCommit": mainTip, "look": map[string]any{"font": "comic"}}); rec.Code != 422 {
+		t.Errorf("bad look saved: %d", rec.Code)
+	}
+	// Saving starts draft/look, with the look in site.yaml and the rest kept.
+	rec = post(s, "/api/sites/site/look-save", jar, map[string]any{"branch": "main", "baseCommit": mainTip, "look": map[string]any{"accent": "#0a7d55", "font": "serif"}})
+	var saved map[string]any
+	json.NewDecoder(rec.Body).Decode(&saved)
+	if rec.Code != 200 || saved["branch"] != "draft/look" || saved["created"] != true {
+		t.Fatalf("look-save: %d %v", rec.Code, saved)
+	}
+	cfg := git(t, repo, "show", "draft/look:site.yaml")
+	if !strings.Contains(cfg, "look:\n  accent: '#0a7d55'\n  font: serif") && !strings.Contains(cfg, "look:\n  accent: \"#0a7d55\"\n  font: serif") {
+		t.Errorf("site.yaml:\n%s", cfg)
+	}
+	// Everything but the look is exactly as it was.
+	orig := git(t, repo, "show", "main:site.yaml")
+	if cfg != orig+"\nlook:\n  accent: '#0a7d55'\n  font: serif" { // git() trims the last newline
+		t.Errorf("site.yaml changed beyond the look:\n%s", cfg)
+	}
+	// Saving again on the draft replaces the block, and an empty look removes it.
+	tip := git(t, repo, "rev-parse", "draft/look")
+	if rec := post(s, "/api/sites/site/look-save", jar, map[string]any{"branch": "draft/look", "baseCommit": tip, "look": map[string]any{}}); rec.Code != 200 {
+		t.Fatalf("clearing the look: %d %s", rec.Code, rec.Body)
+	}
+	if got := git(t, repo, "show", "draft/look:site.yaml"); got != orig {
+		t.Errorf("an empty look didn't restore site.yaml:\n%s", got)
+	}
+	if git(t, repo, "rev-parse", "main") != mainTip {
+		t.Error("the look reached the publishing branch")
+	}
+}
+
+func TestSetTopLevel(t *testing.T) {
+	in := "name: T\nlook:\n  accent: \"#111111\"\n  font: serif\n# Menus\nmenus:\n  main:\n    - { name: Home, url: / }\n"
+	got, err := setTopLevel(in, "look", map[string]any{"accent": "#222222"})
+	want := "name: T\nlook:\n  accent: '#222222'\n# Menus\nmenus:\n  main:\n    - { name: Home, url: / }\n"
+	if err != nil || got != want {
+		t.Errorf("replace:\n%s\n%v", got, err)
+	}
+	if got, _ := setTopLevel(in, "look", nil); got != "name: T\n# Menus\nmenus:\n  main:\n    - { name: Home, url: / }\n" {
+		t.Errorf("remove:\n%s", got)
+	}
+	if _, err := setTopLevel("look: { accent: '#111' }\n", "look", map[string]any{"font": "serif"}); err == nil {
+		t.Error("a one-line look: was rewritten")
 	}
 }

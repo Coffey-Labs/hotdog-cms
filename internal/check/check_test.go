@@ -156,3 +156,21 @@ func TestImageRules(t *testing.T) {
 		}
 	}
 }
+
+func TestLookContrast(t *testing.T) {
+	dir, out, cfg := mkSite(t, map[string]string{"index.html": `<html><head>` + head + `</head></html>`, "card.png": "png"}, "look:\n  accent: \"#dddddd\"\n")
+	os.WriteFile(filepath.Join(dir, "look.yaml"), []byte("tokens:\n  - { name: accent, type: color, default: \"#ba5019\", dark: \"#f2a65a\" }\n  - { name: bg, type: color, default: \"#ffffff\", dark: \"#000000\" }\ncontrast:\n  - [accent, bg]\n"), 0o644)
+	r, err := Run(dir, out, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var found []string
+	for _, p := range r.Problems {
+		if p.Rule == "look-contrast" {
+			found = append(found, p.What)
+		}
+	}
+	if len(found) != 1 || !strings.Contains(found[0], "accent on bg is 1.36:1 in light mode") {
+		t.Errorf("look-contrast: %v", found)
+	}
+}

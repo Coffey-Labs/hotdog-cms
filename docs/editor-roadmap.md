@@ -271,13 +271,33 @@ platform or several, with sites spread across them):
 
 ### E3 · Sections and look
 
-- The section library, shown as cards. A section is added from the library,
-  reordered by drag and drop, and its fields edited as a form. This is the
-  cairnobs.org home page, editable without YAML.
-- New section types are template files, so a developer adds one and every
-  editor can use it.
-- Palette, fonts and logo edited through `site.yaml` params with a live
-  preview, inside limits the theme declares (contrast is checked).
+*Built 2026-10-10* (see [themes.md](themes.md)):
+- **Sections as cards:** a page's sections are shown top to bottom. Add one
+  from the site's library, drag or move it, duplicate or remove it, and edit
+  its fields in a form; the live preview follows.
+- **Forms from templates:** a section declares its fields in a comment at
+  the top of its template: labels, help, required, defaults, and twelve types
+  including lists, groups, pictures, data files and collections. A template
+  without one still gets a form, from the fields it uses, partials included.
+  The cairnobs.org port's sections work unchanged. The starter's five
+  sections are declared.
+- **Edits keep the file as written:** front matter changes keep key order,
+  and every part that didn't change keeps its comments and style, even when
+  sections move.
+- **Look:**
+  - the theme lists in `look.yaml` what can change (colors with light and
+    dark values, fonts, selects such as corners, a logo) and which pairs must
+    stay readable;
+  - the site's choices go in `site.yaml` (`look:`), and the build writes them
+    as a fingerprinted stylesheet, so no inline styles;
+  - the Look panel previews the home page as you pick and checks every pair
+    as you go;
+  - saving replaces only the `look:` block of `site.yaml`.
+- **New check:** `look-contrast` (an error under 4.5:1).
+- **Found and fixed:** the starter's own light-mode accent was 4.39:1 on its
+  background, now 4.73:1.
+- **Tried** on a throwaway repository on the Coffey Labs Gitea (since
+  deleted).
 
 ### E4 · Power interface
 

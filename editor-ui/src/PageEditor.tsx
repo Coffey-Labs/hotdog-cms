@@ -368,7 +368,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
   )
 }
 
-function ReviewForm({ id, branch, title, onDone, onError }: { id: string; branch: string; title: string; onDone: (msg: string) => void; onError: (m: string) => void }) {
+export function ReviewForm({ id, branch, title, onDone, onError }: { id: string; branch: string; title: string; onDone: (msg: string) => void; onError: (m: string) => void }) {
   const [t, setT] = useState(`Update ${title}`)
   const [d, setD] = useState('')
   const [busy, setBusy] = useState(false)

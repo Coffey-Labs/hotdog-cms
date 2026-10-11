@@ -47,6 +47,8 @@ type Options struct {
 	// such as "about.md"), or adds files that don't exist yet: a page being
 	// edited, before it is saved.
 	Overrides map[string][]byte
+	// Look, if not nil, replaces site.yaml's look: (the Look panel's preview).
+	Look map[string]any
 }
 
 // Load reads a whole site directory.
@@ -54,6 +56,9 @@ func Load(dir string, opt Options) (*Site, error) {
 	cfg, err := LoadConfig(dir)
 	if err != nil {
 		return nil, err
+	}
+	if opt.Look != nil {
+		cfg.Look = opt.Look
 	}
 	host := ""
 	if u, err := url.Parse(cfg.URL); err == nil {

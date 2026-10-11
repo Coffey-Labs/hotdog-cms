@@ -24,6 +24,10 @@ export type Edit = { set?: Record<string, unknown>; frontMatter?: string; body: 
 export type Field = { name: string; label?: string; type: string; help?: string; required?: boolean; default?: unknown; options?: string[]; fields?: Field[] }
 export type SectionInfo = { name: string; label: string; about?: string; fields: Field[]; declared: boolean; problem?: string }
 export type SectionLib = { sections: SectionInfo[]; data: string[]; collections: string[] }
+export type LookToken = { name: string; label?: string; type: 'color' | 'font' | 'select' | 'image'; help?: string; default?: string; dark?: string; options?: { name: string; value: string }[] }
+export type LookFile = { tokens: LookToken[]; contrast: string[][] | null }
+export type LookValue = string | { light?: string; dark?: string }
+export type LookInfo = { look: LookFile | null; values: Record<string, LookValue>; branch: string; commit: string; canWrite: boolean; minContrast: number }
 export type MediaItem = { url: string; width: number; height: number; thumb: string; bytes: number; files: number; usedBy: string[]; alt: string }
 export type Uploaded = { branch: string; commit: string; created: boolean; url: string; width: number; height: number; notes: string[] | null; files: string[] }
 
@@ -111,6 +115,10 @@ export const api = {
   review: (id: string, b: { branch: string; title: string; description: string }) => post<Review>(site(id, 'review'), b),
   publish: (id: string, b: { branch: string }) => post<{ published: boolean; number: number }>(site(id, 'publish'), b),
   upload: (id: string, file: File, b: { branch: string; baseCommit: string; source: string }) => upload(id, file, b),
+  look: (id: string, branch?: string) => get<LookInfo>(siteURL(id, 'look', { branch })),
+  lookLive: (id: string, b: { branch: string; look: Record<string, LookValue> }) => post<{ url?: string; error?: string }>(site(id, 'look-live'), b),
+  lookSave: (id: string, b: { branch: string; baseCommit: string; look: Record<string, LookValue> }) =>
+    post<{ branch: string; commit: string; created: boolean }>(site(id, 'look-save'), b),
   sections: (id: string, branch?: string) => get<SectionLib>(siteURL(id, 'sections', { branch })),
   media: (id: string, branch?: string) => get<MediaItem[]>(siteURL(id, 'media', { branch })),
   mediaFile: (id: string, url: string, branch?: string) => siteURL(id, 'media-file', { url, branch }),

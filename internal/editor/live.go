@@ -68,8 +68,9 @@ func (l *liveServer) origin() string {
 }
 
 // show points an owner's preview at a build and, if html is given, overlays
-// one page with the unsaved version. It returns the page's preview address.
-func (l *liveServer) show(owner, dir, pagePath string, html []byte) string {
+// one page with the unsaved version, plus any other files (such as a look
+// stylesheet not yet saved). It returns the page's preview address.
+func (l *liveServer) show(owner, dir, pagePath string, html []byte, extra map[string][]byte) string {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	now := time.Now()
@@ -93,6 +94,9 @@ func (l *liveServer) show(owner, dir, pagePath string, html []byte) string {
 	}
 	if html != nil {
 		e.overlay[pagePath] = html
+	}
+	for p, data := range extra {
+		e.overlay[p] = data
 	}
 	e.used = now
 	return l.cfg.Scheme + "://" + tok + "." + l.cfg.Domain + portSuffix(l.cfg.Port) + pagePath
@@ -129,7 +133,12 @@ func (l *liveServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if html != nil {
-		h.Set("Content-Type", "text/html; charset=utf-8")
+		switch path.Ext(r.URL.Path) {
+		case ".css":
+			h.Set("Content-Type", "text/css; charset=utf-8")
+		default:
+			h.Set("Content-Type", "text/html; charset=utf-8")
+		}
 		_, _ = w.Write(html)
 		return
 	}

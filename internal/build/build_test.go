@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -196,5 +197,43 @@ func TestHTMLBodiesAndRedirectTo(t *testing.T) {
 	}
 	if !strings.Contains(read("articles/feed.xml"), "https://example.net/post/") {
 		t.Error("feed doesn't link the redirect_to destination")
+	}
+}
+
+func TestLook(t *testing.T) {
+	dir := writeStarter(t)
+	res, err := Run(Options{SiteDir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	home, _ := os.ReadFile(filepath.Join(res.Out, "index.html"))
+	if strings.Contains(string(home), "/look.") || strings.Contains(string(home), "brand-logo") {
+		t.Error("a site that changes nothing gets a look stylesheet or a logo")
+	}
+
+	cfg, _ := os.ReadFile(filepath.Join(dir, "site.yaml"))
+	os.WriteFile(filepath.Join(dir, "site.yaml"), append(cfg, []byte("look:\n  accent: \"#0a7d55\"\n  font: serif\n  logo: /logo.svg\n")...), 0o644)
+	if res, err = Run(Options{SiteDir: dir}); err != nil {
+		t.Fatal(err)
+	}
+	home, _ = os.ReadFile(filepath.Join(res.Out, "index.html"))
+	link := regexp.MustCompile(`<link rel="stylesheet" href="(/look\.[0-9a-f]{10}\.css)">`).FindStringSubmatch(string(home))
+	if link == nil || !strings.Contains(string(home), `<img class="brand-logo" src="/logo.svg" alt="">`) {
+		t.Fatalf("home page:\n%s", home)
+	}
+	css, err := os.ReadFile(filepath.Join(res.Out, link[1]))
+	if err != nil || !strings.Contains(string(css), "--accent: #0a7d55;") || !strings.Contains(string(css), "--font: Charter") {
+		t.Errorf("look.css: %v\n%s", err, css)
+	}
+	// LookCSS, for the editor's preview, names the same file.
+	u, data, err := LookCSS(dir, map[string]any{"accent": "#0a7d55", "font": "serif", "logo": "/logo.svg"})
+	if err != nil || u != link[1] || string(data) != string(css) {
+		t.Errorf("LookCSS: %s %v", u, err)
+	}
+
+	// A choice the theme doesn't allow stops the build, saying why.
+	os.WriteFile(filepath.Join(dir, "site.yaml"), append(cfg, []byte("look:\n  font: comic\n")...), 0o644)
+	if _, err := Run(Options{SiteDir: dir}); err == nil || !strings.Contains(err.Error(), `"comic" isn't one of`) {
+		t.Errorf("bad look: %v", err)
 	}
 }

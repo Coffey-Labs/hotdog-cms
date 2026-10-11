@@ -27,7 +27,8 @@ type Options struct {
 	Drafts  bool
 	URL     string // replace site.yaml's url (local preview)
 	Dev     bool
-	Now     time.Time // judge scheduled pages against this time; default now
+	Now     time.Time      // judge scheduled pages against this time; default now
+	Look    map[string]any // replace site.yaml's look: (the editor's Look preview)
 }
 
 // Result says what a build produced.
@@ -215,7 +216,37 @@ func prepare(siteDir string, s *site.Site, out string) (*Templates, error) {
 			return nil, err
 		}
 	}
+	// The site's look: a stylesheet of what it changes, after the theme's own.
+	look, err := site.LoadLook(siteDir)
+	if err != nil {
+		return nil, err
+	}
+	var lookVals map[string]site.LookValue
+	if look != nil {
+		if lookVals, err = look.Values(s.Config.Look); err != nil {
+			return nil, err
+		}
+		if css := look.CSS(lookVals); css != nil {
+			if err := assets.add(out, "look.css", css); err != nil {
+				return nil, err
+			}
+		}
+	} else if len(s.Config.Look) > 0 {
+		return nil, fmt.Errorf("site.yaml has look: but the site has no look.yaml saying what can change")
+	}
 	fm := funcs(s, assets, s.Markdown, icons)
+	// lookCSS is the look stylesheet's address, or "" when nothing's changed;
+	// look "logo" is a token's value, the site's choice or the theme's default.
+	fm["lookCSS"] = func() string {
+		u, _ := assets.URL("look.css")
+		return u
+	}
+	fm["look"] = func(name string) string {
+		if look == nil {
+			return ""
+		}
+		return look.Get(lookVals, name)
+	}
 	// form "contact" renders forms/contact.yaml.
 	fm["form"] = func(name string) (template.HTML, error) {
 		f, ok := siteForms[name]
@@ -235,7 +266,7 @@ func prepare(siteDir string, s *site.Site, out string) (*Templates, error) {
 // beside that build's files. It returns the HTML and the page's address.
 func RenderPage(siteDir, source string, content []byte, opt Options) ([]byte, string, error) {
 	rel := strings.TrimPrefix(filepath.ToSlash(source), "content/")
-	s, err := site.Load(siteDir, site.Options{Drafts: true, URL: opt.URL, Now: opt.Now, Overrides: map[string][]byte{rel: content}})
+	s, err := site.Load(siteDir, site.Options{Drafts: true, URL: opt.URL, Now: opt.Now, Overrides: map[string][]byte{rel: content}, Look: opt.Look})
 	if err != nil {
 		return nil, "", err
 	}
@@ -350,3 +381,27 @@ const Marker = marker
 
 // CopyTree copies a folder as it is.
 func CopyTree(src, dst string) error { return copyTree(src, dst, nil) }
+
+// LookCSS is the look stylesheet a site would get with these choices, and the
+// address a build would publish it at: for previewing a look before it's
+// saved. Empty when the choices change nothing.
+func LookCSS(siteDir string, look map[string]any) (string, []byte, error) {
+	lf, err := site.LoadLook(siteDir)
+	if err != nil || lf == nil {
+		return "", nil, err
+	}
+	vals, err := lf.Values(look)
+	if err != nil {
+		return "", nil, err
+	}
+	css := lf.CSS(vals)
+	if css == nil {
+		return "", nil, nil
+	}
+	a := &Assets{urls: map[string]string{}}
+	if err := a.add("", "look.css", css); err != nil {
+		return "", nil, err
+	}
+	u, _ := a.URL("look.css")
+	return u, css, nil
+}

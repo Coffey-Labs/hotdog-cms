@@ -30,11 +30,14 @@ type Config struct {
 	// TermIndexMin marks taxonomy pages with fewer items than this noindex and
 	// leaves them out of the sitemap: an archive with a thousand tags used once
 	// would otherwise hand search engines a thousand thin pages.
-	TermIndexMin int            `yaml:"term_index_min"`
-	Redirects    []Redirect     `yaml:"redirects"`
-	Outputs      OutputsConfig  `yaml:"outputs"`
-	Check        CheckConfig    `yaml:"check"`
-	Params       map[string]any `yaml:"params"`
+	TermIndexMin int        `yaml:"term_index_min"`
+	Redirects    []Redirect `yaml:"redirects"`
+	// Look is the site's choices for what its theme's look.yaml lets change:
+	// colors, fonts, the logo (look.go).
+	Look    map[string]any `yaml:"look"`
+	Outputs OutputsConfig  `yaml:"outputs"`
+	Check   CheckConfig    `yaml:"check"`
+	Params  map[string]any `yaml:"params"`
 }
 
 // MarkdownConfig controls how page bodies are rendered.

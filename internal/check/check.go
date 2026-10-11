@@ -97,6 +97,7 @@ func Run(siteDir, out string, cfg *site.Config) (*Report, error) {
 	}
 	c.sitewide(pages)
 	c.images()
+	c.look()
 	c.report.CSP = policy(pages)
 	sort.SliceStable(c.report.Problems, func(i, j int) bool {
 		a, b := c.report.Problems[i], c.report.Problems[j]

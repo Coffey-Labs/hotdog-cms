@@ -43,6 +43,7 @@ check:
 | `img-alt` | warning | Images without an `alt` attribute (`alt=""` is right for decoration). |
 | `image-location` | error | A JPEG that carries the GPS location where it was taken: on a personal site, often the author's home. Pictures uploaded through the editor never do. |
 | `image-weight` | warning | A picture over 500 KB. |
+| `look-contrast` | error | A pair the theme's `look.yaml` says must stay readable is under 4.5:1, in light or dark mode, with the site's look applied. |
 
 ## The Content-Security-Policy a site needs
 

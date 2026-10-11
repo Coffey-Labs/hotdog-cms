@@ -4,6 +4,7 @@ import logoLight from '../../brand/svg/logo-header-light.svg'
 import { AccountsMenu, label } from './Accounts'
 import { api, chooseAccount, signInURL, SignedOut, type SessionInfo, type SiteDetail, type SiteSummary } from './api'
 import { go, href, useRoute, type Route } from './route'
+import { LookPanel } from './Look'
 import { MediaLibrary } from './Media'
 import { PageEditor } from './PageEditor'
 import { Present } from './Present'
@@ -42,6 +43,7 @@ export function App() {
       {route.view === 'page' && <PageRoute id={route.id} source={route.source} branch={route.branch} />}
       {route.view === 'present' && <Present id={route.id} url={route.url} branch={route.branch} />}
       {route.view === 'media' && <MediaLibrary id={route.id} branch={route.branch} />}
+      {route.view === 'look' && <LookPanel id={route.id} branch={route.branch} />}
     </Shell>
   )
 }
@@ -170,6 +172,7 @@ function SiteView({ id, branch }: { id: string; branch?: string }) {
         <nav aria-label="Site files">
           <h2 className="side-label">Files</h2>
           <Link to={{ view: 'media', id, branch }} className="side-item">Pictures</Link>
+          <Link to={{ view: 'look', id, branch }} className="side-item">Look</Link>
         </nav>
         <nav aria-label="Drafts">
           <h2 className="side-label">Drafts</h2>
