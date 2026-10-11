@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -32,6 +33,12 @@ type Config struct {
 	// would otherwise hand search engines a thousand thin pages.
 	TermIndexMin int        `yaml:"term_index_min"`
 	Redirects    []Redirect `yaml:"redirects"`
+	// Fediverse is the author's handle (@name@instance), which Mastodon
+	// credits in link previews: <meta name="fediverse:creator">.
+	Fediverse string `yaml:"fediverse"`
+	// Cards draws a social card for every page without its own image
+	// (`cards: true`, or a map to choose the font, colors and logo).
+	Cards *CardsConfig `yaml:"cards"`
 	// Look is the site's choices for what its theme's look.yaml lets change:
 	// colors, fonts, the logo (look.go).
 	Look    map[string]any `yaml:"look"`
@@ -169,6 +176,9 @@ func LoadConfig(dir string) (*Config, error) {
 		return nil, fmt.Errorf("site.yaml: url %q has a path; a site lives at the root of its host", c.URL)
 	}
 	c.URL = strings.TrimRight(c.URL, "/")
+	if c.Fediverse != "" && !fediverseRe.MatchString(c.Fediverse) {
+		return nil, fmt.Errorf("site.yaml: fediverse %q should be a handle like @name@instance.social", c.Fediverse)
+	}
 	if c.Language == "" {
 		c.Language = "en"
 	}
@@ -204,3 +214,38 @@ func LoadConfig(dir string) (*Config, error) {
 	}
 	return &c, nil
 }
+
+// CardsConfig sets up social cards. Colors default to the site's look (its
+// band and band text), the fonts to the Go fonts, the logo to look's logo.
+type CardsConfig struct {
+	Enabled    bool   `yaml:"enabled"`
+	Font       string `yaml:"font"`       // a .ttf or .otf in the site, for the title
+	FontSmall  string `yaml:"font_small"` // for the site's name
+	Background string `yaml:"background"`
+	Text       string `yaml:"text"`
+	Accent     string `yaml:"accent"`
+	Logo       string `yaml:"logo"` // a PNG or JPEG in static/ or assets/
+}
+
+// UnmarshalYAML takes `cards: true` as well as the map form.
+func (c *CardsConfig) UnmarshalYAML(n *yaml.Node) error {
+	if n.Kind == yaml.ScalarNode {
+		return n.Decode(&c.Enabled)
+	}
+	type plain CardsConfig
+	c.Enabled = true
+	return n.Decode((*plain)(c))
+}
+
+// On reports whether cards are drawn.
+func (c *CardsConfig) On() bool { return c != nil && c.Enabled }
+
+// Signature is what, besides the title, changes a card's picture.
+func (c *CardsConfig) Signature() string {
+	if c == nil {
+		return ""
+	}
+	return strings.Join([]string{c.Font, c.FontSmall, c.Background, c.Text, c.Accent, c.Logo}, "\x00")
+}
+
+var fediverseRe = regexp.MustCompile(`^@[^@\s]+@[^@\s]+\.[^@\s]+$`)

@@ -190,6 +190,7 @@ func loadPage(raw []byte, rel string, md *Markdown) (*Page, error) {
 	}
 	p.Layout = str(fm["layout"])
 	p.Image = str(fm["image"])
+	p.ImageAlt = str(fm["image_alt"])
 	p.RedirectTo = str(fm["redirect_to"])
 	p.Draft = truthy(fm["draft"])
 	p.NoIndex = truthy(fm["noindex"])

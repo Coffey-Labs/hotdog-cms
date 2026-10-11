@@ -29,6 +29,7 @@ type Page struct {
 	Path       string // URL path: "/", "/about/", "/articles/x/", "/404.html"
 	Permalink  string // absolute URL
 	Image      string // social card, as written in front matter
+	ImageAlt   string // what the social card shows, for people who can't see it
 	Weight     int
 	Content    template.HTML
 	Params     map[string]any // every front matter key, as written

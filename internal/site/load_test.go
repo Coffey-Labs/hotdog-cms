@@ -1,6 +1,8 @@
 package site
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -67,5 +69,22 @@ func TestEmailOffWrapsTextAddresses(t *testing.T) {
 	}
 	if strings.Count(s, "<!--email_off-->") != 3 {
 		t.Errorf("addresses wrapped twice: %s", s)
+	}
+}
+
+func TestFediverseHandle(t *testing.T) {
+	dir := t.TempDir()
+	for _, c := range []struct {
+		v  string
+		ok bool
+	}{{"@john@linuxexpert.org", true}, {"john@linuxexpert.org", false}, {"@john", false}, {"", true}} {
+		y := "name: T\nurl: https://example.org\n"
+		if c.v != "" {
+			y += "fediverse: \"" + c.v + "\"\n"
+		}
+		os.WriteFile(filepath.Join(dir, "site.yaml"), []byte(y), 0o644)
+		if _, err := LoadConfig(dir); (err == nil) != c.ok {
+			t.Errorf("%q: %v", c.v, err)
+		}
 	}
 }

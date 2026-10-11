@@ -27,6 +27,12 @@ menus:
 outputs:
   llms: true
 
+# A picture for link previews (Mastodon, LinkedIn, chat apps), drawn for
+# every page that doesn't set image: in its front matter. Its colors follow
+# look.yaml; set font:, background:, text:, accent: or logo: to choose.
+cards: true
+# Your fediverse handle, which Mastodon credits in link previews.
+# fediverse: "@you@your.instance"
 # Patterns `hotdog-cms check` refuses to publish: internal host names, private
 # addresses, anything that must never reach the public site.
 check:

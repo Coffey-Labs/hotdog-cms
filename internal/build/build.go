@@ -73,8 +73,12 @@ func Run(opt Options) (*Result, error) {
 		return nil, err
 	}
 
+	cards := assignCards(s)
 	tpl, err := prepare(siteDir, s, work)
 	if err != nil {
+		return nil, err
+	}
+	if err := writeCards(siteDir, work, s, cards); err != nil {
 		return nil, err
 	}
 	if err := copyTree(filepath.Join(siteDir, "static"), work, nil); err != nil {
@@ -270,6 +274,7 @@ func RenderPage(siteDir, source string, content []byte, opt Options) ([]byte, st
 	if err != nil {
 		return nil, "", err
 	}
+	assignCards(s)
 	tpl, err := prepare(siteDir, s, "")
 	if err != nil {
 		return nil, "", err

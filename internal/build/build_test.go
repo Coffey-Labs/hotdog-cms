@@ -2,6 +2,7 @@ package build
 
 import (
 	"fmt"
+	"image/png"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -235,5 +236,56 @@ func TestLook(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "site.yaml"), append(cfg, []byte("look:\n  font: comic\n")...), 0o644)
 	if _, err := Run(Options{SiteDir: dir}); err == nil || !strings.Contains(err.Error(), `"comic" isn't one of`) {
 		t.Errorf("bad look: %v", err)
+	}
+}
+
+func TestSocialCards(t *testing.T) {
+	dir := writeStarter(t)
+	// A page with its own picture keeps it.
+	about := filepath.Join(dir, "content", "about.md")
+	src, _ := os.ReadFile(about)
+	os.WriteFile(about, []byte(strings.Replace(string(src), "title: About", "title: About\nimage: /own.png\nimage_alt: Our own", 1)), 0o644)
+	res, err := Run(Options{SiteDir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	home, _ := os.ReadFile(filepath.Join(res.Out, "index.html"))
+	m := regexp.MustCompile(`<meta property="og:image" content="https://example.org(/cards/home\.[0-9a-f]{8}\.png)">`).FindStringSubmatch(string(home))
+	if m == nil || !strings.Contains(string(home), `<meta property="og:image:alt" content="Home">`) {
+		t.Fatalf("home head:\n%s", home)
+	}
+	f, err := os.Open(filepath.Join(res.Out, m[1]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	img, err := png.Decode(f)
+	f.Close()
+	if err != nil || img.Bounds().Dx() != 1200 || img.Bounds().Dy() != 630 {
+		t.Fatalf("card: %v %v", err, img.Bounds())
+	}
+	// The site's band color fills it; the accent runs down the left edge.
+	if r, g, b, _ := img.At(600, 20).RGBA(); r>>8 != 0x1d || g>>8 != 0x2b || b>>8 != 0x3a {
+		t.Errorf("background %x %x %x", r>>8, g>>8, b>>8)
+	}
+	aboutHTML, _ := os.ReadFile(filepath.Join(res.Out, "about", "index.html"))
+	if !strings.Contains(string(aboutHTML), `content="https://example.org/own.png"`) || strings.Contains(string(aboutHTML), "/cards/") {
+		t.Error("a page with its own image got a card")
+	}
+	if _, err := os.Stat(filepath.Join(res.Out, "articles", "hello-world")); err != nil {
+		t.Fatal(err)
+	}
+	cards, _ := filepath.Glob(filepath.Join(res.Out, "cards", "*.png"))
+	// Home, the articles list, the article, contact; not 404, tags or about.
+	if len(cards) != 4 {
+		t.Errorf("%d cards: %v", len(cards), cards)
+	}
+	// A new title is a new address, so previews refresh.
+	idx := filepath.Join(dir, "content", "index.md")
+	src, _ = os.ReadFile(idx)
+	os.WriteFile(idx, []byte(strings.Replace(string(src), "title: Home", "title: Welcome", 1)), 0o644)
+	res, _ = Run(Options{SiteDir: dir})
+	home2, _ := os.ReadFile(filepath.Join(res.Out, "index.html"))
+	if strings.Contains(string(home2), m[1]) {
+		t.Error("the card's address didn't change with its title")
 	}
 }
