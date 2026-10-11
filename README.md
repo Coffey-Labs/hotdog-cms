@@ -3,6 +3,10 @@
 Websites from Markdown files and templates, with no database. Write in
 Markdown, see it live, publish from git. [hotdogcms.org](https://hotdogcms.org)
 
+> [!NOTE]
+> Development happens on [git.coffeylabs.org/coffey-labs/hotdog-cms](https://git.coffeylabs.org/coffey-labs/hotdog-cms); the copy on GitHub is a read-only mirror.
+> Report issues at **[git.coffeylabs.org/coffey-labs/hotdog-cms/issues](https://git.coffeylabs.org/coffey-labs/hotdog-cms/issues)**, join discussions at **[community.coffeylabs.org](https://community.coffeylabs.org)**, or chat on **[Discord](https://discord.gg/nqcY4TKfAn)**.
+
 ## Install
 
 Download `hotdog-cms` for Linux, macOS or Windows from the
