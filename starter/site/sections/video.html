@@ -1,0 +1,25 @@
+{{/* section
+label: Video
+about: A video from media/, with a poster picture and captions.
+fields:
+  - { name: heading, type: text }
+  - { name: src, type: link, label: Video file, required: true, help: An MP4 in static/media, like /media/tour.mp4. Add it to the site's repository. }
+  - { name: webm, type: link, label: WebM version, help: Optional, smaller; browsers that can play it use it. }
+  - { name: poster, type: image, label: Poster, help: Shown before it plays. }
+  - { name: captions, type: link, label: Captions, help: A WebVTT file (.vtt) for people who can't hear it. }
+  - { name: caption, type: markdown, label: Below the video }
+*/}}
+<section class="block">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    <figure class="video">
+      <video controls preload="metadata" playsinline{{ with .Data.poster }} poster="{{ . }}"{{ end }}>
+        {{ with .Data.webm }}<source src="{{ . }}" type="video/webm">{{ end }}
+        <source src="{{ .Data.src }}" type="video/mp4">
+        {{ with .Data.captions }}<track kind="captions" src="{{ . }}" srclang="{{ $.Site.Config.Language }}" label="Captions" default>{{ end }}
+        <a href="{{ .Data.src }}">Download the video</a>
+      </video>
+      {{ with .Data.caption }}<figcaption>{{ markdownify . }}</figcaption>{{ end }}
+    </figure>
+  </div>
+</section>

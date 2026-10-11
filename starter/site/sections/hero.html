@@ -5,6 +5,8 @@ fields:
   - { name: eyebrow, type: text, help: A short line above the heading. }
   - { name: heading, type: text, required: true }
   - { name: text, type: markdown }
+  - { name: image, type: image, label: Picture, help: Beside the text on wide screens, above it on phones. }
+  - { name: image_alt, type: text, label: What the picture shows, help: For people who can't see it. Leave empty only if it's decoration. }
   - name: buttons
     type: list
     fields:
@@ -12,11 +14,14 @@ fields:
       - { name: href, type: link, label: Goes to, required: true }
       - { name: primary, type: bool, label: Main button }
 */}}
-<section class="hero">
+<section class="hero{{ if .Data.image }} with-picture{{ end }}">
   <div class="wrap">
-    {{ with .Data.eyebrow }}<p class="eyebrow">{{ . }}</p>{{ end }}
-    <h1>{{ .Data.heading }}</h1>
-    {{ with .Data.text }}<div class="lede">{{ markdownify . }}</div>{{ end }}
-    {{ with .Data.buttons }}<p class="actions">{{ range . }}<a class="btn{{ if .primary }} primary{{ end }}" href="{{ .href }}">{{ .text }}</a>{{ end }}</p>{{ end }}
+    <div class="hero-text">
+      {{ with .Data.eyebrow }}<p class="eyebrow">{{ . }}</p>{{ end }}
+      <h1>{{ .Data.heading }}</h1>
+      {{ with .Data.text }}<div class="lede">{{ markdownify . }}</div>{{ end }}
+      {{ with .Data.buttons }}<p class="actions">{{ range . }}<a class="btn{{ if .primary }} primary{{ end }}" href="{{ .href }}">{{ .text }}</a>{{ end }}</p>{{ end }}
+    </div>
+    {{ with .Data.image }}<figure class="hero-picture"><img src="{{ . }}" alt="{{ $.Data.image_alt }}"{{ with imageSize . }} width="{{ .w }}" height="{{ .h }}"{{ end }} fetchpriority="high"></figure>{{ end }}
   </div>
 </section>

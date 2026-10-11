@@ -1,3 +1,12 @@
+/* Recursive (SIL Open Font License, static/fonts/OFL.txt): downloaded only
+   when the Look panel picks it. */
+@font-face {
+  font-family: "Recursive";
+  src: url("/fonts/recursive.woff2") format("woff2");
+  font-weight: 300 1000;
+  font-display: swap;
+}
+
 /* ---- Palette --------------------------------------------------------------
    Every color lives here. Change these and the whole site follows; nothing
    below names a color directly. */
@@ -78,8 +87,14 @@ pre code { background: none; padding: 0; color: inherit; }
 }
 
 /* ---- Blocks -------------------------------------------------------------- */
-.hero { padding: clamp(56px, 10vw, 112px) 0 clamp(40px, 7vw, 72px); }
+.hero { padding: clamp(56px, 10vw, 112px) 0 clamp(40px, 7vw, 72px); background: var(--hero, transparent); color: var(--hero-text, inherit); }
 .hero h1 { font-size: clamp(2.4rem, 7vw, 4.2rem); max-width: 16ch; }
+.hero .lede, .hero .eyebrow { color: inherit; }
+.hero .lede { opacity: .88; }
+.hero.with-picture .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: clamp(28px, 5vw, 64px); align-items: center; }
+.hero-picture { margin: 0; }
+.hero-picture img { display: block; width: 100%; height: auto; }
+@media (max-width: 820px) { .hero.with-picture .wrap { grid-template-columns: 1fr; } .hero-picture { order: -1; } }
 .eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: .78rem; font-weight: 700; color: var(--accent); margin: 0 0 14px; }
 .eyebrow a { text-decoration: none; }
 .lede { font-size: 1.2rem; color: var(--muted); max-width: 60ch; }
@@ -145,3 +160,6 @@ pre code { background: none; padding: 0; color: inherit; }
 .table-wrap { overflow-x: auto; }
 .privacy-facts { width: 100%; border-collapse: collapse; font-size: .92rem; }
 .privacy-facts th, .privacy-facts td { text-align: left; vertical-align: top; padding: .5rem .6rem; border-bottom: 1px solid var(--line); }
+.video { margin: 0; }
+.video video { display: block; width: 100%; height: auto; border-radius: var(--radius); background: #000; }
+.video figcaption { color: var(--muted); font-size: .95rem; margin-top: 10px; }

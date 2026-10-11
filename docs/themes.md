@@ -175,3 +175,11 @@ numbers, marks the current page for screen readers, and its head adds
 `rel="prev"` and `rel="next"` and "page 2" to later pages' titles. Later
 pages keep their own canonical address. The duplicate-title check leaves
 them out.
+
+## What the starter offers
+
+The starter's sections are hero (with an optional picture beside the text),
+cards, latest, text, closing band and video. Its Look panel sets the accent,
+background, text, hero and closing-band colors (each with a dark-mode
+value), the font (Inter, system, serif, rounded or Recursive, which ships
+with the starter under the SIL Open Font License), corners and the logo.
