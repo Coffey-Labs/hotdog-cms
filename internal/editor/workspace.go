@@ -16,6 +16,7 @@ import (
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/check"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/gitx"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/isolate"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
 
@@ -94,12 +95,16 @@ func (ws *workspaces) buildAndCheck(siteDir, commit string) *BuildResult {
 	ws.mu.Unlock()
 	out := siteDir + ".editor-build"
 	r := &BuildResult{Commit: commit, At: time.Now()}
-	res, err := build.Run(build.Options{SiteDir: siteDir, Out: out, Drafts: true})
+	res, err := isolate.Build(build.Options{SiteDir: siteDir, Out: out, Drafts: true})
+	var cfg *site.Config
+	if err == nil {
+		cfg, err = site.LoadConfig(siteDir)
+	}
 	if err != nil {
 		r.Failed = err.Error()
 	} else {
 		r.Pages = res.Pages
-		if rep, err := check.Run(siteDir, out, res.Site.Config); err != nil {
+		if rep, err := check.Run(siteDir, out, cfg); err != nil {
 			r.Failed = err.Error()
 		} else {
 			r.Errors = rep.Errors()
@@ -172,7 +177,40 @@ func readSource(siteDir, source string) ([]byte, error) {
 	if clean != source || !strings.HasPrefix(clean, "content/") || !strings.HasSuffix(clean, ".md") {
 		return nil, fmt.Errorf("not a page source: %q", source)
 	}
-	return os.ReadFile(filepath.Join(siteDir, filepath.FromSlash(clean)))
+	return readIn(siteDir, clean)
+}
+
+// readIn reads rel (slash-separated) inside dir. Nothing outside dir can be
+// reached, even through a symbolic link, and a link itself isn't read.
+func readIn(dir, rel string) ([]byte, error) {
+	r, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	name := filepath.FromSlash(rel)
+	if fi, err := r.Lstat(name); err == nil && !fi.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s isn't a regular file", rel)
+	}
+	return r.ReadFile(name)
+}
+
+// writeIn writes rel inside dir, making folders as needed, without ever
+// writing outside dir or through a link.
+func writeIn(dir, rel string, data []byte) error {
+	r, err := os.OpenRoot(dir)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	name := filepath.FromSlash(rel)
+	if fi, err := r.Lstat(name); err == nil && !fi.Mode().IsRegular() {
+		return fmt.Errorf("%s isn't a regular file", rel)
+	}
+	if err := r.MkdirAll(filepath.Dir(name), 0o755); err != nil {
+		return err
+	}
+	return r.WriteFile(name, data, 0o644)
 }
 
 // errConflict means the branch moved since the person started editing.
@@ -184,6 +222,9 @@ var errConflict = errors.New("this branch changed since you opened it")
 // given and the branch has moved past it, nothing is written: someone else's
 // change is never silently overwritten.
 func (ws *workspaces) save(sess *Session, kind forge.Kind, sc *SiteConfig, repo, baseBranch, target string, create bool, baseCommit string, files map[string][]byte, message string) (string, error) {
+	if !gitx.ValidBranch(target) {
+		return "", fmt.Errorf("%q isn't a branch name the editor uses", target)
+	}
 	dir := ws.dir(sess, sc, baseBranch)
 	defer ws.lock(dir)()
 	if err := os.MkdirAll(filepath.Dir(dir), 0o700); err != nil {
@@ -202,17 +243,13 @@ func (ws *workspaces) save(sess *Session, kind forge.Kind, sc *SiteConfig, repo,
 		if clean != rel || strings.HasPrefix(clean, ".git/") || clean == ".git" {
 			return "", fmt.Errorf("refusing to write %q", rel)
 		}
-		p := filepath.Join(dir, filepath.FromSlash(clean))
 		if data == nil { // nil: delete the file
 			if _, err := gitx.Run(auth, dir, "rm", "--quiet", "--ignore-unmatch", "--", clean); err != nil {
 				return "", err
 			}
 			continue
 		}
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			return "", err
-		}
-		if err := os.WriteFile(p, data, 0o644); err != nil {
+		if err := writeIn(dir, clean, data); err != nil {
 			return "", err
 		}
 		if _, err := gitx.Run(auth, dir, "add", "--", clean); err != nil {
@@ -267,7 +304,7 @@ func (ws *workspaces) revert(sess *Session, kind forge.Kind, sc *SiteConfig, rep
 	if err != nil {
 		return "", err
 	}
-	if _, err := gitx.Run(auth, dir, "fetch", "--quiet", "--depth", "300", "origin", sc.Branch); err != nil {
+	if _, err := gitx.Run(auth, dir, "fetch", "--quiet", "--depth", "300", "--end-of-options", "origin", "+refs/heads/"+sc.Branch); err != nil {
 		return "", err
 	}
 	if _, err := gitx.Run(auth, dir, "cat-file", "-e", sha+"^{commit}"); err != nil {

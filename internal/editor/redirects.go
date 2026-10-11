@@ -3,7 +3,6 @@ package editor
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -99,7 +98,7 @@ func (s *Server) redirectsSave(w http.ResponseWriter, r *http.Request, sess *Ses
 		apiError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	cfg, err := os.ReadFile(filepath.Join(siteDir, "site.yaml"))
+	cfg, err := readIn(siteDir, "site.yaml")
 	if err != nil {
 		apiError(w, http.StatusBadGateway, "Couldn't read site.yaml.")
 		return
@@ -198,7 +197,7 @@ func (s *Server) movePage(w http.ResponseWriter, r *http.Request, sess *Session,
 			list = append(list, rd)
 		}
 		list = append(list, site.Redirect{From: oldPath, To: newPath})
-		cfg, err := os.ReadFile(filepath.Join(siteDir, "site.yaml"))
+		cfg, err := readIn(siteDir, "site.yaml")
 		if err != nil {
 			apiError(w, http.StatusBadGateway, "Couldn't read site.yaml.")
 			return

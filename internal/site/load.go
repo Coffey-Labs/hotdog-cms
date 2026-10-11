@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"io"
 	"io/fs"
 	"net/url"
 	"os"
@@ -62,6 +63,9 @@ type Options struct {
 
 // Load reads a whole site directory.
 func Load(dir string, opt Options) (*Site, error) {
+	if err := NoLinks(dir); err != nil {
+		return nil, err
+	}
 	cfg, err := LoadConfig(dir)
 	if err != nil {
 		return nil, err
@@ -180,6 +184,70 @@ func Load(dir string, opt Options) (*Site, error) {
 		return nil, err
 	}
 	return s, nil
+}
+
+// ReadFile reads a file inside the site folder: rel is cleaned so it can't
+// climb out ("../../etc/passwd" reads <site>/etc/passwd), it must be a
+// regular file (not a link, not /dev/zero), and it may not be larger than
+// max bytes.
+func ReadFile(siteDir, rel string, max int64) ([]byte, error) {
+	clean := strings.TrimPrefix(path.Clean("/"+filepath.ToSlash(rel)), "/")
+	if clean == "" {
+		return nil, fmt.Errorf("%q isn't a file in the site", rel)
+	}
+	root, err := os.OpenRoot(siteDir)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+	fi, err := root.Lstat(filepath.FromSlash(clean))
+	if err != nil {
+		return nil, err
+	}
+	if !fi.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s isn't a regular file", clean)
+	}
+	if fi.Size() > max {
+		return nil, fmt.Errorf("%s is larger than %d MB", clean, max>>20)
+	}
+	f, err := root.Open(filepath.FromSlash(clean))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return io.ReadAll(io.LimitReader(f, max+1))
+}
+
+// NoLinks refuses a site that holds a symbolic link anywhere: a link
+// committed to a site (static/x -> /etc/passwd, layouts/y -> ~/.ssh/id_ed25519)
+// would let anyone who can write to the repository make a build read, and
+// publish, files from the machine it runs on. The site's own folder may be
+// reached through a link; nothing inside it may be one.
+func NoLinks(dir string) error {
+	root, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return err
+	}
+	return filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, _ := filepath.Rel(root, p)
+		if d.IsDir() {
+			switch filepath.ToSlash(rel) {
+			case ".git", "public", "node_modules":
+				return fs.SkipDir
+			}
+			return nil
+		}
+		if d.Type()&fs.ModeSymlink != 0 {
+			return fmt.Errorf("%s is a symbolic link; HotDog CMS doesn't follow links in a site, since they can reach files outside it. Put the file itself there", filepath.ToSlash(rel))
+		}
+		if !d.Type().IsRegular() {
+			return fmt.Errorf("%s isn't a regular file", filepath.ToSlash(rel))
+		}
+		return nil
+	})
 }
 
 // schedule notes a moment the site changes by itself, if it's still ahead.
@@ -410,6 +478,9 @@ func (s *Site) checkPaths() error {
 		src := p.Source
 		if src == "" {
 			src = "(generated " + p.Kind + " page)"
+		}
+		if !SafeURLPath(p.Path) && p.Path != "/404.html" {
+			return fmt.Errorf("%s: the address %q isn't one a build can write safely (letters, digits, - _ . ~ and /, no ..)", src, p.Path)
 		}
 		if other, dup := seen[p.Path]; dup {
 			return fmt.Errorf("%s and %s both want %s", other, src, p.Path)

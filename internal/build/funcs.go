@@ -15,11 +15,21 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
+
+var hugeWidth = regexp.MustCompile(`%[-+# 0]*(\*|\d{4,})|\.(\*|\d{4,})`)
+
+func limitString(s string) (string, error) {
+	if len(s) > maxPage {
+		return "", errors.New("the result is too long")
+	}
+	return s, nil
+}
 
 // funcs is everything a template can call. There is deliberately no way to
 // mark a string as trusted HTML: the only HTML that reaches a page unescaped
@@ -224,6 +234,16 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 			hashes[p] = hex.EncodeToString(sum[:])[:8]
 			return hashes[p], nil
 		},
+		// printf, print and println replace the template builtins with ones
+		// that won't build a huge string from a tiny format ("%0999999999d").
+		"printf": func(format string, args ...any) (string, error) {
+			if hugeWidth.MatchString(format) {
+				return "", errors.New("printf: widths and precisions over 999 aren't allowed")
+			}
+			return limitString(fmt.Sprintf(format, args...))
+		},
+		"print":   func(args ...any) (string, error) { return limitString(fmt.Sprint(args...)) },
+		"println": func(args ...any) (string, error) { return limitString(fmt.Sprintln(args...)) },
 		"sectionContext": func(p *site.Page, sec site.Section) SectionContext {
 			return SectionContext{Type: sec.Type, Data: sec.Data, Page: p, Site: s}
 		},

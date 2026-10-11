@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -121,8 +122,8 @@ func Run(opt Options) (*Result, error) {
 		if err := tpl.checkSections(p); err != nil {
 			return nil, fmt.Errorf("%s: %w", name, err)
 		}
-		var buf bytes.Buffer
-		if err := tpl.layouts[layout].ExecuteTemplate(&buf, "base", p); err != nil {
+		buf := &capped{max: maxPage}
+		if err := tpl.layouts[layout].ExecuteTemplate(buf, "base", p); err != nil {
 			return nil, fmt.Errorf("%s (layout %s): %w", name, layout, err)
 		}
 		dst := pageFile(work, p.Path)
@@ -325,8 +326,8 @@ func RenderPage(siteDir, source string, content []byte, opt Options) ([]byte, st
 		if err := tpl.checkSections(p); err != nil {
 			return nil, "", err
 		}
-		var buf bytes.Buffer
-		if err := tpl.layouts[layout].ExecuteTemplate(&buf, "base", p); err != nil {
+		buf := &capped{max: maxPage}
+		if err := tpl.layouts[layout].ExecuteTemplate(buf, "base", p); err != nil {
 			return nil, "", fmt.Errorf("layout %s: %w", layout, err)
 		}
 		return buf.Bytes(), p.Path, nil
@@ -334,11 +335,33 @@ func RenderPage(siteDir, source string, content []byte, opt Options) ([]byte, st
 	return nil, "", fmt.Errorf("%s isn't a page of this site", source)
 }
 
-func pageFile(root, urlPath string) string {
-	if strings.HasSuffix(urlPath, "/") {
-		return filepath.Join(root, filepath.FromSlash(urlPath), "index.html")
+// maxPage bounds one rendered page. A template is something anyone who can
+// write to the site can change, and a loop in one shouldn't be able to use
+// up the memory of the machine building it (the editor builds everyone's
+// drafts).
+const maxPage = 32 << 20
+
+// capped is a buffer that refuses to grow past max.
+type capped struct {
+	bytes.Buffer
+	max int
+}
+
+func (c *capped) Write(p []byte) (int, error) {
+	if c.Len()+len(p) > c.max {
+		return 0, fmt.Errorf("the page is over %d MB; is a template looping?", c.max>>20)
 	}
-	return filepath.Join(root, filepath.FromSlash(urlPath))
+	return c.Buffer.Write(p)
+}
+
+func pageFile(root, urlPath string) string {
+	// path.Clean of an absolute path can't climb above it: whatever reaches
+	// here stays inside root.
+	clean := path.Clean("/" + urlPath)
+	if strings.HasSuffix(urlPath, "/") {
+		return filepath.Join(root, filepath.FromSlash(clean), "index.html")
+	}
+	return filepath.Join(root, filepath.FromSlash(clean))
 }
 
 // safeOut refuses output folders that would overwrite the site itself.

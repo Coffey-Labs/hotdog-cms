@@ -51,7 +51,22 @@ type Session struct {
 // ID names the account in the interface and in requests: platform/login.
 func (s *Session) ID() string { return s.Forge + "/" + s.Login }
 
-type sealer struct{ aead cipher.AEAD }
+type sealer struct {
+	aead cipher.AEAD
+	// secure: the editor is reached over https (its public_url). Cookies are
+	// then Secure and named __Host-…, which a page on another subdomain
+	// (a live preview, a branch preview, the site itself) can't set or
+	// overwrite. The name sealed into each value stays the plain one.
+	secure bool
+}
+
+// wire is the name a cookie has in the browser.
+func (s *sealer) wire(name string) string {
+	if s.secure {
+		return "__Host-" + name
+	}
+	return name
+}
 
 func newSealer(secret string) (*sealer, error) {
 	if len(secret) < 32 {
@@ -95,31 +110,32 @@ func (s *sealer) open(name, value string, v any) error {
 	return json.Unmarshal(plain, v)
 }
 
-func (s *sealer) setCookie(w http.ResponseWriter, r *http.Request, name string, v any, ttl time.Duration) error {
+func (s *sealer) setCookie(w http.ResponseWriter, name string, v any, ttl time.Duration) error {
 	val, err := s.seal(name, v)
 	if err != nil {
 		return err
 	}
 	http.SetCookie(w, &http.Cookie{
-		Name: name, Value: val, Path: "/", MaxAge: int(ttl.Seconds()),
-		HttpOnly: true, Secure: isHTTPS(r), SameSite: http.SameSiteLaxMode,
+		Name: s.wire(name), Value: val, Path: "/", MaxAge: int(ttl.Seconds()),
+		HttpOnly: true, Secure: s.secure, SameSite: http.SameSiteLaxMode,
 	})
 	return nil
 }
 
-func clearCookie(w http.ResponseWriter, r *http.Request, name string) {
-	http.SetCookie(w, &http.Cookie{Name: name, Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: isHTTPS(r), SameSite: http.SameSiteLaxMode})
+func (s *sealer) clearCookie(w http.ResponseWriter, name string) {
+	http.SetCookie(w, &http.Cookie{Name: s.wire(name), Value: "", Path: "/", MaxAge: -1, HttpOnly: true, Secure: s.secure, SameSite: http.SameSiteLaxMode})
 }
 
-func isHTTPS(r *http.Request) bool {
-	return r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
+// cookie reads one of the editor's cookies.
+func (s *sealer) cookie(r *http.Request, name string) (*http.Cookie, error) {
+	return r.Cookie(s.wire(name))
 }
 
 // accounts returns every account the browser is signed in to, in slot order.
 func (s *sealer) accounts(r *http.Request) []*Session {
 	var out []*Session
 	for i := 0; i < maxAccounts; i++ {
-		c, err := r.Cookie(accountCookie(i))
+		c, err := s.cookie(r, accountCookie(i))
 		if err != nil {
 			continue
 		}

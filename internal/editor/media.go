@@ -165,7 +165,7 @@ func mediaLibrary(siteDir string) []*MediaItem {
 		default:
 			return nil
 		}
-		data, err := os.ReadFile(p)
+		data, err := readIn(siteDir, rel)
 		if err != nil || !bytes.Contains(data, []byte("/media/")) {
 			return nil
 		}
@@ -216,7 +216,7 @@ func (s *Server) apiMediaFile(w http.ResponseWriter, r *http.Request, sess *Sess
 		branch = st.Branch
 	}
 	dir := filepath.Join(s.ws.dir(sess, st, branch), st.Subdir)
-	data, err := os.ReadFile(filepath.Join(dir, "static", filepath.FromSlash(clean)))
+	data, err := readIn(dir, "static/"+clean)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			http.NotFound(w, r)

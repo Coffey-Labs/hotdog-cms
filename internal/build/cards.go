@@ -11,6 +11,7 @@ import (
 	_ "image/jpeg" // a logo can be a JPEG
 	"image/png"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -125,20 +126,28 @@ func loadCardStyle(siteDir string, s *site.Site) (*cardStyle, error) {
 	}
 	if logo != "" && !strings.HasSuffix(strings.ToLower(logo), ".svg") {
 		for _, base := range []string{"static", "assets"} {
-			if f, err := os.Open(filepath.Join(siteDir, base, filepath.FromSlash(strings.TrimPrefix(logo, "/")))); err == nil {
-				st.logo, _, _ = image.Decode(f)
-				f.Close()
-				break
+			data, err := site.ReadFile(siteDir, path.Join(base, path.Clean("/"+logo)), 16<<20)
+			if err != nil {
+				continue
 			}
+			// Check the size from the header before decoding: a small file
+			// can claim a huge picture.
+			if cfg, _, err := image.DecodeConfig(bytes.NewReader(data)); err == nil && cfg.Width > 0 && cfg.Height > 0 && cfg.Width*cfg.Height <= maxLogoPixels {
+				st.logo, _, _ = image.Decode(bytes.NewReader(data))
+			}
+			break
 		}
 	}
 	return st, nil
 }
 
+// maxLogoPixels bounds a card logo: far more than any logo needs.
+const maxLogoPixels = 16_000_000
+
 func loadFont(siteDir, rel string, fallback []byte) (*opentype.Font, error) {
 	data := fallback
 	if rel != "" {
-		b, err := os.ReadFile(filepath.Join(siteDir, filepath.FromSlash(rel)))
+		b, err := site.ReadFile(siteDir, rel, 16<<20)
 		if err != nil {
 			return nil, fmt.Errorf("cards: font %s: %w", rel, err)
 		}

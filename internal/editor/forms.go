@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -16,6 +15,7 @@ import (
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forms"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/isolate"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/preview"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
@@ -188,7 +188,7 @@ func (s *Server) formLive(w http.ResponseWriter, r *http.Request, sess *Session,
 		writeJSON(w, http.StatusOK, map[string]any{"error": err.Error()})
 		return
 	}
-	html, pagePath, err := build.RenderPage(siteDir, pages[0], content, build.Options{URL: loaded.Config.URL, Forms: map[string][]byte{req.Name: raw}})
+	html, pagePath, err := isolate.RenderPage(siteDir, pages[0], content, build.Options{URL: loaded.Config.URL, Forms: map[string][]byte{req.Name: raw}})
 	if err != nil {
 		writeJSON(w, http.StatusOK, map[string]any{"error": err.Error()})
 		return
@@ -215,7 +215,7 @@ func (s *Server) formSave(w http.ResponseWriter, r *http.Request, sess *Session,
 		return
 	}
 	rel := "forms/" + req.Name + ".yaml"
-	old, readErr := os.ReadFile(filepath.Join(siteDir, filepath.FromSlash(rel)))
+	old, readErr := readIn(siteDir, rel)
 	exists := readErr == nil
 	var data []byte
 	msg := "Edit form " + req.Name

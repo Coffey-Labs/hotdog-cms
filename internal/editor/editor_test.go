@@ -479,6 +479,17 @@ func TestWriting(t *testing.T) {
 	if rec := post(s, "/api/sites/site/publish", jar, map[string]any{"branch": "main"}); rec.Code != 400 {
 		t.Errorf("publishing the publishing branch: %d", rec.Code)
 	}
+	// A writer can push a pipeline change with plain git, but can't publish it.
+	git(t, repo, "checkout", "-q", "draft/hello")
+	os.MkdirAll(filepath.Join(repo, ".gitea", "workflows"), 0o755)
+	os.WriteFile(filepath.Join(repo, ".gitea", "workflows", "deploy.yml"), []byte("on: push\n"), 0o644)
+	git(t, repo, "add", "-A")
+	git(t, repo, "commit", "-q", "-m", "pipeline")
+	git(t, repo, "checkout", "-q", "main")
+	rec = post(s, "/api/sites/site/publish", jar, map[string]any{"branch": "draft/hello"})
+	if rec.Code != 403 || len(ff.merged) != 1 || !strings.Contains(rec.Body.String(), ".gitea/workflows/deploy.yml") {
+		t.Errorf("a writer published a pipeline change: %d %s merged %v", rec.Code, rec.Body, ff.merged)
+	}
 }
 
 func TestCompose(t *testing.T) {
@@ -1333,5 +1344,40 @@ func TestQuickPosts(t *testing.T) {
 		if rec := post(s, "/api/sites/site/quick", jar, bad); rec.Code != 400 {
 			t.Errorf("%v: %d %s", bad, rec.Code, rec.Body)
 		}
+	}
+}
+
+func TestSafeReturn(t *testing.T) {
+	for in, want := range map[string]string{
+		"/sites/x?branch=draft/a": "/sites/x?branch=draft/a",
+		"/":                       "/",
+		"//evil.example/":         "/",
+		"/\t/evil.example/":       "/",
+		"/\\evil.example":         "/",
+		"/%09/evil.example":       "/%09/evil.example", // stays a path on the editor: browsers don't decode %09 here
+		"https://evil.example/":   "/",
+		"/ /x":                    "/",
+		"javascript:alert(1)":     "/",
+		"":                        "/",
+	} {
+		if got := safeReturn(in); got != want {
+			t.Errorf("safeReturn(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestHostCookiesOverHTTPS(t *testing.T) {
+	sl, err := newSealer(strings.Repeat("k", 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sl.secure = true
+	rec := httptest.NewRecorder()
+	if err := sl.setCookie(rec, accountCookie(0), map[string]string{"a": "b"}, time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	c := rec.Result().Cookies()[0]
+	if c.Name != "__Host-hotdog_a0" || !c.Secure || c.Path != "/" || c.Domain != "" || !c.HttpOnly {
+		t.Errorf("cookie over https: %+v", c)
 	}
 }

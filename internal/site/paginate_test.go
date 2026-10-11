@@ -2,6 +2,8 @@ package site
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -34,5 +36,15 @@ func TestPageLinks(t *testing.T) {
 		if got := row(n); got != want {
 			t.Errorf("page %d: %q, want %q", n, got, want)
 		}
+	}
+}
+
+func TestNoLinks(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "static"), 0o755)
+	os.WriteFile(filepath.Join(dir, "site.yaml"), []byte("name: x\nurl: https://example.org\n"), 0o644)
+	os.Symlink("/etc/passwd", filepath.Join(dir, "static", "passwd.txt"))
+	if _, err := Load(dir, Options{}); err == nil || !strings.Contains(err.Error(), "static/passwd.txt is a symbolic link") {
+		t.Errorf("loaded a site with a link in it: %v", err)
 	}
 }

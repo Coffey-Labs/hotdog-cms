@@ -69,7 +69,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	st := oauthState{Forge: f.Host, State: randomString(24), Verifier: randomString(48), Return: safeReturn(r.URL.Query().Get("return")), Expires: time.Now().Add(10 * time.Minute)}
-	if err := s.seal.setCookie(w, r, stateCookie, st, 10*time.Minute); err != nil {
+	if err := s.seal.setCookie(w, stateCookie, st, 10*time.Minute); err != nil {
 		http.Error(w, "couldn't start sign-in", http.StatusInternalServerError)
 		return
 	}
@@ -91,7 +91,17 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 
 // safeReturn keeps the after-sign-in destination on the editor itself.
 func safeReturn(p string) string {
-	if !strings.HasPrefix(p, "/") || strings.HasPrefix(p, "//") || strings.ContainsAny(p, "\\\r\n") {
+	// A path on the editor itself, nothing else. Browsers drop tabs and
+	// newlines from addresses and read a backslash as a slash, so "/\t/x"
+	// would become "//x", another site: refuse every control character,
+	// space and backslash before looking at the shape.
+	for _, r := range p {
+		if r < 0x21 || r == 0x7f || r == '\\' {
+			return "/"
+		}
+	}
+	u, err := url.Parse(p)
+	if err != nil || u.Scheme != "" || u.Host != "" || u.User != nil || !strings.HasPrefix(p, "/") || strings.HasPrefix(p, "//") {
 		return "/"
 	}
 	return p
@@ -100,13 +110,13 @@ func safeReturn(p string) string {
 // callback finishes sign-in: checks state, trades the code for a token,
 // asks the platform who this is, and seals it all into the session cookie.
 func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
-	c, err := r.Cookie(stateCookie)
+	c, err := s.seal.cookie(r, stateCookie)
 	var st oauthState
 	if err != nil || s.seal.open(stateCookie, c.Value, &st) != nil || time.Now().After(st.Expires) {
 		http.Error(w, "Sign-in expired or was started elsewhere. Start again from the editor.", http.StatusBadRequest)
 		return
 	}
-	clearCookie(w, r, stateCookie)
+	s.seal.clearCookie(w, stateCookie)
 	q := r.URL.Query()
 	if e := q.Get("error"); e != "" {
 		http.Error(w, "The platform declined the sign-in: "+e, http.StatusForbidden)
@@ -153,7 +163,7 @@ func (s *Server) callback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("You're signed in to %d accounts, the most the editor holds. Sign one out, then add this one.", maxAccounts), http.StatusConflict)
 		return
 	}
-	if err := s.seal.setCookie(w, r, accountCookie(slot), sess, sessionTTL); err != nil {
+	if err := s.seal.setCookie(w, accountCookie(slot), sess, sessionTTL); err != nil {
 		http.Error(w, "couldn't start the session", http.StatusInternalServerError)
 		return
 	}
@@ -258,14 +268,14 @@ func (s *Server) freshen(w http.ResponseWriter, r *http.Request, accts []*Sessio
 		s.renewMu.Unlock()
 		if got.err != nil {
 			s.log.Printf("%s on %s: renewing the token failed, signing out that account: %v", a.Login, a.Forge, got.err)
-			clearCookie(w, r, accountCookie(a.slot))
+			s.seal.clearCookie(w, accountCookie(a.slot))
 			continue
 		}
 		a.Token, a.TokenExp = got.ts.Access, got.ts.Expires
 		if got.ts.Refresh != "" {
 			a.Refresh = got.ts.Refresh
 		}
-		_ = s.seal.setCookie(w, r, accountCookie(a.slot), a, time.Until(a.Expires))
+		_ = s.seal.setCookie(w, accountCookie(a.slot), a, time.Until(a.Expires))
 		out = append(out, a)
 	}
 	return out

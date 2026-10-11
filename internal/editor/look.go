@@ -2,10 +2,9 @@ package editor
 
 import (
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/isolate"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/preview"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/siteyaml"
@@ -79,7 +78,7 @@ func (s *Server) lookLive(w http.ResponseWriter, r *http.Request, sess *Session,
 		writeJSON(w, http.StatusOK, map[string]any{"error": "This site has no content/index.md to preview the look on."})
 		return
 	}
-	html, pagePath, err := build.RenderPage(siteDir, "content/index.md", home, build.Options{URL: loaded.Config.URL, Look: req.Look})
+	html, pagePath, err := isolate.RenderPage(siteDir, "content/index.md", home, build.Options{URL: loaded.Config.URL, Look: req.Look})
 	if err != nil {
 		writeJSON(w, http.StatusOK, map[string]any{"error": err.Error()})
 		return
@@ -117,7 +116,7 @@ func (s *Server) lookSave(w http.ResponseWriter, r *http.Request, sess *Session,
 		apiError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	cfg, err := os.ReadFile(filepath.Join(siteDir, "site.yaml"))
+	cfg, err := readIn(siteDir, "site.yaml")
 	if err != nil {
 		apiError(w, http.StatusBadGateway, "Couldn't read site.yaml.")
 		return

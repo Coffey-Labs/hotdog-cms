@@ -27,6 +27,8 @@ import (
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/check"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/gitx"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/isolate"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
 
 // Options configure the preview builder.
@@ -125,6 +127,9 @@ func (b *Builder) heads() (map[string]string, error) {
 }
 
 func (b *Builder) wanted(branch string) bool {
+	if !gitx.ValidBranch(branch) {
+		return false // a name git could read as an option, or that git itself would refuse
+	}
 	if len(b.o.Refs) == 0 {
 		return true
 	}
@@ -186,9 +191,13 @@ func (b *Builder) buildBranch(branch, slug, commit string) {
 
 	b.status(commit, forge.Pending, url+"/", "Building the preview")
 	err := b.checkout(src, branch)
-	var res *build.Result
+	var res *isolate.Summary
+	var cfg *site.Config
 	if err == nil {
-		res, err = build.Run(build.Options{SiteDir: filepath.Join(src, b.o.Subdir), Out: out, Drafts: b.o.Drafts, URL: url})
+		res, err = isolate.Build(build.Options{SiteDir: filepath.Join(src, b.o.Subdir), Out: out, Drafts: b.o.Drafts, URL: url})
+	}
+	if err == nil {
+		cfg, err = site.LoadConfig(filepath.Join(src, b.o.Subdir))
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -205,7 +214,7 @@ func (b *Builder) buildBranch(branch, slug, commit string) {
 	}
 	p.Commit, p.Built, p.Pages, p.Error, p.pending = commit, time.Now(), res.Pages, "", ""
 	p.Errors, p.Warnings = 0, 0
-	if rep, err := check.Run(filepath.Join(src, b.o.Subdir), out, res.Site.Config); err == nil {
+	if rep, err := check.Run(filepath.Join(src, b.o.Subdir), out, cfg); err == nil {
 		p.Errors = rep.Errors()
 		p.Warnings = len(rep.Problems) - p.Errors
 	}

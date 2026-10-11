@@ -70,13 +70,19 @@ func repoPath(site *SiteConfig) (string, error) {
 }
 
 func (s *Server) access(ctx context.Context, f *ForgeConfig, token string, site *SiteConfig) (Access, error) {
-	base := s.apiBase(f)
-	if base == "" {
-		return Access{Read: true}, nil // checked by cloning instead
-	}
 	p, err := repoPath(site)
 	if err != nil {
 		return Access{}, err
+	}
+	switch f.Kind {
+	case forge.GitLab:
+		return s.gitlabAccess(ctx, f, token, p)
+	case forge.Bitbucket:
+		return s.bitbucketAccess(ctx, token, p)
+	}
+	base := s.apiBase(f)
+	if base == "" {
+		return Access{}, nil // a platform the editor can't ask: no access
 	}
 	var d struct {
 		Permissions struct{ Admin, Push, Pull bool } `json:"permissions"`
@@ -89,6 +95,67 @@ func (s *Server) access(ctx context.Context, f *ForgeConfig, token string, site 
 	}
 	return Access{Read: d.Permissions.Pull, Write: d.Permissions.Push, Admin: d.Permissions.Admin}, nil
 }
+
+// gitlabAccess reads the person's role on a GitLab project: reporters can
+// read, developers write, maintainers and owners maintain.
+func (s *Server) gitlabAccess(ctx context.Context, f *ForgeConfig, token, p string) (Access, error) {
+	var d struct {
+		Permissions struct {
+			Project *struct {
+				Level int `json:"access_level"`
+			} `json:"project_access"`
+			Group *struct {
+				Level int `json:"access_level"`
+			} `json:"group_access"`
+		} `json:"permissions"`
+	}
+	if err := s.api(ctx, f, token, f.base()+"/api/v4/projects/"+url.PathEscape(p), &d); err != nil {
+		if errors.Is(err, errSignedOut) {
+			return Access{}, err
+		}
+		return Access{}, nil
+	}
+	level := 0
+	if d.Permissions.Project != nil {
+		level = d.Permissions.Project.Level
+	}
+	if d.Permissions.Group != nil && d.Permissions.Group.Level > level {
+		level = d.Permissions.Group.Level
+	}
+	return Access{Read: level >= 20, Write: level >= 30, Admin: level >= 40}, nil
+}
+
+// bitbucketAccess reads the person's permission on a Bitbucket Cloud
+// repository: read, write or admin.
+func (s *Server) bitbucketAccess(ctx context.Context, token, p string) (Access, error) {
+	var d struct {
+		Values []struct {
+			Permission string `json:"permission"`
+		} `json:"values"`
+	}
+	q := url.Values{"q": {`repository.full_name="` + p + `"`}}
+	if err := s.api(ctx, &ForgeConfig{Kind: forge.Bitbucket}, token, bitbucketAPI+"/user/permissions/repositories?"+q.Encode(), &d); err != nil {
+		if errors.Is(err, errSignedOut) {
+			return Access{}, err
+		}
+		return Access{}, nil
+	}
+	if len(d.Values) == 0 {
+		return Access{}, nil
+	}
+	switch d.Values[0].Permission {
+	case "admin":
+		return Access{Read: true, Write: true, Admin: true}, nil
+	case "write":
+		return Access{Read: true, Write: true}, nil
+	case "read":
+		return Access{Read: true}, nil
+	}
+	return Access{}, nil
+}
+
+// bitbucketAPI is Bitbucket Cloud's API; a variable so tests can stand in.
+var bitbucketAPI = "https://api.bitbucket.org/2.0"
 
 // accessCached is access, remembered for a minute per token and repository:
 // with several accounts, one page load would otherwise ask the platform the

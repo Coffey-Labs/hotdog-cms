@@ -3,8 +3,6 @@ package editor
 import (
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -72,7 +70,7 @@ func (s *Server) privacySave(w http.ResponseWriter, r *http.Request, sess *Sessi
 		s.writeError(w, r, err)
 		return
 	}
-	raw, err := os.ReadFile(filepath.Join(siteDir, "site.yaml"))
+	raw, err := readIn(siteDir, "site.yaml")
 	if err != nil {
 		apiError(w, http.StatusBadGateway, "Couldn't read site.yaml.")
 		return

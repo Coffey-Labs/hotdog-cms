@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -223,9 +224,12 @@ func LoadConfig(dir string) (*Config, error) {
 	}
 	for name, cc := range c.Collections {
 		switch cc.Sort {
-		case "", "date", "title", "weight":
+		case "", "date", "title", "weight", "start":
 		default:
-			return nil, fmt.Errorf("site.yaml: collection %s: sort %q is not date, title or weight", name, cc.Sort)
+			return nil, fmt.Errorf("site.yaml: collection %s: sort %q is not date, title, weight or start", name, cc.Sort)
+		}
+		if cc.FeedPath != "" && !SafeURLPath(cc.FeedPath) {
+			return nil, fmt.Errorf("site.yaml: collection %s: feed_path %q should be a path on the site, like /%s/feed.xml", name, cc.FeedPath, name)
 		}
 		switch cc.FeedFormat {
 		case "", "atom", "rss":
@@ -239,8 +243,8 @@ func LoadConfig(dir string) (*Config, error) {
 		return nil, fmt.Errorf("site.yaml: markdown.external_links %q: the only option is new_tab", c.Markdown.ExternalLinks)
 	}
 	for _, r := range c.Redirects {
-		if !strings.HasPrefix(r.From, "/") || strings.Contains(r.From, "..") || r.To == "" {
-			return nil, fmt.Errorf("site.yaml: redirect %q -> %q: from must be a path starting with /, and to must be set", r.From, r.To)
+		if !SafeURLPath(r.From) || !safeRedirectTo(r.To) {
+			return nil, fmt.Errorf("site.yaml: redirect %q -> %q: from must be a path on the site (/old-page/), and to a path or a web address", r.From, r.To)
 		}
 	}
 	for _, t := range c.Taxonomies {
@@ -249,6 +253,31 @@ func LoadConfig(dir string) (*Config, error) {
 		}
 	}
 	return &c, nil
+}
+
+// SafeURLPath accepts an address on the site that a build can safely turn
+// into a file: absolute, clean, no "..", and only characters that need no
+// escaping in a web server's configuration.
+func SafeURLPath(p string) bool {
+	if !strings.HasPrefix(p, "/") || strings.Contains(p, "..") || strings.Contains(p, "//") {
+		return false
+	}
+	clean := path.Clean(p)
+	if strings.HasSuffix(p, "/") && clean != "/" {
+		clean += "/"
+	}
+	return clean == p && urlPathRe.MatchString(p)
+}
+
+var (
+	urlPathRe = regexp.MustCompile(`^/[\p{L}\p{N}._~%/@+=-]*$`)
+	// Redirect targets go into nginx and Caddy configuration: a path, or an
+	// http(s) address, with nothing a config file would read as syntax.
+	redirectToRe = regexp.MustCompile(`^(https?://[A-Za-z0-9.-]+(:[0-9]+)?)?/[A-Za-z0-9._~%/@+=?&:-]*$|^https?://[A-Za-z0-9.-]+(:[0-9]+)?$`)
+)
+
+func safeRedirectTo(to string) bool {
+	return redirectToRe.MatchString(to) && !strings.Contains(to, "..")
 }
 
 // CardsConfig sets up social cards. Colors default to the site's look (its

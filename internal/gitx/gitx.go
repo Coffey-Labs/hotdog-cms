@@ -78,16 +78,51 @@ func firstVerb(args []string) string {
 	return ""
 }
 
+// ValidBranch says whether name is a branch name hotdog-cms will pass to
+// git: what `git check-ref-format --branch` accepts, minus anything that
+// could be read as an option or a revision expression.
+func ValidBranch(name string) bool {
+	if name == "" || len(name) > 200 || strings.HasPrefix(name, "-") || strings.HasPrefix(name, "/") || strings.HasSuffix(name, "/") ||
+		strings.HasSuffix(name, ".") || strings.HasSuffix(name, ".lock") || strings.Contains(name, "..") || strings.Contains(name, "//") ||
+		strings.Contains(name, "@{") || name == "@" {
+		return false
+	}
+	for _, r := range name {
+		if r <= ' ' || r == 0x7f || strings.ContainsRune("~^:?*[\\", r) {
+			return false
+		}
+	}
+	for _, part := range strings.Split(name, "/") {
+		if strings.HasPrefix(part, ".") || strings.HasPrefix(part, "-") {
+			return false
+		}
+	}
+	return true
+}
+
+// safeConfig is set on every clone hotdog-cms makes. Symbolic links in a
+// repository are checked out as small files holding the link's target,
+// never as links: a link committed to a site (static/x -> /etc/passwd)
+// must not let anyone read or write outside the checkout through it.
+var safeConfig = []string{"-c", "core.symlinks=false", "-c", "protocol.ext.allow=never"}
+
 // Checkout makes dir a shallow clone of one branch at its tip: cloning the
 // first time, fetching and resetting after. The folder belongs to hotdog-cms, so
 // anything in it that isn't on the branch is thrown away.
 func Checkout(auth Auth, repo, branch, dir string) (string, error) {
+	if !ValidBranch(branch) {
+		return "", fmt.Errorf("%q isn't a branch name hotdog-cms uses", branch)
+	}
 	if _, err := os.Stat(dir + "/.git"); err != nil {
-		if _, err := Run(auth, "", "clone", "--quiet", "--depth", "1", "--branch", branch, "--single-branch", repo, dir); err != nil {
+		args := append(append([]string{}, safeConfig...), "clone", "--quiet", "--depth", "1", "--branch", branch, "--single-branch", "--config", "core.symlinks=false", "--end-of-options", repo, dir)
+		if _, err := Run(auth, "", args...); err != nil {
 			return "", err
 		}
 	} else {
-		if _, err := Run(auth, dir, "fetch", "--quiet", "--depth", "1", "origin", branch); err != nil {
+		if _, err := Run(auth, dir, "config", "core.symlinks", "false"); err != nil {
+			return "", err
+		}
+		if _, err := Run(auth, dir, "fetch", "--quiet", "--depth", "1", "--end-of-options", "origin", "+refs/heads/"+branch); err != nil {
 			return "", err
 		}
 		if _, err := Run(auth, dir, "reset", "--quiet", "--hard", "FETCH_HEAD"); err != nil {

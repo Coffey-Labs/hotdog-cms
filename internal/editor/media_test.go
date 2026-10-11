@@ -10,6 +10,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -121,5 +123,25 @@ func TestMedia(t *testing.T) {
 	}
 	if rec := do(s, "GET", "/api/sites/site/media?branch=draft/about", nil, nil); rec.Code != 401 {
 		t.Errorf("library without signing in: %d", rec.Code)
+	}
+}
+
+func TestNoWritesThroughLinks(t *testing.T) {
+	outside := t.TempDir()
+	dir := t.TempDir()
+	os.Symlink(outside, filepath.Join(dir, "data"))
+	os.WriteFile(filepath.Join(outside, "secret"), []byte("s3cret"), 0o600)
+	if err := writeIn(dir, "data/planted", []byte("x")); err == nil {
+		t.Error("wrote through a linked folder")
+	}
+	if _, err := os.Stat(filepath.Join(outside, "planted")); err == nil {
+		t.Error("a file appeared outside the checkout")
+	}
+	if b, err := readIn(dir, "data/secret"); err == nil {
+		t.Errorf("read through a linked folder: %q", b)
+	}
+	os.Symlink(filepath.Join(outside, "secret"), filepath.Join(dir, "page.md"))
+	if _, err := readIn(dir, "page.md"); err == nil {
+		t.Error("read a linked file")
 	}
 }

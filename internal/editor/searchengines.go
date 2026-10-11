@@ -2,8 +2,6 @@ package editor
 
 import (
 	"net/http"
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -82,7 +80,7 @@ func (s *Server) searchSave(w http.ResponseWriter, r *http.Request, sess *Sessio
 		s.writeError(w, r, err)
 		return
 	}
-	raw, err := os.ReadFile(filepath.Join(siteDir, "site.yaml"))
+	raw, err := readIn(siteDir, "site.yaml")
 	if err != nil {
 		apiError(w, http.StatusBadGateway, "Couldn't read site.yaml.")
 		return

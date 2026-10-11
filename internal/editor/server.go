@@ -68,6 +68,7 @@ func New(configFile string, logw io.Writer) (*Server, error) {
 		}
 	}
 	ui, _ := fs.Sub(uiFiles, "ui/dist")
+	seal.secure = strings.HasPrefix(cfg.PublicURL, "https://")
 	s := &Server{cfg: cfg, seal: seal, ws: newWorkspaces(cfg.Cache), http: &http.Client{Timeout: 20 * time.Second}, log: log.New(logw, "", log.LstdFlags), ui: ui,
 		cloneURL: func(sc *SiteConfig) string { return sc.Repo }}
 	// The editor's own pages get the strictest policy that still lets them
@@ -122,7 +123,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		which := r.URL.Query().Get("account")
 		for _, a := range s.seal.accounts(r) {
 			if which == "" || a.ID() == which {
-				clearCookie(w, r, accountCookie(a.slot))
+				s.seal.clearCookie(w, accountCookie(a.slot))
 			}
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -383,7 +384,7 @@ func (s *Server) accountsFor(w http.ResponseWriter, r *http.Request, accts []*Se
 		}
 		acc, err := s.accessCached(r.Context(), f, c.Token, st)
 		if errors.Is(err, errSignedOut) {
-			clearCookie(w, r, accountCookie(c.slot))
+			s.seal.clearCookie(w, accountCookie(c.slot))
 			continue
 		}
 		if err == nil && acc.Read {
@@ -417,7 +418,7 @@ func (s *Server) signedOut(w http.ResponseWriter, r *http.Request, err error) bo
 	if errors.Is(err, errSignedOut) {
 		who := "Your sign-in"
 		if i := infoFrom(r); i != nil {
-			clearCookie(w, r, accountCookie(i.sess.slot))
+			s.seal.clearCookie(w, accountCookie(i.sess.slot))
 			who = "The sign-in for @" + i.sess.Login + " on " + i.sess.Forge
 		}
 		apiError(w, http.StatusUnauthorized, who+" has ended. Sign in again.")

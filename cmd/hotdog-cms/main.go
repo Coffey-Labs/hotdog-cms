@@ -24,6 +24,7 @@ import (
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/gitx"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/importer"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/isolate"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/packs"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/preview"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/publish"
@@ -63,6 +64,9 @@ Run "hotdog-cms <command> -h" for a command's flags.
 `
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == isolate.ChildArg {
+		isolate.Child() // a build the editor, preview or pull agent handed off
+	}
 	if len(os.Args) < 2 {
 		fmt.Fprint(os.Stderr, usage)
 		os.Exit(2)
@@ -80,14 +84,17 @@ func main() {
 	case "publish":
 		err = cmdPublish(args)
 	case "pull":
+		isolate.Enabled = true
 		err = cmdPull(args)
 	case "preview":
+		isolate.Enabled = true
 		err = cmdPreview(args)
 	case "ci":
 		err = cmdCI(args)
 	case "endpoint":
 		err = cmdEndpoint(args)
 	case "editor":
+		isolate.Enabled = true
 		err = cmdEditor(args)
 	case "import":
 		err = cmdImport(args)

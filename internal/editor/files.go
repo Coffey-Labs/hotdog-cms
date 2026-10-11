@@ -3,6 +3,7 @@ package editor
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"os"
@@ -121,7 +122,7 @@ func (s *Server) apiFiles(w http.ResponseWriter, r *http.Request, sess *Session,
 		}
 		fi := FileInfo{Path: rel, Size: info.Size()}
 		if info.Size() <= maxTextFile {
-			if data, err := os.ReadFile(p); err == nil {
+			if data, err := readIn(siteDir, rel); err == nil {
 				fi.Text = isText(data)
 			}
 		}
@@ -142,7 +143,7 @@ func (s *Server) apiFile(w http.ResponseWriter, r *http.Request, sess *Session, 
 		apiError(w, http.StatusNotFound, "No such file.")
 		return
 	}
-	data, err := os.ReadFile(filepath.Join(siteDir, filepath.FromSlash(rel)))
+	data, err := readIn(siteDir, rel)
 	if errors.Is(err, fs.ErrNotExist) {
 		writeJSON(w, http.StatusOK, map[string]any{"path": rel, "exists": false, "content": "", "commit": commit})
 		return
@@ -245,7 +246,7 @@ func (s *Server) fileDiff(w http.ResponseWriter, r *http.Request, sess *Session,
 		s.writeError(w, r, err)
 		return
 	}
-	old, _ := os.ReadFile(filepath.Join(siteDir, filepath.FromSlash(rel)))
+	old, _ := readIn(siteDir, rel)
 	var now []byte
 	if !req.Delete {
 		now = []byte(req.Content)
@@ -299,11 +300,15 @@ func (s *Server) apiCompare(w http.ResponseWriter, r *http.Request, sess *Sessio
 		writeJSON(w, http.StatusOK, map[string]any{"diff": "", "stat": "", "base": st.Branch, "branch": st.Branch})
 		return
 	}
+	if !gitx.ValidBranch(branch) {
+		apiError(w, http.StatusBadRequest, "That isn't a branch name the editor uses.")
+		return
+	}
 	dir := s.ws.dir(sess, st, branch)
 	unlock := s.ws.lock(dir)
 	defer unlock()
 	auth := gitx.Auth{User: f.Kind.TokenUser(), Token: sess.Token}
-	if _, err := gitx.Run(auth, dir, "fetch", "--quiet", "--depth", "200", "origin",
+	if _, err := gitx.Run(auth, dir, "fetch", "--quiet", "--depth", "200", "--end-of-options", "origin",
 		"+refs/heads/"+st.Branch+":refs/hotdog/base", "+refs/heads/"+branch+":refs/hotdog/head"); err != nil {
 		apiError(w, http.StatusBadGateway, "Couldn't fetch the branches: "+trimErr(err))
 		return
@@ -328,6 +333,37 @@ func (s *Server) apiCompare(w http.ResponseWriter, r *http.Request, sess *Sessio
 		d = d[:2<<20] + "\n… (the rest of the diff is too long to show)"
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"diff": d, "stat": stat, "base": st.Branch, "branch": branch})
+}
+
+// draftChanges lists the repository paths a draft changes since it left the
+// publishing branch.
+func (s *Server) draftChanges(sess *Session, f *ForgeConfig, st *SiteConfig, branch string) ([]string, error) {
+	if !gitx.ValidBranch(branch) || !gitx.ValidBranch(st.Branch) {
+		return nil, fmt.Errorf("not a branch name the editor uses")
+	}
+	dir := s.ws.dir(sess, st, branch)
+	unlock := s.ws.lock(dir)
+	defer unlock()
+	auth := gitx.Auth{User: f.Kind.TokenUser(), Token: sess.Token}
+	if _, err := gitx.Run(auth, dir, "fetch", "--quiet", "--depth", "200", "--end-of-options", "origin",
+		"+refs/heads/"+st.Branch+":refs/hotdog/base", "+refs/heads/"+branch+":refs/hotdog/head"); err != nil {
+		return nil, err
+	}
+	rng := "refs/hotdog/base...refs/hotdog/head"
+	if _, err := gitx.Run(auth, dir, "merge-base", "refs/hotdog/base", "refs/hotdog/head"); err != nil {
+		rng = "refs/hotdog/base..refs/hotdog/head"
+	}
+	out, err := gitx.Run(auth, dir, "diff", "--name-only", "--no-renames", "-z", rng)
+	if err != nil {
+		return nil, err
+	}
+	var paths []string
+	for _, p := range strings.Split(out, "\x00") {
+		if p != "" {
+			paths = append(paths, p)
+		}
+	}
+	return paths, nil
 }
 
 // Commit is one entry of a branch's history.
@@ -362,11 +398,15 @@ func (s *Server) apiLog(w http.ResponseWriter, r *http.Request, sess *Session, f
 	} else if st.Subdir != "" {
 		args = append(args, "--", st.Subdir)
 	}
+	if !gitx.ValidBranch(branch) {
+		apiError(w, http.StatusBadRequest, "That isn't a branch name the editor uses.")
+		return
+	}
 	dir := s.ws.dir(sess, st, branch)
 	unlock := s.ws.lock(dir)
 	defer unlock()
 	auth := gitx.Auth{User: f.Kind.TokenUser(), Token: sess.Token}
-	if _, err := gitx.Run(auth, dir, "fetch", "--quiet", "--depth", strconv.Itoa(n+1), "origin", "+refs/heads/"+branch+":refs/hotdog/log"); err != nil {
+	if _, err := gitx.Run(auth, dir, "fetch", "--quiet", "--depth", strconv.Itoa(n+1), "--end-of-options", "origin", "+refs/heads/"+branch+":refs/hotdog/log"); err != nil {
 		apiError(w, http.StatusBadGateway, "Couldn't fetch the history: "+trimErr(err))
 		return
 	}

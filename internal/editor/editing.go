@@ -13,6 +13,7 @@ import (
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/build"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/check"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/isolate"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/media"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/preview"
 )
@@ -75,7 +76,7 @@ func (s *Server) apiWrite(w http.ResponseWriter, r *http.Request, sess *Session,
 	case "review":
 		s.review(w, r, sess, f, st)
 	case "publish":
-		s.publish(w, r, sess, f, st)
+		s.publish(w, r, sess, f, st, acc)
 	case "quick":
 		s.quickPost(w, r, sess, f, st)
 	default:
@@ -274,7 +275,7 @@ func (s *Server) liveRender(w http.ResponseWriter, r *http.Request, sess *Sessio
 			return
 		}
 	}
-	html, pagePath, err := build.RenderPage(siteDir, req.Source, content, build.Options{URL: loaded.Config.URL})
+	html, pagePath, err := isolate.RenderPage(siteDir, req.Source, content, build.Options{URL: loaded.Config.URL})
 	if err != nil {
 		// A page that doesn't render yet (a typo in front matter, mid-edit)
 		// is reported, not an error: the preview keeps its last good version.
@@ -356,7 +357,7 @@ type publishRequest struct {
 
 // publish merges a draft's review, after running the checks on the draft
 // exactly as the publishing pipeline will.
-func (s *Server) publish(w http.ResponseWriter, r *http.Request, sess *Session, f *ForgeConfig, st *SiteConfig) {
+func (s *Server) publish(w http.ResponseWriter, r *http.Request, sess *Session, f *ForgeConfig, st *SiteConfig, acc Access) {
 	var req publishRequest
 	if !decode(w, r, &req) {
 		return
@@ -384,6 +385,21 @@ func (s *Server) publish(w http.ResponseWriter, r *http.Request, sess *Session, 
 	if err != nil {
 		s.writeError(w, r, err)
 		return
+	}
+	// A draft can be pushed with plain git, so the rule the Files view keeps
+	// (only maintainers change what runs at publish time) is kept here too.
+	if !acc.Admin {
+		changed, err := s.draftChanges(sess, f, st, req.Branch)
+		if err != nil {
+			apiError(w, http.StatusBadGateway, "Couldn't work out what the draft changes: "+trimErr(err))
+			return
+		}
+		for _, p := range changed {
+			if pipelineFile(p) {
+				apiError(w, http.StatusForbidden, p+" decides what runs when the site is published, so only a maintainer of the repository can publish a draft that changes it.")
+				return
+			}
+		}
 	}
 	res := s.ws.buildAndCheck(siteDir, commit)
 	if res.Failed != "" || res.Errors > 0 {

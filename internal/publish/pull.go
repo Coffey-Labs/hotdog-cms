@@ -15,6 +15,8 @@ import (
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/check"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/gitx"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/isolate"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
 
 // PullOptions configure the pull agent: hotdog-cms running on the web server
@@ -30,7 +32,7 @@ type PullOptions struct {
 	Every   time.Duration // 0 with no hook: check once and exit (systemd timer)
 	Git     gitx.Auth
 	Log     io.Writer
-	OnBuild func(*build.Result)
+	OnBuild func(*isolate.Summary)
 	// IndexNow tells search engines which pages changed after each publish.
 	IndexNow bool
 
@@ -87,7 +89,7 @@ func Pull(o PullOptions) error {
 		case err != nil:
 			fmt.Fprintf(o.Log, "pull: %v\n", err)
 		case head != last || dueNow:
-			var res *build.Result
+			var res *isolate.Summary
 			res, err = buildChecked(filepath.Join(o.Cache, o.Subdir), o.Out)
 			if err != nil {
 				err = fmt.Errorf("build of %s failed, the live site is unchanged: %w", short(head), err)
@@ -98,7 +100,7 @@ func Pull(o PullOptions) error {
 					indexNow("pull", Target{Type: "dir", Path: o.Out}, o.Out, o.Log)
 				}
 				last = head
-				due = res.Site.NextScheduled
+				due = res.NextScheduled
 				if !due.IsZero() {
 					fmt.Fprintf(o.Log, "next scheduled page goes live at %s\n", due.Format(time.RFC3339))
 				}
@@ -125,14 +127,18 @@ func Pull(o PullOptions) error {
 // buildChecked builds into a staging folder, runs the site's checks on it,
 // and only then puts it live, so a commit that fails a check never reaches
 // the web root.
-func buildChecked(siteDir, out string) (*build.Result, error) {
+func buildChecked(siteDir, out string) (*isolate.Summary, error) {
 	staging := out + ".hotdog-cms-check"
-	res, err := build.Run(build.Options{SiteDir: siteDir, Out: staging})
+	res, err := isolate.Build(build.Options{SiteDir: siteDir, Out: staging})
 	if err != nil {
 		return nil, err
 	}
 	defer os.RemoveAll(staging)
-	rep, err := check.Run(siteDir, staging, res.Site.Config)
+	cfg, err := site.LoadConfig(siteDir)
+	if err != nil {
+		return nil, err
+	}
+	rep, err := check.Run(siteDir, staging, cfg)
 	if err != nil {
 		return nil, err
 	}
