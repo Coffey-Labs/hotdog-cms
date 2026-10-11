@@ -139,6 +139,7 @@ pre.body { white-space: pre-wrap; background: var(--surface); border: 1px solid 
 .toolbar-actions { display: flex; gap: .5rem; align-items: flex-start; flex-wrap: wrap; }
 .form { display: grid; gap: .7rem; }
 .form label, .fields label.field { display: grid; gap: .25rem; font-size: .88rem; font-weight: 600; }
+.fields label.check { display: flex; align-items: center; gap: .5rem; font-weight: 500; }
 .form label.check { display: flex; align-items: center; gap: .5rem; font-weight: 500; }
 .form input:not([type="checkbox"]), .form textarea, .form select, textarea.code,
 .fields input:not([type="checkbox"]):not([type="file"]), .fields textarea, .fields select {
