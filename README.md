@@ -1,7 +1,24 @@
-# HotDog CMS
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="brand/svg/logo-horizontal-dark.svg">
+    <img src="brand/svg/logo-horizontal-light.svg" alt="HotDog CMS" height="120">
+  </picture>
+</p>
 
-Websites from Markdown files and templates, with no database. Write in
-Markdown, see it live, publish from git. [hotdogcms.org](https://hotdogcms.org)
+<h3 align="center">
+  Websites from Markdown files and templates, with no database.<br>
+  Write in Markdown, see it live, publish from git.
+</h3>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: AGPL-3.0-or-later" src="https://img.shields.io/badge/license-AGPL--3.0--or--later-c8352a?style=flat-square"></a>
+  <a href="https://git.coffeylabs.org/coffey-labs/hotdog-cms/releases/latest"><img alt="Latest release" src="https://img.shields.io/gitea/v/release/coffey-labs/hotdog-cms?gitea_url=https%3A%2F%2Fgit.coffeylabs.org&label=release&color=c8352a&style=flat-square"></a>
+  <a href="https://hotdogcms.org"><img alt="Website: hotdogcms.org" src="https://img.shields.io/badge/website-hotdogcms.org-0ea5e9?style=flat-square"></a>
+  <a href="https://community.coffeylabs.org/c/hotdog-cms/31"><img alt="Forum: community.coffeylabs.org" src="https://img.shields.io/badge/forum-community.coffeylabs.org-0f766e?style=flat-square"></a>
+  <a href="https://discord.gg/nqcY4TKfAn"><img alt="Chat on Discord" src="https://img.shields.io/discord/1523538164084637797?label=discord&logo=discord&logoColor=white&color=5865f2&style=flat-square"></a>
+</p>
+
+---
 
 > [!NOTE]
 > Development happens on [git.coffeylabs.org/coffey-labs/hotdog-cms](https://git.coffeylabs.org/coffey-labs/hotdog-cms); the copy on GitHub is a read-only mirror.
