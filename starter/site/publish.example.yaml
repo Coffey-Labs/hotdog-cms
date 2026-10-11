@@ -15,6 +15,12 @@ targets:
     host: deploy@${DEPLOY_HOST}
     path: /var/www/example.org
     # port: 2222
+    # Your own steps around publishing, run without a shell. before can change
+    # the build ({out}); after runs once the site is live.
+    # before:
+    #   - [pagefind, --site, "{out}"]
+    # after:
+    #   - [curl, -fsS, "https://hc-ping.com/${HEALTHCHECK_ID}"]
 
   # A container image with the site and a small web server (nginx or caddy)
   # on port 8080. push sends it to the registry named in the image.

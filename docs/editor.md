@@ -101,6 +101,9 @@ person couldn't read anyway.
     be compared with the published branch.
   - Like everything else, a save is a commit on a draft. `.git` and `public/`
     can't be written.
+  - Files that decide what runs at publish time (`publish.yaml` and CI
+    pipelines such as `.github/` or `.gitea/`) can be changed only by
+    maintainers of the repository.
 - **Console (Ctrl+`):** a command line that speaks HotDog CMS: `status`,
   `pages`, `edit site.yaml`, `cat`, `new articles "Title"`, `check`,
   `drafts`, `branch draft/about`, `diff`, `log`, `review "Title"`, `publish`,
@@ -150,6 +153,11 @@ is signed out.
   one, in one commit. Redirects that pointed at the old address are updated,
   so there are no chains.
 - **Redirects:** the site's redirects as a table.
+- **Share:** once a page is published, the post text (title, summary, link,
+  all editable) and buttons that open Mastodon, Bluesky or LinkedIn's own
+  share page with it filled in. You post from your account there; the editor
+  holds no tokens and posts nothing itself. Your Mastodon server is
+  remembered in this browser.
 - **Privacy & statistics:** the analytics wizard and who answers for
   visitors' data (see [privacy.md](privacy.md)).
 - **Search engines:**

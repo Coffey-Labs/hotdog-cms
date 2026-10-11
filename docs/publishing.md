@@ -41,6 +41,38 @@ keep outside the repository and pass with `-targets`.
 `dir` and `rsync` only replace a folder that is empty or was written by HotDog CMS,
 so a wrong path can't wipe something else.
 
+### Your own steps: before and after
+
+Any target can run commands of yours around publishing: a search index, a
+minifier, a cache purge, a ping to a monitor.
+
+```yaml
+targets:
+  server:
+    type: rsync
+    host: deploy@${DEPLOY_HOST}
+    path: /var/www/example.org
+    before:
+      - [pagefind, --site, "{out}"]
+    after:
+      - [curl, -fsS, "https://hc-ping.com/${HEALTHCHECK_ID}"]
+```
+
+- Each step is a command and its arguments, run **without a shell**, so
+  nothing in a value is interpreted. `{out}` is the build folder;
+  `HOTDOG_OUT` and `HOTDOG_TARGET` are set too.
+- `before` runs once the site is built and may change the build. If a step
+  fails, nothing is published.
+- `after` runs once the site is live. If a step fails, the publish has still
+  happened, and the error says so.
+
+These steps run with your rights, so they belong to you. They live only in
+the targets file, never in `site.yaml` (anyone who can edit the site can
+change that). In the editor, `publish.yaml` and CI pipeline files (`.github/`,
+`.gitea/`, `.forgejo/`, `.gitlab-ci.yml`, `.woodpecker*` and others) can be
+changed only by maintainers of the repository. For the strongest separation,
+keep the targets file outside the repository and pass it with `-targets`.
+
 ## Pull: the agent on the server
 
     hotdog-cms pull -repo https://git.example.org/me/site.git -out /var/www/example.org -every 1m

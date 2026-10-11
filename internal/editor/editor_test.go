@@ -877,6 +877,14 @@ func TestFilesPowerTools(t *testing.T) {
 		}
 	}
 
+	// Writers can't change what runs at publish time; the fake forge makes
+	// this account a writer, not a maintainer.
+	for _, pipe := range []string{"publish.yaml", ".gitea/workflows/deploy.yml", ".github/workflows/ci.yml"} {
+		if rec := post(s, "/api/sites/site/file-save", jar, map[string]any{"path": pipe, "branch": "draft/site", "content": "x"}); rec.Code != 403 {
+			t.Errorf("%s: %d", pipe, rec.Code)
+		}
+	}
+
 	// What publishing the draft would change, and its history.
 	var cmp struct{ Diff, Stat string }
 	json.NewDecoder(do(s, "GET", "/api/sites/site/compare?branch=draft/site", jar, nil).Body).Decode(&cmp)
@@ -1238,5 +1246,17 @@ func TestDiscoverFindsNewRepos(t *testing.T) {
 	do(s, "GET", "/api/sites/owner-newsite", jar, nil)
 	if ff.listed != 2 {
 		t.Errorf("asked again at once: listed %d", ff.listed)
+	}
+}
+
+func TestPipelineFile(t *testing.T) {
+	for p, want := range map[string]bool{
+		"publish.yaml": true, "site/publish.yml": true, ".gitea/workflows/a.yml": true, ".github/dependabot.yml": true,
+		".forgejo/workflows/b.yaml": true, ".gitlab-ci.yml": true, ".woodpecker/build.yml": true, ".woodpecker.yml": true,
+		"Jenkinsfile": true, "content/publish.md": false, "site.yaml": false, "docs/.github.md": false, "assets/ci.css": false,
+	} {
+		if pipelineFile(p) != want {
+			t.Errorf("%s: want %v", p, want)
+		}
 	}
 }

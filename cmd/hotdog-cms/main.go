@@ -23,6 +23,7 @@ import (
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forge"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/gitx"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/importer"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/packs"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/preview"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/publish"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/serve"
@@ -44,6 +45,7 @@ Usage:
   hotdog-cms preview -repo URL     build every branch as it would be published, each at its own address
   hotdog-cms ci <platform>         write the CI file for github, gitea, forgejo, gitlab, bitbucket, woodpecker, or a git hook
   hotdog-cms endpoint -config FILE the small server for form submissions and search, behind your web server
+  hotdog-cms pack add|remove|list|check   extensions as files: sections, layouts, styles (docs/packs.md)
   hotdog-cms import <from> ...     bring a site in: wordpress, wxr, ghost, hugo or jekyll (docs/importing.md)
   hotdog-cms editor -config FILE   the editor: sign in with your git platform and work on sites (never on a site's host)
 
@@ -90,6 +92,8 @@ func main() {
 		err = cmdEditor(args)
 	case "import":
 		err = cmdImport(args)
+	case "pack":
+		err = cmdPack(args)
 	case "version", "-v", "--version":
 		fmt.Println("hotdog-cms", version)
 	case "help", "-h", "--help":
@@ -570,5 +574,70 @@ func cmdImport(args []string) error {
 	}
 	fmt.Printf("\n%d written, %d skipped, %d kept as HTML, %d picture(s), %d redirect(s). Details: %s\nThen: hotdog-cms check\n",
 		len(rep.Written), len(rep.Skipped), len(rep.KeptHTML), rep.Pictures, len(rep.Redirects), report)
+	return nil
+}
+
+func cmdPack(args []string) error {
+	usage := errors.New("usage: hotdog-cms pack add <folder|git-url[@tag]> [-force] | remove <name> | list | check <folder>  (all take -site, default .)")
+	if len(args) == 0 {
+		return usage
+	}
+	verb, args := args[0], args[1:]
+	fl := flag.NewFlagSet("pack "+verb, flag.ExitOnError)
+	siteDir := fl.String("site", ".", "the site")
+	force := fl.Bool("force", false, "add: replace files already in the site")
+	_ = fl.Parse(args)
+	switch verb {
+	case "add":
+		if fl.NArg() != 1 {
+			return usage
+		}
+		ref, err := packs.Add(*siteDir, fl.Arg(0), *force)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("installed %s %s: %d file(s)\n", ref.Name, ref.Version, len(ref.Files))
+		for _, f := range ref.Files {
+			fmt.Println(" ", f)
+		}
+		fmt.Println("They're the site's files now: commit them, and review them like any change.")
+	case "remove":
+		if fl.NArg() != 1 {
+			return usage
+		}
+		if err := packs.Remove(*siteDir, fl.Arg(0)); err != nil {
+			return err
+		}
+		fmt.Printf("removed %s\n", fl.Arg(0))
+	case "list":
+		cfg, err := site.LoadConfig(*siteDir)
+		if err != nil {
+			return err
+		}
+		if len(cfg.Packs) == 0 {
+			fmt.Println("no packs installed")
+		}
+		for _, p := range cfg.Packs {
+			src := p.Source
+			if src == "" {
+				src = "a local folder"
+			}
+			fmt.Printf("%s %s (%d files, from %s)\n", p.Name, p.Version, len(p.Files), src)
+		}
+	case "check":
+		if fl.NArg() != 1 {
+			return usage
+		}
+		m, files, err := packs.Check(fl.Arg(0))
+		if err != nil {
+			return err
+		}
+		fmt.Printf("%s %s: installs %d file(s)\n", m.Name, m.Version, len(files))
+		for _, f := range files {
+			fmt.Printf("  %s -> %s\n", f.From, f.To)
+		}
+	default:
+		return usage
+	}
 	return nil
 }

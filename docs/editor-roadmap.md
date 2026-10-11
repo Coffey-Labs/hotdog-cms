@@ -360,8 +360,7 @@ platform or several, with sites spread across them):
 
 ### E6 · Helpers
 
-*Built 2026-10-10*, except share-on-publish, which waits on John (see
-below):
+*Built 2026-10-10:*
 - **Search and social:** a search-result and link-preview panel on every
   page, from what the page actually renders (title and description lengths,
   missing picture or alt text, noindex).
@@ -399,9 +398,13 @@ below):
   - a failed ping never fails a publish.
 - **Found and fixed on the way:** `x/net`, `x/text` and `x/sys` releases
   under two weeks old were back to older ones.
-- **Not yet, needs John:** share-on-publish (which networks, and where their
-  tokens live, given the editor holds no publishing credentials). Per-platform
-  previews are one shared card for now.
+- **Share links** (decided by John, 2026-10-10): after publishing, or on any
+  published page, the post text and buttons that open Mastodon, Bluesky and
+  LinkedIn's own share pages with it filled in. No tokens: the person posts
+  from their own account. Posting straight from the editor would need
+  per-network tokens, which the editor doesn't hold; that stays out unless
+  it's asked for.
+- Per-platform previews are one shared card for now.
 
 ### E7 · Forms
 
@@ -475,13 +478,20 @@ below):
 
 ### E10 · Extensions without the plugin problem
 
-- Sections, templates and build-time steps that run in a sandbox (WASI, no
-  network, no filesystem outside the site), never in the page path or the
-  editor's process.
-- An extension declares what it reads and writes, and the editor shows that
-  before it's enabled.
-- To be designed carefully before it's built. This is where WordPress's
-  security problems came from.
+*Built 2026-10-10*, as decided by John: extensions are files, not code.
+- **Packs** (see [packs.md](packs.md)): sections, partials, layouts and
+  stylesheets, from a folder or a git repository, installed as the site's
+  own files with `hotdog-cms pack add`. They're reviewed and versioned like
+  any change and recorded in `site.yaml`. A pack carries no JavaScript, no
+  SVG, and no template with a script, an event handler or a `javascript:`
+  link. The section library says which pack a section came from.
+- **Operator steps:** `before` and `after` commands on publish targets (see
+  [publishing.md](publishing.md)). They're trusted, they live only in the
+  operator's targets file, and in the editor only maintainers can change
+  that file or CI pipelines.
+- **Not built:** a WebAssembly sandbox for third-party build steps. It
+  comes back only if a real need turns up that packs and operator steps
+  can't meet.
 
 ## Decisions (John, 2026-10-10)
 

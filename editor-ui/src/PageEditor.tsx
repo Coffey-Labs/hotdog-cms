@@ -5,6 +5,7 @@ import { useCommands, useShortcut } from './Commands'
 import { ACCEPT, InsertPicture } from './Media'
 import { liveChannel } from './Present'
 import { SeoPanel } from './Seo'
+import { SharePanel } from './Share'
 import { fromFrontMatter, SectionsEditor, toFrontMatter, type Sec } from './Sections'
 import type { VisualHandle } from './VisualEditor'
 
@@ -81,6 +82,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
   const [yamlMode, setYamlMode] = useState(false)
   const [yaml, setYaml] = useState('')
   const [status, setStatus] = useState<{ kind: 'info' | 'good' | 'bad'; text: string }>()
+  const [sharing, setSharing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [previewURL, setPreviewURL] = useState<string>()
   const [previewNote, setPreviewNote] = useState<string>()
@@ -196,6 +198,8 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
   const review = site?.reviews?.find((r) => r.branch === cur)
   const onDraft = site ? cur !== site.publishBranch : false
   const canWrite = site?.canWrite
+  const liveURL = site?.siteURL && pagePath ? site.siteURL.replace(/\/+$/, '') + pagePath : ''
+  const canShare = !onDraft && !!fields && !fields.draft && !!liveURL
 
   const save = async () => {
     if (!page || !edit) return
@@ -260,6 +264,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
     try {
       await api.publish(id, { branch: cur })
       setStatus({ kind: 'good', text: 'Published: the change is merged. The live site updates when its publishing pipeline runs.' })
+      setSharing(true)
       // The merge may have removed the draft branch; carry on from the
       // published one.
       if (site) go({ view: 'page', id, source, branch: site.publishBranch })
@@ -324,6 +329,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
           { id: 'page-yaml', title: yamlMode ? 'Edit front matter as fields' : 'Edit front matter as YAML', group: 'Page', run: () => setYamlMode(!yamlMode) },
           ...(onDraft && !review && canWrite && !dirty ? [{ id: 'page-review', title: 'Submit for review', group: 'Page', run: () => setReviewOpen(true) }] : []),
           ...(onDraft && review && canWrite && !dirty ? [{ id: 'page-publish', title: 'Publish', group: 'Page', run: publish }] : []),
+          ...(canShare && !dirty ? [{ id: 'page-share', title: 'Share this page', group: 'Page', run: () => setSharing(true) }] : []),
           ...(previewURL ? [{ id: 'page-present', title: 'Present in a new tab', group: 'Page', run: () => window.open(href({ view: 'present', id, url: previewURL, branch }), '_blank', 'noopener') }] : []),
           { id: 'page-file', title: `Edit ${source} as a raw file`, group: 'Page', run: () => go({ view: 'files', id, branch, path: source }) },
         ],
@@ -359,6 +365,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
           {onDraft && !review && <button type="button" className="button" disabled={busy || dirty || !canWrite} onClick={() => setReviewOpen(!reviewOpen)}>Submit for review</button>}
           {onDraft && review && <a className="button" href={review.url} target="_blank" rel="noopener noreferrer">Review #{review.number} ↗</a>}
           {onDraft && review && <button type="button" className="button" disabled={busy || dirty || !canWrite} onClick={publish} title="Merges the review, if the draft passes the checks">Publish</button>}
+          {canShare && !sharing && <button type="button" className="ghost" disabled={dirty} onClick={() => setSharing(true)} title="Post a link to this page on Mastodon, Bluesky or LinkedIn">Share…</button>}
           {!canWrite && <span className="muted small">Read only: the platform doesn't let you change this site.</span>}
           {dirty && <span className="muted small">Unsaved changes</span>}
         </div>
@@ -366,6 +373,7 @@ export function PageEditor({ id, source, branch, site, onSiteChanged }: { id: st
         {problems && problems.length > 0 && (
           <ul className="problems">{problems.filter((p) => p.Level === 'error').map((p, i) => <li key={i} className="error"><span className="pill">{p.Rule}</span> <span className="mono small">{p.File}</span> {p.What}</li>)}</ul>
         )}
+        {sharing && canShare && <SharePanel title={fields.title} summary={fields.summary} url={liveURL} onClose={() => setSharing(false)} />}
         {reviewOpen && <ReviewForm id={id} branch={cur} title={fields.title} onDone={(msg) => { setReviewOpen(false); setStatus({ kind: 'good', text: msg }); onSiteChanged() }} onError={(m) => setStatus({ kind: 'bad', text: m })} />}
 
         {pageProblems.length > 0 && (

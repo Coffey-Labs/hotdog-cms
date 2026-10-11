@@ -44,6 +44,26 @@ func cleanSitePath(p string) (string, bool) {
 	return c, true
 }
 
+// pipelineFile says whether a repository path is one that decides what runs
+// when the site is built or published: the operator's publish targets (and
+// their before and after steps) and CI pipelines. Changing one is changing
+// what runs with the operator's credentials, so only maintainers may.
+func pipelineFile(repoPath string) bool {
+	base := path.Base(repoPath)
+	top, _, _ := strings.Cut(repoPath, "/")
+	switch {
+	case base == "publish.yaml" || base == "publish.yml":
+		return true
+	case top == ".github" || top == ".gitea" || top == ".forgejo" || top == ".circleci":
+		return true
+	case repoPath == ".gitlab-ci.yml" || repoPath == "Jenkinsfile" || repoPath == ".drone.yml" || repoPath == "bitbucket-pipelines.yml":
+		return true
+	case top == ".woodpecker" || repoPath == ".woodpecker.yml" || repoPath == ".woodpecker.yaml":
+		return true
+	}
+	return false
+}
+
 func isText(data []byte) bool {
 	head := data
 	if len(head) > 8192 {
@@ -147,7 +167,7 @@ type fileSaveRequest struct {
 	Message    string `json:"message"`
 }
 
-func (s *Server) fileSave(w http.ResponseWriter, r *http.Request, sess *Session, f *ForgeConfig, st *SiteConfig) {
+func (s *Server) fileSave(w http.ResponseWriter, r *http.Request, sess *Session, f *ForgeConfig, st *SiteConfig, acc Access) {
 	var req fileSaveRequest
 	if !decode(w, r, &req) {
 		return
@@ -155,6 +175,10 @@ func (s *Server) fileSave(w http.ResponseWriter, r *http.Request, sess *Session,
 	rel, ok := cleanSitePath(req.Path)
 	if !ok {
 		apiError(w, http.StatusBadRequest, "That isn't a path in the site (and .git and public/ can't be written).")
+		return
+	}
+	if pipelineFile(repoFile(st, rel)) && !acc.Admin {
+		apiError(w, http.StatusForbidden, rel+" decides what runs when the site is published, so only a maintainer of the repository can change it.")
 		return
 	}
 	if len(req.Content) > maxTextFile {

@@ -52,6 +52,16 @@ type Target struct {
 	// command: argv, run without a shell. {out} is replaced with the build folder.
 	Command []string `yaml:"command"`
 
+	// Before and After are the operator's own steps around publishing: argv,
+	// run without a shell, with {out} replaced by the build folder. Before runs
+	// once the site is built and can change the build (a search index, a
+	// minifier); a failure stops the publish. After runs once it's live (purge
+	// a cache, tell a monitor). They run with the operator's rights, so they
+	// live only here, in a file the operator owns, never in site.yaml, which
+	// anyone who can edit the site can change.
+	Before [][]string `yaml:"before"`
+	After  [][]string `yaml:"after"`
+
 	// IndexNow tells search engines which pages changed, after each publish
 	// here (indexnow.go). For the live site's target, not a staging one.
 	IndexNow bool `yaml:"indexnow"`
@@ -124,6 +134,13 @@ func (t Target) validate() error {
 	default:
 		return fmt.Errorf("type %q is not dir, rsync, container or command", t.Type)
 	}
+	for _, steps := range [][][]string{t.Before, t.After} {
+		for _, argv := range steps {
+			if len(argv) == 0 || argv[0] == "" {
+				return fmt.Errorf("before and after steps are commands: [program, arg, ...]")
+			}
+		}
+	}
 	return nil
 }
 
@@ -146,6 +163,11 @@ func Run(name string, t Target, out string, log io.Writer) error {
 	if _, err := os.Stat(filepath.Join(out, build.Marker)); err != nil {
 		return fmt.Errorf("%s is not a hotdog-cms build; run hotdog-cms build first", out)
 	}
+	for _, argv := range t.Before {
+		if err := step(name, argv, out, log); err != nil {
+			return fmt.Errorf("before publishing to %s: %w", name, err)
+		}
+	}
 	fmt.Fprintf(log, "publishing to %s (%s)\n", name, t.Type)
 	if err := run(t, out, log); err != nil {
 		return err
@@ -153,7 +175,25 @@ func Run(name string, t Target, out string, log io.Writer) error {
 	if t.IndexNow {
 		indexNow(name, t, out, log)
 	}
+	for _, argv := range t.After {
+		if err := step(name, argv, out, log); err != nil {
+			return fmt.Errorf("published to %s, but an after step failed: %w", name, err)
+		}
+	}
 	return nil
+}
+
+// step runs one of the operator's before or after commands.
+func step(target string, argv []string, out string, log io.Writer) error {
+	args := make([]string, len(argv))
+	for i, a := range argv {
+		args[i] = strings.ReplaceAll(a, "{out}", out)
+	}
+	fmt.Fprintf(log, "running %s\n", strings.Join(args, " "))
+	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Env = append(os.Environ(), "HOTDOG_OUT="+out, "HOTDOG_TARGET="+target)
+	cmd.Stdout, cmd.Stderr = log, log
+	return cmd.Run()
 }
 
 func run(t Target, out string, log io.Writer) error {

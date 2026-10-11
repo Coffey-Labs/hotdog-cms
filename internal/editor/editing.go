@@ -65,7 +65,7 @@ func (s *Server) apiWrite(w http.ResponseWriter, r *http.Request, sess *Session,
 	case "move":
 		s.movePage(w, r, sess, f, st)
 	case "file-save":
-		s.fileSave(w, r, sess, f, st)
+		s.fileSave(w, r, sess, f, st, acc)
 	case "file-diff":
 		s.fileDiff(w, r, sess, f, st)
 	case "look-live":

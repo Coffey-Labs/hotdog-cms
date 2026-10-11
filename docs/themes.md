@@ -1,5 +1,8 @@
 # Sections and looks, for theme builders
 
+(To share sections between sites, put them in a pack: see
+[packs.md](packs.md).)
+
 A theme decides what the editor offers people who'd rather not touch
 templates: the **sections** a page can be built from, and the **look** they
 can change. Both come from plain files in the site, so adding a section type

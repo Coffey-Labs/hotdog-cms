@@ -138,6 +138,7 @@ export function SectionsEditor({ id, branch, value, onChange, disabled }: { id: 
                 >
                   <strong>{si.label}</strong>
                   {si.about && <span className="muted small">{si.about}</span>}
+                  {si.pack && <span className="muted small">From the {si.pack} pack</span>}
                 </button>
               </li>
             ))}

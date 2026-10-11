@@ -10,6 +10,8 @@ import (
 	"text/template/parse"
 
 	"gopkg.in/yaml.v3"
+
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
 
 // The section library: every section a site's pages can stack, with the
@@ -42,6 +44,7 @@ type SectionInfo struct {
 	Fields   []Field `json:"fields"`
 	Declared bool    `json:"declared"`          // false: fields read from the template
 	Problem  string  `json:"problem,omitempty"` // the declaration couldn't be read
+	Pack     string  `json:"pack,omitempty"`    // installed by this pack
 }
 
 // Field is one field of a section, or of an item in a list field.
@@ -91,13 +94,23 @@ func SectionLibrary(siteDir string) ([]SectionInfo, error) {
 		t.Mode = parse.SkipFuncCheck
 		_, _ = t.Parse(string(src), "", "", partials)
 	}
+	fromPack := map[string]string{}
+	if cfg, err := site.LoadConfig(siteDir); err == nil {
+		for _, p := range cfg.Packs {
+			for _, f := range p.Files {
+				fromPack[f] = p.Name
+			}
+		}
+	}
 	out := []SectionInfo{}
 	for _, name := range files {
 		src, err := os.ReadFile(filepath.Join(siteDir, "sections", name+".html"))
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, describeSection(name, string(src), partials))
+		info := describeSection(name, string(src), partials)
+		info.Pack = fromPack["sections/"+name+".html"]
+		out = append(out, info)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Label < out[j].Label })
 	return out, nil

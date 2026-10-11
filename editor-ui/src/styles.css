@@ -238,6 +238,12 @@ button.small, .small.ghost { font-size: .8rem; padding: .2rem .55rem; }
 .list-tools { display: inline-flex; gap: .25rem; }
 .image-row { display: flex; gap: .4rem; }
 .image-row input { flex: 1; }
+.share-panel { border: 1px solid var(--line); border-radius: var(--radius); padding: .7rem; display: grid; gap: .5rem; margin: .5rem 0; }
+.share-panel textarea { width: 100%; }
+.share-row { display: flex; gap: .5rem; align-items: flex-end; flex-wrap: wrap; }
+.share-server { flex: 1 1 12rem; display: grid; gap: .25rem; }
+.share-server input { width: 100%; }
+.bad-text { color: var(--bad); }
 .section-library { border: 1px dashed var(--line); border-radius: var(--radius); padding: .7rem; display: grid; gap: .5rem; }
 .library-head { display: flex; justify-content: space-between; align-items: center; }
 .section-library ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }

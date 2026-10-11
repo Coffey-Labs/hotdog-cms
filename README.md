@@ -14,6 +14,7 @@ Websites from Markdown files and templates, with no database.
     hotdog-cms preview -repo URL     every branch built as it would be published, at <branch>.localhost:8160
     hotdog-cms endpoint -config FILE forms and search, behind your web server (docs/forms.md)
     hotdog-cms import <from>       bring a site in: wordpress, wxr, ghost, hugo, jekyll (docs/importing.md)
+    hotdog-cms pack add <pack>     sections, layouts and styles from a folder or repository, no code (docs/packs.md)
     hotdog-cms ci <platform>         the CI file for GitHub, GitLab, Gitea, Forgejo, Bitbucket, Woodpecker, or a git hook
 
 A site is a folder:

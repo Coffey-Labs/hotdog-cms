@@ -242,3 +242,37 @@ func TestContainerCSP(t *testing.T) {
 		t.Errorf("nginx.conf has no strict CSP:\n%s", conf)
 	}
 }
+
+func TestBeforeAndAfterSteps(t *testing.T) {
+	out := built(t)
+	root := filepath.Join(t.TempDir(), "www")
+	seen := filepath.Join(t.TempDir(), "after")
+	tg := Target{
+		Type:   "dir",
+		Path:   root,
+		Before: [][]string{{"sh", "-c", `echo indexed > "$0/search.txt"`, "{out}"}},
+		After:  [][]string{{"sh", "-c", `test -f "$0/search.txt" && echo "$HOTDOG_TARGET" > "$1"`, root, seen}},
+	}
+	if err := tg.validate(); err != nil {
+		t.Fatal(err)
+	}
+	var log bytes.Buffer
+	if err := Run("live", tg, out, &log); err != nil {
+		t.Fatalf("%v\n%s", err, log.String())
+	}
+	if got, _ := os.ReadFile(seen); string(got) != "live\n" {
+		t.Errorf("after step didn't see the published change: %q", got)
+	}
+	// A failing before step stops the publish.
+	root2 := filepath.Join(t.TempDir(), "www")
+	tg = Target{Type: "dir", Path: root2, Before: [][]string{{"false"}}}
+	if err := Run("live", tg, out, &log); err == nil {
+		t.Error("published after a failed before step")
+	}
+	if _, err := os.Stat(root2); err == nil {
+		t.Error("before step failed but the site was published")
+	}
+	if err := (Target{Type: "dir", Path: "/x", After: [][]string{{}}}).validate(); err == nil {
+		t.Error("accepted an empty step")
+	}
+}

@@ -43,6 +43,9 @@ type Config struct {
 	// indexnow: true).
 	Verify   VerifyConfig   `yaml:"verify"`
 	IndexNow IndexNowConfig `yaml:"indexnow"`
+	// Packs are the extensions installed in the site (internal/packs): what
+	// each put where, so it can be upgraded or removed.
+	Packs []PackRef `yaml:"packs"`
 	// Fediverse is the author's handle (@name@instance), which Mastodon
 	// credits in link previews: <meta name="fediverse:creator">.
 	Fediverse string `yaml:"fediverse"`
@@ -352,3 +355,12 @@ var (
 	indexNowKey = regexp.MustCompile(`^[A-Za-z0-9-]{8,128}$`)
 	verifyCode  = regexp.MustCompile(`^[A-Za-z0-9_.=+/-]{4,200}$`)
 )
+
+// PackRef records an installed pack.
+type PackRef struct {
+	Name    string   `yaml:"name" json:"name"`
+	Version string   `yaml:"version" json:"version"`
+	Source  string   `yaml:"source,omitempty" json:"source,omitempty"`
+	Commit  string   `yaml:"commit,omitempty" json:"commit,omitempty"`
+	Files   []string `yaml:"files" json:"files"`
+}
