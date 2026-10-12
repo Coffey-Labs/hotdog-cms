@@ -1,5 +1,10 @@
 # Importing a site
 
+> **Only import content you own or have the rights to use.** The importers
+> are migration tools: they're for moving *your own* site to HotDog CMS from
+> the tool it's on now. They're not for copying sites, posts or pictures that
+> belong to someone else, and they say so every time they run.
+
 `hotdog-cms import` brings a site in from WordPress, Hugo, Jekyll or Ghost,
 into a HotDog CMS site made with `hotdog-cms new`:
 

@@ -153,6 +153,9 @@ func TestWordPressImport(t *testing.T) {
 	if ck.Errors() > 0 {
 		t.Errorf("check errors: %v", ck.Problems)
 	}
+	if md := rep.Markdown(srv.URL); !strings.Contains(md, "> "+Ownership) {
+		t.Errorf("the report doesn't open with the ownership note:\n%s", md)
+	}
 	if md := rep.Markdown(srv.URL); !strings.Contains(md, "with-video.md`: ") || !strings.Contains(md, "an embed") {
 		t.Errorf("report:\n%s", md)
 	}
