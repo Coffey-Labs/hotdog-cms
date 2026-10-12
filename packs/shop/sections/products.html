@@ -1,0 +1,19 @@
+{{/* section
+label: Products
+about: Products from the shop, with their photos and prices.
+fields:
+  - { name: heading, type: text, default: Shop }
+  - { name: intro, type: markdown }
+  - { name: collection, type: collection, default: products, label: Products from }
+  - { name: count, type: number, default: 4, label: How many }
+*/}}
+{{ $c := default "products" .Data.collection }}
+<link rel="stylesheet" href="{{ asset "packs/shop/shop.css" }}">
+<section class="block shop">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    <ul class="shop-grid">{{ range limit (default 4 .Data.count) (collection $c) }}{{ template "product-card" . }}{{ end }}</ul>
+    <p><a class="more" href="/{{ $c }}/">Everything in the shop</a></p>
+  </div>
+</section>

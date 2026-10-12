@@ -1,0 +1,8 @@
+{{/* One product in a grid: its first photo, name and price. */}}
+<li class="shop-card">
+  <a href="{{ .Href }}">
+    {{ with .Params.photos }}{{ with index . 0 }}<img class="shop-photo" src="{{ .image }}" alt="{{ .alt }}" loading="lazy">{{ end }}{{ else }}<span class="shop-photo shop-none" aria-hidden="true"></span>{{ end }}
+    <strong>{{ .Title }}</strong>
+  </a>
+  <span class="shop-price">{{ with .Params.price }}{{ money . $.Params.currency }}{{ end }}{{ if eq (printf "%v" .Params.sold_out) "true" }} · <em>Sold out</em>{{ end }}</span>
+</li>

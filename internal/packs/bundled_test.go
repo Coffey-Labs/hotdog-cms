@@ -154,6 +154,15 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 		}, map[string][]string{
 			"shop/index.html": {`href="https://buy.stripe.com/test_123" rel="noopener">Buy now`, `alt="A gift card"`, "Support the bakery", `href="https://liberapay.com/bakery" rel="noopener">Donate`, ">$5<"},
 		}},
+		{"shop", []page{
+			{"content/products/_index.md", "---\ntitle: Shop\nsummary: Things to buy.\n---\n"},
+			{"content/products/kit.md", "---\ntitle: Starter kit\nsummary: A jar of starter.\nprice: 24\ncurrency: USD\nweight: 1\nphotos:\n  - { image: /media/a.png, alt: A jar }\n  - { image: /media/b.png, alt: The card }\nbuy: \"https://buy.stripe.com/test_1\"\noptions:\n  - { name: With a basket, price: 39.5, buy: \"https://buy.stripe.com/test_2\" }\n---\nWhat's in the box.\n"},
+			{"content/products/mug.md", "---\ntitle: Mug\nsummary: A mug.\nprice: 12\ncurrency: EUR\nweight: 2\nsold_out: true\n---\n"},
+		}, map[string][]string{
+			"products/index.html":     {`href="/products/kit/"`, "$24.00", "€12.00 · <em>Sold out</em>"},
+			"products/kit/index.html": {`href="https://buy.stripe.com/test_1" rel="noopener">Buy`, "With a basket · $39.50", `alt="The card"`, `"@type":"Product"`, `"priceCurrency":"USD"`, `"price":"24.00"`, "InStock"},
+			"products/mug/index.html": {"Sold out", "OutOfStock"},
+		}},
 	}
 	for _, c := range cases {
 		t.Run(c.pack, func(t *testing.T) {

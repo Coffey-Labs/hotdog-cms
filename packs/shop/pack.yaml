@@ -1,0 +1,33 @@
+name: shop
+version: 1.0.0
+title: Shop
+description: A product catalog with a page per product (photos, price, options), where each Buy button opens your payment provider's checkout. No cart, no card details on your site, no script.
+license: MIT
+author: Coffey Labs LLC
+collections:
+  products:
+    layout: product
+    list_layout: shop
+    sort: weight
+notes: |
+  Make a payment link for each product in your provider's dashboard (Stripe
+  Payment Links can ask for a quantity, a shipping address and sales tax),
+  then add each product as content/products/<name>.md:
+
+    ---
+    title: Sourdough starter kit
+    summary: Our 20-year-old starter, a jar and the instructions.
+    price: 24
+    currency: USD
+    weight: 1
+    photos:
+      - { image: /media/shop/kit.jpg, alt: A jar of starter beside a recipe card }
+    buy: https://buy.stripe.com/your-link
+    options:
+      - { name: Kit and a proving basket, price: 39, buy: "https://buy.stripe.com/another-link" }
+    ---
+    What's in the box, how it ships, and anything else, in Markdown.
+
+  sold_out: true shows Sold out instead of the buttons. weight sets the
+  order (lowest first). /products/ lists them; the "Products" section shows
+  some on any page. Mention your payment provider in your privacy notice.

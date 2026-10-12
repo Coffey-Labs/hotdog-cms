@@ -1,0 +1,9 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/shop/shop.css" }}">
+<section class="wrap page shop">
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  <ul class="shop-grid">{{ range .Paginator.Items }}{{ template "product-card" . }}{{ end }}</ul>
+  {{ template "pagination" . }}
+</section>
+{{ end }}

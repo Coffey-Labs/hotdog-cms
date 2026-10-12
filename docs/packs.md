@@ -50,14 +50,16 @@ Content-Security-Policy as the site's own.
     tags with it;
   - **share-links**: plain share links for Mastodon, Bluesky, LinkedIn and
     email, with no tracking;
+  - **shop**: a product catalog with a page per product, each Buy button
+    opening your payment provider's checkout (no cart);
   - **table-of-contents**: a long page's headings, linked, at its top;
   - **team**: a page per person, a list of everyone and a section;
   - **testimonials**: quotes with a name and a role.
 - `-site` picks the site folder (default: the current one).
 
-**Search engines.** The faq, location-and-hours, team, recipes and jobs packs
-are also written as schema.org data (FAQPage, LocalBusiness, Person, Recipe,
-JobPosting), which search engines use for richer results. A pack can't carry
+**Search engines.** The faq, location-and-hours, team, recipes, jobs and shop
+packs are also written as schema.org data (FAQPage, LocalBusiness, Person,
+Recipe, JobPosting, Product), which search engines use for richer results. A pack can't carry
 the `<script type="application/ld+json">` that holds it, so HotDog CMS
 builds it (`pageData` in templates) and the starter's `partials/schema.html`
 writes it. Sites started before HotDog CMS 0.2 can add the same two lines to

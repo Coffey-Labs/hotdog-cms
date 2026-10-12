@@ -1,0 +1,17 @@
+/* The shop pack. Colors come from the theme's variables. */
+.shop-grid { list-style: none; padding: 0; margin: 0 0 20px; display: grid; gap: 22px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.shop-card a { display: grid; gap: 10px; color: var(--text); text-decoration: none; }
+.shop-card a:hover strong { color: var(--accent); }
+.shop-photo { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: var(--radius); background: var(--accent-soft); display: block; }
+.shop-price { color: var(--muted); }
+.product-main { display: grid; gap: 32px; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; margin-bottom: 28px; }
+@media (max-width: 760px) { .product-main { grid-template-columns: minmax(0, 1fr); } }
+.product-photos { display: grid; gap: 10px; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.product-photo-main { grid-column: 1 / -1; width: 100%; border-radius: var(--radius); }
+.product-photo { width: 100%; aspect-ratio: 1 / 1; object-fit: cover; border-radius: calc(var(--radius) - 4px); }
+.product-buy h1 { margin: 0 0 6px; }
+.product-price { font-size: 1.6rem; font-weight: 750; margin: 0 0 12px; }
+.product-summary { color: var(--muted); margin: 0 0 18px; }
+.product-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.product-secure { margin: 12px 0 0; color: var(--muted); font-size: .88rem; }
+.product-sold-out { display: inline-block; padding: 8px 14px; border-radius: var(--radius); background: var(--accent-soft); font-weight: 650; }
