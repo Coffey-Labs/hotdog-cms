@@ -1,0 +1,10 @@
+{{/* Up to three articles sharing the most tags with this one. Pass the page. */}}
+{{ with related . 3 }}
+<link rel="stylesheet" href="{{ asset "packs/related-posts/related.css" }}">
+<aside class="related" aria-labelledby="related-heading">
+  <h2 id="related-heading">Keep reading</h2>
+  <ul class="related-list">
+    {{ range . }}<li><a href="{{ .Href }}">{{ .Title }}</a>{{ with .Summary }}<p>{{ . }}</p>{{ end }}</li>{{ end }}
+  </ul>
+</aside>
+{{ end }}

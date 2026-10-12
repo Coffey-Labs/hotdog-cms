@@ -1,0 +1,15 @@
+name: table-of-contents
+version: 1.0.0
+title: Table of contents
+description: A list of a long page's headings at its top, each linking to its part of the page.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Add this line to layouts/article.html (or page.html), just before
+  {{ .Content }}:
+
+    {{ template "table-of-contents" . }}
+
+  It lists the page's ## and ### headings, and only appears on pages with
+  three or more of them, so short pages stay as they are. Leave a page out
+  with toc: false in its front matter.

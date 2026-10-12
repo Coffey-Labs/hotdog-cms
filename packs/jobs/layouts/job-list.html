@@ -1,0 +1,9 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/jobs/jobs.css" }}">
+<section class="wrap page jobs">
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  {{ $open := list }}{{ range collection .Collection }}{{ if not (closed .Params.closes) }}{{ $open = append $open . }}{{ end }}{{ end }}
+  {{ with $open }}<ul class="job-list">{{ range . }}{{ template "job-row" . }}{{ end }}</ul>{{ else }}<p class="job-none">No openings right now. Check back soon.</p>{{ end }}
+</section>
+{{ end }}

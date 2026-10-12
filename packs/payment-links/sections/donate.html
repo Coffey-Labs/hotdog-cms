@@ -1,0 +1,27 @@
+{{/* section
+label: Donate
+about: One call to give, with a button to your donation page.
+fields:
+  - { name: heading, type: text, default: Support our work, required: true }
+  - { name: text, type: markdown, help: What a gift pays for. }
+  - { name: link, type: link, required: true, label: Donation link, help: "Liberapay, Open Collective, Ko-fi, a Stripe Payment Link, PayPal.me…" }
+  - { name: button, type: text, default: Donate }
+  - name: amounts
+    type: list
+    label: Suggested amounts
+    help: "Optional buttons with their own links, such as $5, $25 and $100."
+    fields:
+      - { name: label, type: text, required: true }
+      - { name: link, type: link, required: true }
+*/}}
+<link rel="stylesheet" href="{{ asset "packs/payment-links/payment.css" }}">
+<section class="block donate">
+  <div class="wrap donate-box">
+    <h2>{{ .Data.heading }}</h2>
+    {{ with .Data.text }}<div class="donate-text">{{ markdownify . }}</div>{{ end }}
+    <p class="donate-actions">
+      {{ range .Data.amounts }}<a class="btn" href="{{ .link }}" rel="noopener">{{ .label }}</a> {{ end }}
+      <a class="btn primary" href="{{ .Data.link }}" rel="noopener">{{ default "Donate" .Data.button }}</a>
+    </p>
+  </div>
+</section>

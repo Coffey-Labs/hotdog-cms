@@ -1,0 +1,8 @@
+{{/* One recipe in a grid: its photo, title and total time. */}}
+<li class="rc-card">
+  <a href="{{ .Href }}">
+    {{ with .Params.photo }}<img class="rc-photo" src="{{ . }}" alt="{{ $.Params.photo_alt }}" loading="lazy">{{ else }}<span class="rc-photo rc-none" aria-hidden="true"></span>{{ end }}
+    <strong>{{ .Title }}</strong>
+  </a>
+  {{ $t := add (default 0 .Params.prep_minutes) (default 0 .Params.cook_minutes) }}{{ if gt $t 0 }}<span class="rc-time">{{ $t }} minutes</span>{{ end }}
+</li>

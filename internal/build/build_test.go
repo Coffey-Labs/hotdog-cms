@@ -332,3 +332,15 @@ func TestHumanSize(t *testing.T) {
 		}
 	}
 }
+
+func TestHeadingsAndMinutes(t *testing.T) {
+	h := headings(`<h2 id="a">First <em>part</em></h2><p>x</p><h3 id="b">Detail</h3><h4 id="c">No</h4><h2>No id</h2>`)
+	if len(h) != 2 || h[0] != (Heading{2, "a", "First part"}) || h[1] != (Heading{3, "b", "Detail"}) {
+		t.Errorf("headings: %+v", h)
+	}
+	for in, want := range map[any]string{15: "PT15M", 60: "PT1H", 75: "PT1H15M", 0: "", "x": ""} {
+		if got := minutes(in); got != want {
+			t.Errorf("minutes(%v) = %q, want %q", in, got, want)
+		}
+	}
+}

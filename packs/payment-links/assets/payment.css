@@ -1,0 +1,14 @@
+/* The payment links pack. Colors come from the theme's variables. */
+.buy-grid { list-style: none; padding: 0; margin: 0; display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.buy-item { display: flex; flex-direction: column; gap: 8px; padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.buy-item h3 { margin: 4px 0 0; }
+.buy-picture { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: calc(var(--radius) - 4px); }
+.buy-price { margin: 0; font-size: 1.3rem; font-weight: 750; }
+.buy-desc { margin: 0; color: var(--muted); }
+.buy-button { margin-top: auto; text-align: center; }
+.buy-note { margin-top: 20px; color: var(--muted); }
+.buy-secure { margin-top: 12px; color: var(--muted); font-size: .88rem; }
+.donate-box { text-align: center; padding: 32px 24px; border-radius: var(--radius); background: var(--accent-soft); }
+.donate-box h2 { margin-top: 0; }
+.donate-text { max-width: 60ch; margin: 0 auto 18px; }
+.donate-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 0; }

@@ -1,0 +1,18 @@
+{{/* section
+label: Jobs
+about: The openings that haven't closed yet.
+fields:
+  - { name: heading, type: text, default: Work with us }
+  - { name: intro, type: markdown }
+  - { name: collection, type: collection, default: jobs, label: Openings from }
+*/}}
+{{ $c := default "jobs" .Data.collection }}
+<link rel="stylesheet" href="{{ asset "packs/jobs/jobs.css" }}">
+<section class="block jobs">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    {{ $open := list }}{{ range collection $c }}{{ if not (closed .Params.closes) }}{{ $open = append $open . }}{{ end }}{{ end }}
+    {{ with $open }}<ul class="job-list">{{ range . }}{{ template "job-row" . }}{{ end }}</ul>{{ else }}<p class="job-none">No openings right now.</p>{{ end }}
+  </div>
+</section>

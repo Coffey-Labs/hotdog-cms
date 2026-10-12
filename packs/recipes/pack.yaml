@@ -1,0 +1,35 @@
+name: recipes
+version: 1.0.0
+title: Recipes
+description: Recipes with ingredients, steps, times and servings, a page listing them, and the details search engines show in recipe results.
+license: MIT
+author: Coffey Labs LLC
+collections:
+  recipes:
+    layout: recipe
+    list_layout: recipe-list
+notes: |
+  Add each recipe as content/recipes/<name>.md:
+
+    ---
+    title: Weekend sourdough
+    date: 2026-10-01
+    summary: A simple loaf with a crisp crust, over two days.
+    photo: /media/recipes/sourdough.jpg
+    photo_alt: A round loaf with a deep crust, cut in half
+    prep_minutes: 30
+    cook_minutes: 45
+    servings: One loaf
+    category: Bread
+    ingredients:
+      - 500 g strong white flour
+      - 350 g water
+    steps:
+      - Mix the flour and water, and rest for an hour.
+      - Bake at 250°C for 45 minutes.
+    ---
+    Notes, stories and tips, in Markdown.
+
+  Times are whole minutes. For the details to reach search engines, the
+  site's partials/schema.html needs {{ range pageData . }} (sites started
+  from HotDog CMS 0.2 and later have it).

@@ -1,0 +1,21 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/recipes/recipes.css" }}">
+<article class="wrap page recipe">
+  {{ with index .Site.Lists .Collection }}<p class="eyebrow"><a href="{{ .Path }}">{{ .Title }}</a></p>{{ end }}
+  <h1>{{ .Title }}</h1>
+  {{ with .Summary }}<p class="lede">{{ . }}</p>{{ end }}
+  {{ with .Params.photo }}<img class="rc-hero" src="{{ . }}" alt="{{ $.Params.photo_alt }}">{{ end }}
+  {{ $prep := default 0 .Params.prep_minutes }}{{ $cook := default 0 .Params.cook_minutes }}
+  <dl class="rc-facts">
+    {{ if gt $prep 0 }}<div><dt>Prep</dt><dd>{{ $prep }} min</dd></div>{{ end }}
+    {{ if gt $cook 0 }}<div><dt>Cook</dt><dd>{{ $cook }} min</dd></div>{{ end }}
+    {{ if and (gt $prep 0) (gt $cook 0) }}<div><dt>Total</dt><dd>{{ add $prep $cook }} min</dd></div>{{ end }}
+    {{ with .Params.servings }}<div><dt>Makes</dt><dd>{{ . }}</dd></div>{{ end }}
+  </dl>
+  <div class="rc-body">
+    {{ with .Params.ingredients }}<section class="rc-ingredients"><h2>Ingredients</h2><ul>{{ range . }}<li>{{ . }}</li>{{ end }}</ul></section>{{ end }}
+    {{ with .Params.steps }}<section class="rc-steps"><h2>Method</h2><ol>{{ range . }}<li>{{ . }}</li>{{ end }}</ol></section>{{ end }}
+  </div>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+</article>
+{{ end }}

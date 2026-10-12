@@ -1,0 +1,38 @@
+{{/* section
+label: Buy buttons
+about: Things to buy or book, each with a button that opens your payment provider's checkout.
+fields:
+  - { name: heading, type: text }
+  - { name: intro, type: markdown }
+  - name: items
+    type: list
+    fields:
+      - { name: name, type: text, required: true }
+      - { name: price, type: text, help: "As you'd write it: $25, From €40." }
+      - { name: description, type: text }
+      - { name: image, type: image }
+      - { name: image_alt, type: text, label: What the picture shows }
+      - { name: link, type: link, required: true, label: Payment link, help: "From your provider: a Stripe Payment Link, a PayPal.me or hosted button link, a Square checkout link." }
+      - { name: button, type: text, default: Buy }
+  - { name: note, type: markdown, label: Below the buttons, help: Shipping, refunds, how to get in touch. }
+*/}}
+<link rel="stylesheet" href="{{ asset "packs/payment-links/payment.css" }}">
+<section class="block buy">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    <ul class="buy-grid">
+      {{ range .Data.items }}
+      <li class="buy-item">
+        {{ if .image }}<img class="buy-picture" src="{{ .image }}" alt="{{ .image_alt }}" loading="lazy">{{ end }}
+        <h3>{{ .name }}</h3>
+        {{ with .price }}<p class="buy-price">{{ . }}</p>{{ end }}
+        {{ with .description }}<p class="buy-desc">{{ . }}</p>{{ end }}
+        <a class="btn primary buy-button" href="{{ .link }}" rel="noopener">{{ default "Buy" .button }}</a>
+      </li>
+      {{ end }}
+    </ul>
+    {{ with .Data.note }}<div class="buy-note">{{ markdownify . }}</div>{{ end }}
+    <p class="buy-secure">You'll pay on our payment provider's secure page.</p>
+  </div>
+</section>

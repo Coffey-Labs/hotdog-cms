@@ -1,0 +1,17 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/jobs/jobs.css" }}">
+<article class="wrap page job">
+  {{ with index .Site.Lists .Collection }}<p class="eyebrow"><a href="{{ .Path }}">{{ .Title }}</a></p>{{ end }}
+  <h1>{{ .Title }}</h1>
+  {{ $closed := closed .Params.closes }}
+  {{ if $closed }}<p class="job-closed">Applications for this job have closed.</p>{{ end }}
+  <dl class="job-facts">
+    {{ with .Params.location }}<div><dt>Where</dt><dd>{{ . }}</dd></div>{{ end }}
+    {{ with .Params.employment }}<div><dt>Kind</dt><dd>{{ . }}</dd></div>{{ end }}
+    {{ with .Params.pay }}<div><dt>Pay</dt><dd>{{ . }}</dd></div>{{ end }}
+    {{ with .Params.closes }}<div><dt>Apply by</dt><dd>{{ formatDate "Monday, January 2, 2006" . }}</dd></div>{{ end }}
+  </dl>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  {{ if not $closed }}{{ with .Params.apply }}<p><a class="btn primary" href="{{ . }}">Apply</a></p>{{ end }}{{ end }}
+</article>
+{{ end }}

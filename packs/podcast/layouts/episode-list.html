@@ -1,0 +1,12 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/podcast/podcast.css" }}">
+<section class="wrap page episodes">
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  <p class="ep-subscribe"><a class="btn" href="/{{ .Collection }}/feed.xml">Subscribe in a podcast app</a> <span>or paste this address into it: <code>{{ .Site.Config.URL }}/{{ .Collection }}/feed.xml</code></span></p>
+  <ul class="ep-list">
+    {{ range .Paginator.Items }}<li class="ep-item"><a class="ep-title" href="{{ .Href }}">{{ .Title }}</a>{{ with .Summary }}<p>{{ . }}</p>{{ end }}{{ template "episode-player" . }}</li>{{ end }}
+  </ul>
+  {{ template "pagination" . }}
+</section>
+{{ end }}

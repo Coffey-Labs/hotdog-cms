@@ -1,0 +1,6 @@
+{{/* One opening in a list: title, where, what kind, and when it closes. */}}
+<li class="job-row">
+  <a class="job-title" href="{{ .Href }}">{{ .Title }}</a>
+  <p class="job-meta">{{ with .Params.location }}{{ . }}{{ end }}{{ with .Params.employment }} · {{ . }}{{ end }}{{ with .Params.pay }} · {{ . }}{{ end }}{{ with .Params.closes }} · Apply by {{ formatDate "January 2" . }}{{ end }}</p>
+  {{ with .Summary }}<p class="job-summary">{{ . }}</p>{{ end }}
+</li>

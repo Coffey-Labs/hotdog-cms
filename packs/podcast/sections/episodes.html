@@ -1,0 +1,17 @@
+{{/* section
+label: Episodes
+about: The latest podcast episodes, each with a player.
+fields:
+  - { name: heading, type: text, default: Latest episodes }
+  - { name: collection, type: collection, default: episodes, label: Episodes from }
+  - { name: count, type: number, default: 3, label: How many }
+*/}}
+{{ $c := default "episodes" .Data.collection }}
+<link rel="stylesheet" href="{{ asset "packs/podcast/podcast.css" }}">
+<section class="block episodes">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    <ul class="ep-list">{{ range limit (default 3 .Data.count) (collection $c) }}<li class="ep-item"><a class="ep-title" href="{{ .Href }}">{{ .Title }}</a>{{ with .Summary }}<p>{{ . }}</p>{{ end }}{{ template "episode-player" . }}</li>{{ end }}</ul>
+    <p><a class="more" href="/{{ $c }}/">Every episode</a></p>
+  </div>
+</section>

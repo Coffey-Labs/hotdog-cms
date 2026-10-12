@@ -40,7 +40,7 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 			{"data/faq.yaml", "- question: Shared question?\n  answer: A shared answer.\n"},
 			{"content/shared.md", "---\ntitle: Shared\nsummary: Questions from a file.\nsections:\n  - faq: { from: faq }\n---\n"},
 		}, map[string][]string{
-			"help/index.html":   {`<details class="faq-item" open>`, "Do you deliver?", "<strong>five</strong>", "packs/faq/faq."},
+			"help/index.html":   {`<details class="faq-item" open>`, "Do you deliver?", "<strong>five</strong>", "packs/faq/faq.", `"@type":"FAQPage"`, `"@type":"Question","acceptedAnswer"`},
 			"shared/index.html": {"Shared question?", "A shared answer."},
 		}},
 		{"testimonials", []page{
@@ -56,7 +56,7 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 			{"content/about-us.md", "---\ntitle: About us\nsummary: Who we are.\nsections:\n  - team: { heading: The team }\n---\n"},
 		}, map[string][]string{
 			"people/index.html":            {"Our team", `href="/people/sam-rivera/"`, "Head baker"},
-			"people/sam-rivera/index.html": {"mailto:sam@example.org", `rel="me"`, "team-initial", ">S<"},
+			"people/sam-rivera/index.html": {`"@type":"Person"`, `"jobTitle":"Head baker"`, "mailto:sam@example.org", `rel="me"`, "team-initial", ">S<"},
 			"about-us/index.html":          {`href="/people/emile-durand/"`, ">É<", `src="/media/a.png" alt="Ana at the counter"`},
 		}},
 		{"location-and-hours", []page{
@@ -64,7 +64,7 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 			{"content/visit.md", "---\ntitle: Visit\nsummary: Where and when.\nsections:\n  - location: { heading: Visit us }\n---\n"},
 			{"content/market.md", "---\ntitle: Market stall\nsummary: Saturdays.\nsections:\n  - location:\n      address: Town Square\n      hours: [{ days: Saturday, times: 8am to noon }]\n---\n"},
 		}, map[string][]string{
-			"visit/index.html":  {"Bakery on Main", "https://www.openstreetmap.org/search?query=12&#43;Main&#43;Street", "tel:%28217%29555-0142", "Monday to Friday", "Closed on public holidays."},
+			"visit/index.html":  {`"@type":"LocalBusiness"`, `"telephone":"(217) 555-0142"`, "Bakery on Main", "https://www.openstreetmap.org/search?query=12&#43;Main&#43;Street", "tel:%28217%29555-0142", "Monday to Friday", "Closed on public holidays."},
 			"market/index.html": {"Town Square", "Saturday", "8am to noon"},
 		}},
 		{"gallery", []page{
@@ -112,6 +112,48 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 			"docs/start/two/index.html": {`<span>Previous</span>Page one`, `<span>Next</span>Page three`, `aria-current="page">Page two`},
 			"docs/search.json":          {`"/docs/start/one/"`},
 		}},
+		{"recipes", []page{
+			{"content/recipes/sourdough.md", "---\ntitle: Weekend sourdough\ndate: 2026-10-01\nsummary: A simple loaf.\nphoto: /media/a.png\nphoto_alt: A round loaf\nprep_minutes: 30\ncook_minutes: 45\nservings: One loaf\ningredients:\n  - 500 g flour\n  - 350 g water\nsteps:\n  - Mix and rest.\n  - Bake at 250°C.\n---\nTips.\n"},
+		}, map[string][]string{
+			"recipes/sourdough/index.html": {"<li>500 g flour</li>", "<li>Bake at 250°C.</li>", "75 min", `"@type":"Recipe"`, `"prepTime":"PT30M"`, `"totalTime":"PT1H15M"`, `"recipeIngredient":["500 g flour","350 g water"]`},
+			"recipes/index.html":           {`href="/recipes/sourdough/"`, "75 minutes"},
+		}},
+		{"jobs", []page{
+			{"content/jobs/baker.md", "---\ntitle: Morning baker\ndate: 2026-10-10\nsummary: Bake from 4am.\nlocation: Springfield, IL\nemployment: Part-time\npay: $19 an hour\ncloses: 2099-11-15\napply: mailto:jobs@example.org\n---\nThe job.\n"},
+			{"content/jobs/old.md", "---\ntitle: Summer help\ndate: 2020-05-01\nsummary: Gone.\ncloses: 2020-06-01\napply: mailto:jobs@example.org\n---\n"},
+		}, map[string][]string{
+			"jobs/index.html":       {"Morning baker", "Apply by November 15"},
+			"jobs/baker/index.html": {`"@type":"JobPosting"`, `"employmentType":"PART_TIME"`, `"validThrough":"2099-11-15T23:59:59`, "Sunday, November 15, 2099", `href="mailto:jobs@example.org">Apply`},
+			"jobs/old/index.html":   {"Applications for this job have closed."},
+		}},
+		{"related-posts", []page{
+			{"content/articles/a.md", "---\ntitle: Article A\ndate: 2026-01-01\nsummary: A.\ntags: [bread, ovens]\n---\nA.\n"},
+			{"content/articles/b.md", "---\ntitle: Article B\ndate: 2026-02-01\nsummary: B.\ntags: [bread, ovens]\n---\nB.\n"},
+			{"content/articles/c.md", "---\ntitle: Article C\ndate: 2026-03-01\nsummary: C.\ntags: [bread]\n---\nC.\n"},
+			{"content/articles/d.md", "---\ntitle: Article D\ndate: 2026-04-01\nsummary: D.\ntags: [cake]\n---\nD.\n"},
+		}, map[string][]string{
+			"articles/a/index.html": {"Keep reading", `href="/articles/b/">Article B`, `href="/articles/c/">Article C`},
+		}},
+		{"table-of-contents", []page{
+			{"content/articles/long.md", "---\ntitle: Long\ndate: 2026-01-01\nsummary: Long.\n---\n## First part\n\nx\n\n### A detail\n\nx\n\n## Second part\n\nx\n"},
+			{"content/articles/short.md", "---\ntitle: Short\ndate: 2026-01-02\nsummary: Short.\n---\n## Only one\n\nx\n"},
+		}, map[string][]string{
+			"articles/long/index.html": {"On this page", `<li class="toc-l2"><a href="#first-part">First part</a>`, `<li class="toc-l3"><a href="#a-detail">A detail</a>`},
+		}},
+		{"podcast", []page{
+			{"static/media/ep1.mp3", strings.Repeat("x", 5000)},
+			{"content/episodes/_index.md", "---\ntitle: The Bakery Hour\nsummary: A podcast.\n---\n"},
+			{"content/episodes/one.md", "---\ntitle: \"1: Why we bake at 4am\"\ndate: 2026-10-01\nsummary: Starters.\naudio: /media/ep1.mp3\nduration: \"34:12\"\nepisode: 1\n---\nNotes.\n"},
+		}, map[string][]string{
+			"episodes/one/index.html": {`<audio controls preload="none" src="/media/ep1.mp3">`, "34:12", "(5 KB)"},
+			"episodes/index.html":     {"Subscribe in a podcast app", "https://example.org/episodes/feed.xml"},
+			"episodes/feed.xml":       {`xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"`, "<title>The Bakery Hour</title>", `<enclosure url="https://example.org/media/ep1.mp3" length="5000" type="audio/mpeg">`, "<itunes:duration>34:12</itunes:duration>", "<itunes:episode>1</itunes:episode>"},
+		}},
+		{"payment-links", []page{
+			{"content/shop.md", "---\ntitle: Gift cards\nsummary: Gift cards.\nsections:\n  - buy:\n      items:\n        - { name: $25 gift card, price: $25, image: /media/a.png, image_alt: A gift card, link: \"https://buy.stripe.com/test_123\", button: Buy now }\n  - donate:\n      heading: Support the bakery\n      link: \"https://liberapay.com/bakery\"\n      amounts:\n        - { label: $5, link: \"https://liberapay.com/bakery/donate?amount=5\" }\n---\n"},
+		}, map[string][]string{
+			"shop/index.html": {`href="https://buy.stripe.com/test_123" rel="noopener">Buy now`, `alt="A gift card"`, "Support the bakery", `href="https://liberapay.com/bakery" rel="noopener">Donate`, ">$5<"},
+		}},
 	}
 	for _, c := range cases {
 		t.Run(c.pack, func(t *testing.T) {
@@ -125,6 +167,15 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 			os.MkdirAll(filepath.Join(dir, "static", "media"), 0o755)
 			os.WriteFile(filepath.Join(dir, "static", "media", "a.png"), picture, 0o644)
 			os.WriteFile(filepath.Join(dir, "static", "media", "b.png"), picture, 0o644)
+			if c.pack == "related-posts" || c.pack == "table-of-contents" {
+				lp := filepath.Join(dir, "layouts", "article.html")
+				raw, _ := os.ReadFile(lp)
+				tpl := `{{ template "related-posts" . }}`
+				if c.pack == "table-of-contents" {
+					tpl = `{{ template "table-of-contents" . }}`
+				}
+				os.WriteFile(lp, []byte(strings.Replace(string(raw), "{{ .Content }}", tpl+"{{ .Content }}", 1)), 0o644)
+			}
 			for _, f := range c.files {
 				p := filepath.Join(dir, filepath.FromSlash(f.path))
 				os.MkdirAll(filepath.Dir(p), 0o755)
