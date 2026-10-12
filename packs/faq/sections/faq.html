@@ -1,0 +1,31 @@
+{{/* section
+label: Questions and answers
+about: Questions that open to show their answers, for an FAQ or a help page.
+fields:
+  - { name: heading, type: text, default: Questions and answers }
+  - { name: intro, type: markdown }
+  - name: items
+    type: list
+    label: Questions
+    fields:
+      - { name: question, type: text, required: true }
+      - { name: answer, type: markdown, required: true }
+  - { name: from, type: data, label: Questions from, help: A file in data/ that holds the questions, to share them between pages. Leave empty to use the questions above. }
+  - { name: open, type: bool, label: Show the first answer open }
+*/}}
+{{ $items := .Data.items }}{{ with .Data.from }}{{ $items = data . }}{{ end }}
+<link rel="stylesheet" href="{{ asset "packs/faq/faq.css" }}">
+<section class="block faq">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    <div class="faq-list">
+      {{ range $i, $q := $items }}
+      <details class="faq-item"{{ if and $.Data.open (eq $i 0) }} open{{ end }}>
+        <summary>{{ $q.question }}</summary>
+        <div class="faq-answer">{{ markdownify $q.answer }}</div>
+      </details>
+      {{ end }}
+    </div>
+  </div>
+</section>

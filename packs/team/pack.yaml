@@ -1,0 +1,29 @@
+name: team
+version: 1.0.0
+title: Team
+description: The people behind a site, each with a photo, a role and a page of their own, and a section that shows them on any page.
+license: MIT
+author: Coffey Labs LLC
+collections:
+  people:
+    layout: person
+    list_layout: people
+    sort: weight
+notes: |
+  Add each person as content/people/<name>.md:
+
+    ---
+    title: Sam Rivera
+    role: Head baker
+    photo: /media/team/sam.jpg
+    photo_alt: Sam in the bakery, smiling
+    weight: 1
+    email: sam@example.org
+    links:
+      - { name: Mastodon, url: "https://example.social/@sam" }
+    ---
+    A few lines about Sam, in Markdown.
+
+  weight puts people in order (lowest first). /people/ lists everyone, and
+  the "Team" section shows them on any page. Give content/people/_index.md a
+  title, such as "Our team", to name that page.

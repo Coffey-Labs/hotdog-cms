@@ -1,0 +1,19 @@
+{{/* section
+label: Team
+about: The people from the team collection, with their photos and roles.
+fields:
+  - { name: heading, type: text, default: The team }
+  - { name: intro, type: markdown }
+  - { name: collection, type: collection, default: people, label: People from }
+  - { name: count, type: number, default: 0, label: How many, help: 0 shows everyone. }
+*/}}
+{{ $c := default "people" .Data.collection }}{{ $people := collection $c }}{{ with .Data.count }}{{ if gt . 0 }}{{ $people = limit . $people }}{{ end }}{{ end }}
+<link rel="stylesheet" href="{{ asset "packs/team/team.css" }}">
+<section class="block team">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    <ul class="team-grid">{{ range $people }}{{ template "team-card" . }}{{ end }}</ul>
+    {{ with .Data.count }}{{ if gt . 0 }}<p><a class="more" href="/{{ $c }}/">Everyone</a></p>{{ end }}{{ end }}
+  </div>
+</section>

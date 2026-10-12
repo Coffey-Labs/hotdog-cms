@@ -1,0 +1,20 @@
+/* The gallery pack: a grid, and each picture full size when its #link is
+   followed (:target), with no script. Colors come from the theme's variables. */
+.gal-grid { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; grid-template-columns: repeat(var(--gal-cols, 3), minmax(0, 1fr)); }
+.gal-cols-2 { --gal-cols: 2; } .gal-cols-3 { --gal-cols: 3; } .gal-cols-4 { --gal-cols: 4; }
+@media (max-width: 640px) { .gal-grid { --gal-cols: 2; } }
+.gal-grid li { display: grid; gap: 6px; }
+.gal-thumb { display: block; border-radius: var(--radius); overflow: hidden; aspect-ratio: 4 / 3; background: var(--accent-soft); }
+.gal-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .2s; }
+.gal-thumb:hover img, .gal-thumb:focus-visible img { transform: scale(1.03); }
+.gal-caption { color: var(--muted); font-size: .9rem; }
+.gal-box { display: none; position: fixed; inset: 0; z-index: 60; padding: 24px; place-items: center; }
+.gal-box:target { display: grid; }
+.gal-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .86); }
+.gal-box figure { position: relative; margin: 0; display: grid; gap: 10px; justify-items: center; max-width: min(1200px, 100%); }
+.gal-box img { max-width: 100%; max-height: calc(100vh - 140px); object-fit: contain; border-radius: 8px; }
+.gal-box figcaption { color: #f4f1ec; }
+.gal-nav { position: relative; display: flex; gap: 18px; align-items: center; margin-top: 12px; color: #d8d2c8; }
+.gal-nav a { color: #fff; font-weight: 650; }
+.gal-close { margin-left: 12px; padding: 6px 12px; border: 1px solid rgba(255, 255, 255, .4); border-radius: 8px; text-decoration: none; }
+@media (prefers-reduced-motion: reduce) { .gal-thumb img { transition: none; } }

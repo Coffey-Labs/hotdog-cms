@@ -1,0 +1,20 @@
+{{/* Address, contact and opening hours from a map like data/location.yaml. */}}
+<div class="loc">
+  <div class="loc-where">
+    {{ with .name }}<p class="loc-name">{{ . }}</p>{{ end }}
+    {{ with .address }}<address class="loc-address">{{ . }}</address>{{ end }}
+    <ul class="loc-links">
+      {{ $map := .map }}{{ if and (not $map) .address }}{{ $map = printf "https://www.openstreetmap.org/search?query=%s" (urlquery .address) }}{{ end }}
+      {{ with $map }}<li><a href="{{ . }}">Map and directions</a></li>{{ end }}
+      {{ with .phone }}<li><a href="tel:{{ replace " " "" . }}">{{ . }}</a></li>{{ end }}
+      {{ with .email }}<li>{{ emailOff }}<a href="mailto:{{ . }}">{{ . }}</a>{{ emailOffEnd }}</li>{{ end }}
+    </ul>
+  </div>
+  {{ with .hours }}
+  <table class="loc-hours">
+    <caption>Opening hours</caption>
+    {{ range . }}<tr><th scope="row">{{ .days }}</th><td>{{ .times }}</td></tr>{{ end }}
+  </table>
+  {{ end }}
+  {{ with .note }}<div class="loc-note">{{ markdownify . }}</div>{{ end }}
+</div>

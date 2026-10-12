@@ -1,0 +1,7 @@
+/* The testimonials pack. Colors come from the theme's variables. */
+.tm-list { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.tm-item { margin: 0; padding: 22px 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); display: flex; flex-direction: column; gap: 16px; }
+.tm-item blockquote { margin: 0; font-size: 1.08rem; line-height: 1.55; white-space: pre-line; }
+.tm-item blockquote::before { content: "\201C"; display: block; font-size: 2.6rem; line-height: .8; color: var(--accent); font-weight: 750; }
+.tm-item figcaption { margin-top: auto; display: grid; gap: 2px; }
+.tm-item figcaption span { color: var(--muted); font-size: .92rem; }

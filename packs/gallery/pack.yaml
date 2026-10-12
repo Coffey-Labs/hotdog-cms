@@ -1,0 +1,22 @@
+name: gallery
+version: 1.0.0
+title: Gallery
+description: A grid of pictures that open full size, with captions and descriptions, and no script.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Add a "Gallery" section to any page:
+
+    sections:
+      - gallery:
+          heading: The shop
+          columns: 3
+          items:
+            - image: /media/2026/10/counter.jpg
+              alt: The bread counter in the morning
+              caption: Fresh at 7am.
+
+  Upload pictures through the editor, so they're resized and cleaned, and
+  give every picture a description (alt). Choosing a picture opens it full
+  size; Escape isn't available without a script, so the close link sits in
+  the corner, and the browser's back button closes it too.

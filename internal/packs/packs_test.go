@@ -218,6 +218,7 @@ func TestMarkupTricks(t *testing.T) {
 		`<a href="/about/">About</a> <a href="https://example.org/">x</a> <a href="mailto:a@example.org">m</a>`,
 		`<img src="{{ asset "packs/x/a.png" }}" alt="">`,
 		`<a href="img/x.png">x</a>`,
+		`<a href="tel:{{ replace " " "" .phone }}">{{ .phone }}</a>`,
 		`<section class="faq">{{ range .Data.items }}<details><summary>{{ .q }}</summary>{{ markdownify .a }}</details>{{ end }}</section>`,
 	} {
 		if found, err := markup.Template(ok); err != nil || len(found) > 0 {

@@ -244,8 +244,8 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 		},
 		"print":   func(args ...any) (string, error) { return limitString(fmt.Sprint(args...)) },
 		"println": func(args ...any) (string, error) { return limitString(fmt.Sprintln(args...)) },
-		"sectionContext": func(p *site.Page, sec site.Section) SectionContext {
-			return SectionContext{Type: sec.Type, Data: sec.Data, Page: p, Site: s}
+		"sectionContext": func(p *site.Page, sec site.Section, i int) SectionContext {
+			return SectionContext{Type: sec.Type, Data: sec.Data, Page: p, Site: s, Index: i}
 		},
 	}
 	for k, v := range eventFuncs(s) {

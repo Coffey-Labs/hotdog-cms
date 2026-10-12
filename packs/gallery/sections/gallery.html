@@ -1,0 +1,45 @@
+{{/* section
+label: Gallery
+about: A grid of pictures that open full size, with captions.
+fields:
+  - { name: heading, type: text }
+  - { name: intro, type: markdown }
+  - { name: columns, type: select, options: ["2", "3", "4"], default: "3", label: Pictures per row }
+  - name: items
+    type: list
+    label: Pictures
+    fields:
+      - { name: image, type: image, required: true }
+      - { name: alt, type: text, label: What the picture shows, required: true }
+      - { name: caption, type: text }
+  - { name: from, type: data, label: Pictures from, help: A file in data/ that holds the pictures. Leave empty to use the pictures above. }
+*/}}
+{{ $items := .Data.items }}{{ with .Data.from }}{{ $items = data . }}{{ end }}
+{{ $g := printf "gallery-%d" .Index }}{{ $n := len $items }}
+<link rel="stylesheet" href="{{ asset "packs/gallery/gallery.css" }}">
+<section class="block gallery" id="{{ $g }}">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    <ul class="gal-grid gal-cols-{{ default "3" .Data.columns }}">
+      {{ range $i, $p := $items }}
+      <li><a href="#{{ $g }}-{{ $i }}" class="gal-thumb"><img src="{{ $p.image }}" alt="{{ $p.alt }}" loading="lazy"></a>{{ with $p.caption }}<span class="gal-caption">{{ . }}</span>{{ end }}</li>
+      {{ end }}
+    </ul>
+  </div>
+  {{ range $i, $p := $items }}
+  <div class="gal-box" id="{{ $g }}-{{ $i }}" role="dialog" aria-label="{{ $p.alt }}">
+    <a class="gal-backdrop" href="#{{ $g }}" tabindex="-1" aria-hidden="true"></a>
+    <figure>
+      <img src="{{ $p.image }}" alt="{{ $p.alt }}" loading="lazy">
+      {{ with $p.caption }}<figcaption>{{ . }}</figcaption>{{ end }}
+    </figure>
+    <nav class="gal-nav" aria-label="Pictures">
+      {{ if gt $i 0 }}<a href="#{{ $g }}-{{ add $i -1 }}">Previous</a>{{ end }}
+      <span>{{ add $i 1 }} of {{ $n }}</span>
+      {{ if lt (add $i 1) $n }}<a href="#{{ $g }}-{{ add $i 1 }}">Next</a>{{ end }}
+      <a class="gal-close" href="#{{ $g }}">Close</a>
+    </nav>
+  </div>
+  {{ end }}
+</section>

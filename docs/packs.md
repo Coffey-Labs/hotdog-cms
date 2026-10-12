@@ -26,9 +26,15 @@ Content-Security-Policy as the site's own.
   overwritten, unless you add `-force`. Two packs can't install the same
   file.
 - `remove` takes the pack's files out and forgets it.
-- `list` also names the packs that come with HotDog CMS. For now that's
-  **calendar**: events, an upcoming-events section and a feed people
-  subscribe to (see [events.md](events.md)).
+- `list` also names the packs that come with HotDog CMS:
+  - **calendar**: events, an upcoming-events section and a feed people
+    subscribe to (see [events.md](events.md));
+  - **faq**: questions that open to show their answers;
+  - **gallery**: a grid of pictures that open full size, with no script;
+  - **location-and-hours**: address, map link, phone, email and opening
+    hours, from `data/location.yaml`, as a section or a partial;
+  - **team**: a page per person, a list of everyone and a section;
+  - **testimonials**: quotes with a name and a role.
 - `-site` picks the site folder (default: the current one).
 
 ```yaml

@@ -1,0 +1,24 @@
+name: location-and-hours
+version: 1.0.0
+title: Location and hours
+description: Your address, opening hours, phone and email, with a map link and room for holiday changes, on any page or in the footer.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Put your details in data/location.yaml, once:
+
+    name: Bakery on Main
+    address: |
+      12 Main Street
+      Springfield, IL 62701
+    phone: "(217) 555-0142"
+    email: hello@example.org
+    hours:
+      - { days: Monday to Friday, times: 7am to 6pm }
+      - { days: Saturday, times: 8am to 2pm }
+      - { days: Sunday, times: Closed }
+    note: Closed on public holidays.
+
+  Then add a "Location and hours" section to any page (it reads that file
+  unless you fill the section's own fields), or show the hours in a layout
+  with {{ template "location-hours" (data "location") }}.

@@ -1,0 +1,19 @@
+name: faq
+version: 1.0.0
+title: Questions and answers
+description: An FAQ section whose questions open to show their answers, with no script, on any page.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Add a "Questions and answers" section to any page, in the editor's section
+  library or in the page's front matter:
+
+    sections:
+      - faq:
+          heading: Questions and answers
+          items:
+            - question: Do you deliver?
+              answer: Yes, within five miles, from 9am to 5pm.
+
+  To share one list between pages, put the questions in data/faq.yaml (a list
+  of question and answer) and set from: faq instead of items.
