@@ -356,3 +356,16 @@ func TestMoney(t *testing.T) {
 		}
 	}
 }
+
+func TestPlainText(t *testing.T) {
+	for in, want := range map[string]string{
+		"Give us **three days' notice**, and *tell* us.": "Give us three days' notice, and tell us.",
+		"See [our menu](/menu/) or `call`.":              "See our menu or call.",
+		"- one\n- two\n\n> quoted":                       "one two quoted",
+		"snake_case stays, _this_ goes.":                 "snake_case stays, this goes.",
+	} {
+		if got := plainText(in); got != want {
+			t.Errorf("plainText(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
