@@ -46,7 +46,7 @@ Usage:
   hotdog-cms ci <platform>         write the CI file for github, gitea, forgejo, gitlab, bitbucket, woodpecker, or a git hook
   hotdog-cms endpoint -config FILE the small server for form submissions and search, behind your web server
   hotdog-cms pack add|remove|list|check   extensions as files: sections, layouts, styles (docs/packs.md)
-  hotdog-cms import <from> ...     bring a site in: wordpress, wxr, ghost, hugo or jekyll (docs/importing.md)
+  hotdog-cms import <from> ...     move your own site in: wordpress, wxr, ghost, hugo or jekyll (docs/importing.md)
   hotdog-cms editor -config FILE   the editor: sign in with your git platform and work on sites (never on a site's host)
 
 Platforms: GitHub, GitLab, Gitea, Forgejo/Codeberg, Gogs, Bitbucket, or any git server.
@@ -492,7 +492,7 @@ func report(r *build.Result) {
 
 func cmdImport(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: hotdog-cms import <wordpress|wxr|ghost|hugo|jekyll> [flags] (hotdog-cms import <from> -h for each)")
+		return errors.New("usage: hotdog-cms import <wordpress|wxr|ghost|hugo|jekyll> [flags] (hotdog-cms import <from> -h for each)\n" + importer.Ownership)
 	}
 	from, args := args[0], args[1:]
 	fl := flag.NewFlagSet("import "+from, flag.ExitOnError)
@@ -519,6 +519,7 @@ func cmdImport(args []string) error {
 		return fmt.Errorf("can't import from %q: wordpress, wxr, ghost, hugo or jekyll", from)
 	}
 	_ = fl.Parse(args)
+	fmt.Printf("%s\n\n", importer.Ownership)
 	var items []importer.Item
 	var err error
 	opt := importer.Options{SiteDir: *siteDir, Overwrite: *overwrite, Log: os.Stdout}

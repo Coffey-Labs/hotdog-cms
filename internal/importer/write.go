@@ -475,9 +475,16 @@ func fetch(u, localRoot string) ([]byte, error) {
 }
 
 // WriteReport writes what happened as Markdown, for the person who ran it.
+// Ownership is said before every import and at the top of every report:
+// the importers are for moving your own site, not for copying anyone else's.
+const Ownership = "Import only content you own or have the rights to use. " +
+	"hotdog-cms import is a migration tool, for moving your own site to HotDog CMS, " +
+	"not for copying sites, posts or pictures that belong to someone else."
+
 func (r *Report) Markdown(source string) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# Import from %s\n\n", source)
+	fmt.Fprintf(&b, "> %s\n\n", Ownership)
 	fmt.Fprintf(&b, "%d page(s) written, %d skipped (already there), %d picture(s) brought in, %d redirect(s) added.\n\n", len(r.Written), len(r.Skipped), r.Pictures, len(r.Redirects))
 	if len(r.KeptHTML) > 0 {
 		b.WriteString("## Kept as HTML\n\nMarkdown would have lost something in these, so their HTML was kept (`format: html`). It's sanitized when the site is built, so embeds and scripts are dropped; check how they look.\n\n")
