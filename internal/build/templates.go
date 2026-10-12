@@ -32,6 +32,9 @@ type SectionContext struct {
 	Data map[string]any
 	Page *site.Page
 	Site *site.Site
+	// Index is the section's place on its page, from 0, so a section can
+	// make ids that don't clash when a page has two of it.
+	Index int
 }
 
 func loadTemplates(dir string, funcs template.FuncMap) (*Templates, error) {
@@ -77,7 +80,7 @@ func loadTemplates(dir string, funcs template.FuncMap) (*Templates, error) {
 		dispatch.WriteString(`{{end}}`)
 	}
 	dispatch.WriteString(`{{end}}`)
-	dispatch.WriteString(`{{define "sections"}}{{range .Sections}}{{template "hotdog:section" (sectionContext $ .)}}{{end}}{{end}}`)
+	dispatch.WriteString(`{{define "sections"}}{{range $i, $s := .Sections}}{{template "hotdog:section" (sectionContext $ $s $i)}}{{end}}{{end}}`)
 	if _, err := common.Parse(dispatch.String()); err != nil {
 		return nil, err
 	}

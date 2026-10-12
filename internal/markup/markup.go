@@ -29,7 +29,7 @@ var forbidden = map[string]bool{
 	"base": true, "meta": true, "portal": true, "noscript": true,
 }
 
-// urlAttrs hold addresses; their values must be web, mail or relative links.
+// urlAttrs hold addresses; their values must be web, mail, phone or relative links.
 var urlAttrs = map[string]bool{
 	"href": true, "src": true, "action": true, "formaction": true, "poster": true, "data": true, "background": true,
 	"cite": true, "longdesc": true, "usemap": true, "xlink:href": true, "ping": true, "manifest": true, "codebase": true,
@@ -133,14 +133,14 @@ func scan(markup string, svg bool) []string {
 				}
 			case urlAttrs[key] || key == "srcset":
 				if !safeURL(a.Val) {
-					problems = append(problems, fmt.Sprintf("a %s on <%s> that isn't a web, mail or relative link (%q)", key, name, a.Val))
+					problems = append(problems, fmt.Sprintf("a %s on <%s> that isn't a web, mail, phone or relative link (%q)", key, name, a.Val))
 				}
 			}
 		}
 	}
 }
 
-// safeURL accepts relative links, web and mail links, and values that are a
+// safeURL accepts relative links, web, mail and phone links, and values that are a
 // single template action (which html/template itself filters). An action
 // after a fixed start ("java{{.x}}script:") is refused, since the template
 // escaper can't see the whole scheme.
@@ -150,7 +150,7 @@ func safeURL(v string) bool {
 		return true
 	}
 	lower := strings.ToLower(v)
-	for _, p := range []string{"https://", "http://", "mailto:", "/", "#", "?", "./", "../"} {
+	for _, p := range []string{"https://", "http://", "mailto:", "tel:", "/", "#", "?", "./", "../"} {
 		if strings.HasPrefix(lower, p) {
 			return true
 		}

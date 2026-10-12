@@ -1,0 +1,18 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/team/team.css" }}">
+<article class="wrap page person">
+  {{ with index .Site.Lists .Collection }}<p class="eyebrow"><a href="{{ .Path }}">{{ .Title }}</a></p>{{ end }}
+  <div class="person-head">
+    {{ with .Params.photo }}<img class="team-photo" src="{{ . }}" alt="{{ $.Params.photo_alt }}">{{ else }}<span class="team-photo team-initial" aria-hidden="true">{{ upper (printf "%.1s" .Title) }}</span>{{ end }}
+    <div>
+      <h1>{{ .Title }}</h1>
+      {{ with .Params.role }}<p class="team-role">{{ . }}</p>{{ end }}
+      {{ if or .Params.email .Params.links }}<ul class="person-links">
+        {{ with .Params.email }}<li>{{ emailOff }}<a href="mailto:{{ . }}">{{ . }}</a>{{ emailOffEnd }}</li>{{ end }}
+        {{ range .Params.links }}<li><a href="{{ .url }}" rel="me">{{ .name }}</a></li>{{ end }}
+      </ul>{{ end }}
+    </div>
+  </div>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+</article>
+{{ end }}

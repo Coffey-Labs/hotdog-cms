@@ -1,0 +1,8 @@
+{{/* One person in a grid: photo (or their initial), name and role. */}}
+<li class="team-card">
+  <a href="{{ .Href }}">
+    {{ with .Params.photo }}<img class="team-photo" src="{{ . }}" alt="{{ $.Params.photo_alt }}" loading="lazy">{{ else }}<span class="team-photo team-initial" aria-hidden="true">{{ upper (printf "%.1s" .Title) }}</span>{{ end }}
+    <strong>{{ .Title }}</strong>
+  </a>
+  {{ with .Params.role }}<span class="team-role">{{ . }}</span>{{ end }}
+</li>

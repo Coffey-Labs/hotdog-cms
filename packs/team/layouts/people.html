@@ -1,0 +1,8 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/team/team.css" }}">
+<section class="wrap page team">
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  <ul class="team-grid">{{ range collection .Collection }}{{ template "team-card" . }}{{ end }}</ul>
+</section>
+{{ end }}

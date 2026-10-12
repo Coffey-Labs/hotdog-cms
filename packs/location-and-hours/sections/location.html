@@ -1,0 +1,26 @@
+{{/* section
+label: Location and hours
+about: Your address with a map link, phone, email and opening hours. Reads data/location.yaml unless you fill in the fields here.
+fields:
+  - { name: heading, type: text, default: Visit us }
+  - { name: from, type: data, default: location, label: Details from, help: The file in data/ with your address and hours. }
+  - { name: name, type: text, label: Name, help: Fill these in only to show something other than the file. }
+  - { name: address, type: textarea }
+  - { name: map, type: link, label: Map link, help: Optional; by default, a link to the address on OpenStreetMap. }
+  - { name: phone, type: text }
+  - { name: email, type: text }
+  - name: hours
+    type: list
+    fields:
+      - { name: days, type: text, required: true }
+      - { name: times, type: text, required: true }
+  - { name: note, type: markdown, help: Holiday hours or other changes. }
+*/}}
+{{ $d := .Data }}{{ if not (or .Data.address .Data.hours) }}{{ $d = data (default "location" .Data.from) }}{{ end }}
+<link rel="stylesheet" href="{{ asset "packs/location-and-hours/location.css" }}">
+<section class="block location">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ template "location-hours" $d }}
+  </div>
+</section>

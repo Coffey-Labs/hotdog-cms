@@ -1,0 +1,31 @@
+{{/* section
+label: Testimonials
+about: Quotes from people you work with, each with a name and a role.
+fields:
+  - { name: heading, type: text, default: What people say }
+  - { name: intro, type: markdown }
+  - name: items
+    type: list
+    label: Quotes
+    fields:
+      - { name: quote, type: textarea, required: true }
+      - { name: name, type: text, required: true, help: As the person agreed to be named. }
+      - { name: role, type: text, help: "Their role, or where they're from: Customer since 2019, Owner of The Corner Shop." }
+  - { name: from, type: data, label: Quotes from, help: A file in data/ that holds the quotes, to share them between pages. Leave empty to use the quotes above. }
+*/}}
+{{ $items := .Data.items }}{{ with .Data.from }}{{ $items = data . }}{{ end }}
+<link rel="stylesheet" href="{{ asset "packs/testimonials/testimonials.css" }}">
+<section class="block testimonials">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    <div class="tm-list">
+      {{ range $items }}
+      <figure class="tm-item">
+        <blockquote>{{ .quote }}</blockquote>
+        <figcaption><strong>{{ .name }}</strong>{{ with .role }}<span>{{ . }}</span>{{ end }}</figcaption>
+      </figure>
+      {{ end }}
+    </div>
+  </div>
+</section>

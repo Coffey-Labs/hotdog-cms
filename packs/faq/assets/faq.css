@@ -1,0 +1,11 @@
+/* The questions and answers pack. Colors come from the theme's variables. */
+.faq-list { display: grid; gap: 10px; max-width: 72ch; }
+.faq-item { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.faq-item summary { list-style: none; cursor: pointer; padding: 14px 18px; font-weight: 650; display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: "+"; flex: none; color: var(--accent); font-weight: 750; font-size: 1.2em; line-height: 1; }
+.faq-item[open] summary::after { content: "\2212"; }
+.faq-item summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius); }
+.faq-answer { padding: 0 18px 16px; }
+.faq-answer > :first-child { margin-top: 0; }
+.faq-answer > :last-child { margin-bottom: 0; }

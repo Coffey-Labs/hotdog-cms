@@ -1,0 +1,20 @@
+name: testimonials
+version: 1.0.0
+title: Testimonials
+description: What people say about you, as quotes with a name and a role, on any page.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Add a "Testimonials" section to any page:
+
+    sections:
+      - testimonials:
+          heading: What people say
+          items:
+            - quote: The best sourdough in town, and they remember your name.
+              name: Maria Lopez
+              role: Customer since 2019
+
+  Only publish words people agreed to have shown, under the name they chose.
+  To share one list between pages, put it in data/testimonials.yaml and set
+  from: testimonials.

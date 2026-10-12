@@ -1,0 +1,12 @@
+/* The team pack. Colors come from the theme's variables. */
+.team-grid { list-style: none; padding: 0; margin: 0 0 20px; display: grid; gap: 22px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.team-card { text-align: center; display: grid; gap: 4px; justify-items: center; }
+.team-card a { display: grid; gap: 10px; justify-items: center; color: var(--text); text-decoration: none; }
+.team-card a:hover strong { color: var(--accent); }
+.team-photo { width: 148px; height: 148px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line); background: var(--accent-soft); }
+.team-initial { display: grid; place-items: center; font-size: 3rem; font-weight: 750; color: var(--accent); }
+.team-role { color: var(--muted); font-size: .95rem; margin: 0; }
+.person-head { display: flex; flex-wrap: wrap; gap: 28px; align-items: center; margin: 0 0 28px; }
+.person-head h1 { margin: 0 0 4px; }
+.person-head .team-photo { width: 180px; height: 180px; }
+.person-links { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
