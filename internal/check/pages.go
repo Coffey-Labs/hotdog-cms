@@ -31,7 +31,8 @@ type page struct {
 	inlineStyles int      // <style> elements and style="" attributes
 	handlers     []string // on* attributes
 	scriptLinks  []string // javascript: (and vbscript:, data:text/html) links
-	frames       []string
+	frames       []string // iframe sources
+	objects      []string // <object data> and <embed src>
 	styles       []string // external stylesheets
 	images       []string // img/source/video sources
 	imgNoAlt     int
@@ -203,6 +204,18 @@ func parsePage(data []byte, file, u string) *page {
 			case "iframe":
 				if src, ok := attr(t, "src"); ok {
 					pg.frames = append(pg.frames, src)
+					pg.links = append(pg.links, src)
+					if strings.HasPrefix(src, "http://") {
+						pg.insecure = append(pg.insecure, src)
+					}
+				}
+			case "object", "embed":
+				k := "data"
+				if t.Data == "embed" {
+					k = "src"
+				}
+				if src, ok := attr(t, k); ok {
+					pg.objects = append(pg.objects, src)
 					pg.links = append(pg.links, src)
 					if strings.HasPrefix(src, "http://") {
 						pg.insecure = append(pg.insecure, src)
