@@ -1,0 +1,17 @@
+name: share-links
+version: 1.0.0
+title: Share links
+description: Plain links for sharing a page on Mastodon, Bluesky, LinkedIn or by email. No buttons from other sites, no tracking, no script.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Show them at the end of every article by adding this line to
+  layouts/article.html, after {{ .Content }}:
+
+    {{ template "share-links" . }}
+
+  or put the "Share links" section on any page.
+
+  Mastodon has no single address, so the link goes to the server set in
+  site.yaml (params: { share_mastodon: mastodon.social }), where people
+  on other servers can still use the share box.

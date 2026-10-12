@@ -1,0 +1,13 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/docs/docs.css" }}">
+<div class="wrap docs">
+  {{ template "docs-sidebar" . }}
+  <article class="doc">
+    {{ range data "docs-nav" }}{{ if hasPrefix (printf "/docs/%s/" .part) $.Path }}<p class="crumb"><a href="/docs/{{ .part }}/">{{ .title }}</a></p>{{ end }}{{ end }}
+    <h1>{{ .Title }}</h1>
+    {{ with .Summary }}<p class="lead">{{ . }}</p>{{ end }}
+    <div class="prose">{{ .Content }}</div>
+    {{ template "docs-prevnext" . }}
+  </article>
+</div>
+{{ end }}

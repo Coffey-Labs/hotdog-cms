@@ -1,0 +1,7 @@
+/* The downloads pack. Colors come from the theme's variables. */
+.dl-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; max-width: 760px; }
+.dl-item { display: grid; grid-template-columns: 56px 1fr; gap: 16px; align-items: start; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.dl-type { display: grid; place-items: center; height: 64px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); font-size: .78rem; font-weight: 800; letter-spacing: .04em; }
+.dl-title { font-weight: 650; }
+.dl-meta { margin: 2px 0 0; color: var(--muted); font-size: .88rem; }
+.dl-desc { margin: 6px 0 0; }

@@ -1,0 +1,60 @@
+/* The docs pack: a sidebar of every part, the page beside it. Colors come
+   from the theme's variables. */
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.wrap.docs { width: min(1260px, 100% - 32px); display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 56px; padding: 32px 0 64px; align-items: start; }
+.side { position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow: auto; padding-right: 6px; font-size: .95rem; }
+.toc > summary { display: none; }
+.parts, .parts ul { list-style: none; margin: 0; padding: 0; }
+.parts > li { margin: 2px 0; }
+.parts a { display: block; padding: 6px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; }
+.parts a:hover { color: var(--text); background: var(--accent-soft); }
+.parts a.part { font-weight: 650; color: var(--text); }
+.parts li.here > a.part { color: var(--accent); }
+.parts ul { margin: 2px 0 10px 10px; border-left: 2px solid var(--line); padding-left: 6px; }
+.parts a[aria-current="page"] { color: var(--text); background: var(--accent-soft); font-weight: 600; }
+
+
+.doc { min-width: 0; max-width: 780px; }
+.doc h1 { margin: 6px 0 10px; font-size: clamp(2rem, 4vw, 2.6rem); line-height: 1.15; }
+.doc .crumb { margin: 0; font-size: .9rem; } .doc .crumb a { color: var(--muted); text-decoration: none; }
+.doc .lead { font-size: 1.15rem; color: var(--muted); margin: 0 0 28px; }
+.doc .prose h2 { margin-top: 2.2em; padding-top: .4em; border-top: 1px solid var(--line); }
+.doc .prose h3 { margin-top: 1.8em; }
+.doc .prose blockquote { margin: 1.4em 0; padding: 14px 18px; border-radius: 12px; background: var(--accent-soft); border: 0; color: var(--text); }
+.doc .prose blockquote p { margin: .3em 0; }
+.doc .prose ol > li, .doc .prose ul > li { margin: .45em 0; }
+.doc .prose table { display: block; overflow-x: auto; border-collapse: collapse; width: max-content; max-width: 100%; font-size: .95rem; }
+.doc .prose th, .doc .prose td { border: 1px solid var(--line); padding: 8px 12px; text-align: left; vertical-align: top; }
+.doc .prose th { background: var(--accent-soft); }
+.doc .prose kbd { font-family: var(--font-mono); font-size: .85em; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: .05em .4em; background: var(--surface); }
+.doc .prose pre { overflow-x: auto; }
+
+.prevnext { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--line); }
+.prevnext a { display: block; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; text-decoration: none; color: var(--text); font-weight: 600; }
+.prevnext a:hover { border-color: var(--accent); }
+.prevnext a span { display: block; font-size: .85rem; font-weight: 400; color: var(--muted); }
+.prevnext .next { text-align: right; grid-column: 2; }
+
+.pagelist { padding: 0; list-style: none; counter-reset: p; }
+.pagelist li { counter-increment: p; padding: 14px 0 14px 46px; border-top: 1px solid var(--line); position: relative; }
+.pagelist li::before { content: counter(p); position: absolute; left: 0; top: 14px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); font-weight: 700; font-size: .9rem; }
+.pagelist a { font-weight: 650; font-size: 1.1rem; }
+.pagelist p { margin: 4px 0 0; color: var(--muted); }
+
+.docs-hero { background: var(--hero, var(--accent-soft)); color: var(--hero-text, var(--text)); padding: 56px 0 48px; }
+.docs-hero h1 { margin: 0 0 8px; font-size: clamp(2.2rem, 5vw, 3.2rem); }
+.docs-hero .lead { font-size: 1.2rem; max-width: 40em; margin: 0 0 24px; }
+.home-intro { margin-top: 32px; max-width: 760px; }
+.partgrid { list-style: none; padding: 0; margin: 32px 0 64px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.partgrid a { display: block; height: 100%; padding: 18px 20px; border: 1px solid var(--line); border-radius: var(--radius, 14px); background: var(--surface); text-decoration: none; color: var(--text); }
+.partgrid a:hover { border-color: var(--accent); }
+.partgrid strong { display: block; font-size: 1.15rem; margin-bottom: 4px; }
+.partgrid span { color: var(--muted); font-size: .95rem; }
+
+@media (max-width: 900px) {
+  .wrap.docs { grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 16px; }
+  .side { position: static; max-height: none; overflow: visible; }
+  .toc > summary { display: block; cursor: pointer; font-weight: 650; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+  .toc[open] > summary { margin-bottom: 8px; }
+  .prevnext { grid-template-columns: minmax(0, 1fr); } .prevnext .next { grid-column: auto; }
+}

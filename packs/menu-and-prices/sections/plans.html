@@ -1,0 +1,45 @@
+{{/* section
+label: Plans
+about: Plans or packages side by side, each with a price, what it includes and a button.
+fields:
+  - { name: heading, type: text, default: Prices }
+  - { name: intro, type: markdown }
+  - name: items
+    type: list
+    label: Plans
+    fields:
+      - { name: name, type: text, required: true }
+      - { name: price, type: text, required: true, help: "$25, Free, From $90." }
+      - { name: period, type: text, help: "a month, a year, per visit." }
+      - { name: description, type: text }
+      - { name: features, type: textarea, help: What it includes, one per line. }
+      - { name: featured, type: bool, label: Mark as the one most people pick }
+      - name: button
+        type: group
+        fields:
+          - { name: text, type: text }
+          - { name: href, type: link, label: Goes to }
+  - { name: from, type: data, label: Plans from, help: A file in data/ that holds the plans. Leave empty to use the plans above. }
+  - { name: note, type: markdown, label: Below the plans }
+*/}}
+{{ $items := .Data.items }}{{ with .Data.from }}{{ $items = data . }}{{ end }}
+<link rel="stylesheet" href="{{ asset "packs/menu-and-prices/prices.css" }}">
+<section class="block plans">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    <ul class="plan-grid">
+      {{ range $items }}
+      <li class="plan{{ if .featured }} plan-featured{{ end }}">
+        {{ if .featured }}<span class="plan-badge">Most popular</span>{{ end }}
+        <h3>{{ .name }}</h3>
+        <p class="plan-price"><strong>{{ .price }}</strong>{{ with .period }} <span>{{ . }}</span>{{ end }}</p>
+        {{ with .description }}<p class="plan-desc">{{ . }}</p>{{ end }}
+        {{ with .features }}<ul class="plan-features">{{ range split "\n" . }}{{ with . }}<li>{{ . }}</li>{{ end }}{{ end }}</ul>{{ end }}
+        {{ with .button }}{{ if .href }}<a class="btn" href="{{ .href }}">{{ default "Choose" .text }}</a>{{ end }}{{ end }}
+      </li>
+      {{ end }}
+    </ul>
+    {{ with .Data.note }}<div class="pl-footnote">{{ markdownify . }}</div>{{ end }}
+  </div>
+</section>

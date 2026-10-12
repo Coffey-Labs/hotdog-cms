@@ -207,6 +207,15 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 			fi, err := os.Stat(staticPath(s.Dir, p))
 			return err == nil && !fi.IsDir()
 		},
+		// fileSize "/media/menu.pdf" -> "1.2 MB": how big a file in static/
+		// is, for a download link. "" if it isn't there.
+		"fileSize": func(p string) string {
+			fi, err := os.Stat(staticPath(s.Dir, p))
+			if err != nil || fi.IsDir() {
+				return ""
+			}
+			return humanSize(fi.Size())
+		},
 		// imageSize "/img/x.jpg" -> {w, h}, for og:image dimensions.
 		"imageSize": func(p string) (map[string]int, error) {
 			f, err := os.Open(staticPath(s.Dir, p))
@@ -252,6 +261,21 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 		m[k] = v
 	}
 	return m
+}
+
+// humanSize writes a byte count the way people read it: 820 bytes, 14 KB,
+// 1.2 MB.
+func humanSize(n int64) string {
+	switch {
+	case n < 1000:
+		return fmt.Sprintf("%d bytes", n)
+	case n < 1000*1000:
+		return fmt.Sprintf("%d KB", (n+500)/1000)
+	case n < 1000*1000*1000:
+		return strings.TrimSuffix(fmt.Sprintf("%.1f", float64(n)/1e6), ".0") + " MB"
+	default:
+		return strings.TrimSuffix(fmt.Sprintf("%.1f", float64(n)/1e9), ".0") + " GB"
+	}
 }
 
 // staticPath maps a site path like /img/x.jpg into the site's static folder,

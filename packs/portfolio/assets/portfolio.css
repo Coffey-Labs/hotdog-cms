@@ -1,0 +1,15 @@
+/* The portfolio pack. Colors come from the theme's variables. */
+.pf-grid { list-style: none; padding: 0; margin: 0 0 20px; display: grid; gap: 22px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.pf-card a { display: grid; gap: 10px; color: var(--text); text-decoration: none; }
+.pf-card a:hover strong { color: var(--accent); }
+.pf-card strong { font-size: 1.1rem; }
+.pf-card p { margin: 4px 0 0; color: var(--muted); }
+.pf-cover { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius); background: var(--accent-soft); display: block; }
+.pf-hero { width: 100%; max-height: 70vh; object-fit: cover; border-radius: var(--radius); margin: 8px 0 24px; }
+.pf-facts { display: grid; gap: 10px 32px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin: 0 0 28px; padding: 18px 20px; border: 1px solid var(--line); border-radius: var(--radius); }
+.pf-facts dt { color: var(--muted); font-size: .85rem; font-weight: 600; }
+.pf-facts dd { margin: 2px 0 0; }
+.pf-pictures { list-style: none; padding: 0; margin: 28px 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+.pf-pictures figure { margin: 0; } .pf-pictures img { width: 100%; border-radius: var(--radius); display: block; }
+.pf-pictures figcaption { color: var(--muted); font-size: .9rem; margin-top: 6px; }
+.pf-next { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-top: 32px; padding-top: 18px; border-top: 1px solid var(--line); }

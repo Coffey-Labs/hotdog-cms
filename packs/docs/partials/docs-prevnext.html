@@ -1,0 +1,10 @@
+{{/* Previous and next, through every page of the docs in reading order. */}}
+{{ $prev := "" }}{{ $next := "" }}{{ $found := false }}{{ $last := "" }}
+{{ range data "docs-nav" }}{{ $part := .part }}{{ range .pages }}{{ $path := printf "/docs/%s/%s/" $part . }}
+  {{ if $found }}{{ if not $next }}{{ $next = $path }}{{ end }}{{ else if eq $path $.Path }}{{ $found = true }}{{ $prev = $last }}{{ end }}
+  {{ $last = $path }}
+{{ end }}{{ end }}
+<nav class="prevnext" aria-label="Previous and next">
+  {{ with $prev }}{{ with pageAt . }}<a class="prev" href="{{ .Path }}"><span>Previous</span>{{ .Title }}</a>{{ end }}{{ else }}<span></span>{{ end }}
+  {{ with $next }}{{ with pageAt . }}<a class="next" href="{{ .Path }}"><span>Next</span>{{ .Title }}</a>{{ end }}{{ end }}
+</nav>

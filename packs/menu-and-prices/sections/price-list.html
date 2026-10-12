@@ -1,0 +1,46 @@
+{{/* section
+label: Price list
+about: A menu or a list of services, in groups, with prices.
+fields:
+  - { name: heading, type: text, default: Menu }
+  - { name: intro, type: markdown }
+  - name: groups
+    type: list
+    fields:
+      - { name: name, type: text, required: true, help: "A heading for the group: Bread, Coffee, Haircuts." }
+      - { name: note, type: text }
+      - name: items
+        type: list
+        fields:
+          - { name: name, type: text, required: true }
+          - { name: description, type: text }
+          - { name: price, type: text, help: "As you'd write it: $8, from €40, Ask us." }
+          - { name: tags, type: list, help: "Small labels: vegan, new, spicy." }
+  - { name: from, type: data, label: List from, help: A file in data/ that holds the groups. Leave empty to use the groups above. }
+  - { name: note, type: markdown, label: Below the list, help: Allergy information, taxes, what's included. }
+*/}}
+{{ $groups := .Data.groups }}{{ with .Data.from }}{{ $groups = data . }}{{ end }}
+<link rel="stylesheet" href="{{ asset "packs/menu-and-prices/prices.css" }}">
+<section class="block price-list">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    <div class="pl-groups">
+      {{ range $groups }}
+      <div class="pl-group">
+        <h3>{{ .name }}</h3>
+        {{ with .note }}<p class="pl-note">{{ . }}</p>{{ end }}
+        <ul class="pl-items">
+          {{ range .items }}
+          <li>
+            <div class="pl-line"><span class="pl-name">{{ .name }}</span><span class="pl-dots" aria-hidden="true"></span>{{ with .price }}<span class="pl-price">{{ . }}</span>{{ end }}</div>
+            {{ if or .description .tags }}<p class="pl-desc">{{ .description }}{{ range .tags }} <span class="pl-tag">{{ . }}</span>{{ end }}</p>{{ end }}
+          </li>
+          {{ end }}
+        </ul>
+      </div>
+      {{ end }}
+    </div>
+    {{ with .Data.note }}<div class="pl-footnote">{{ markdownify . }}</div>{{ end }}
+  </div>
+</section>

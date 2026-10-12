@@ -324,3 +324,11 @@ func TestSocialCards(t *testing.T) {
 		t.Error("the card's address didn't change with its title")
 	}
 }
+
+func TestHumanSize(t *testing.T) {
+	for n, want := range map[int64]string{0: "0 bytes", 999: "999 bytes", 1000: "1 KB", 14400: "14 KB", 999_499: "999 KB", 1_000_000: "1 MB", 1_250_000: "1.2 MB", 2_000_000_000: "2 GB"} {
+		if got := humanSize(n); got != want {
+			t.Errorf("humanSize(%d) = %q, want %q", n, got, want)
+		}
+	}
+}

@@ -1,0 +1,18 @@
+name: downloads
+version: 1.0.0
+title: Downloads
+description: A list of files to download, each with its type, size and a line about it.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Put the files in static/, such as static/files/menu.pdf, then add a
+  "Downloads" section to any page:
+
+    sections:
+      - downloads:
+          heading: Forms and menus
+          items:
+            - { title: Catering menu, file: /files/catering-menu.pdf, description: Updated every season. }
+
+  The type (PDF) and size are worked out from the file itself when the site
+  is built, so they're never out of date.

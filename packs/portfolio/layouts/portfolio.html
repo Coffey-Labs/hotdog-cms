@@ -1,0 +1,9 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/portfolio/portfolio.css" }}">
+<section class="wrap page portfolio">
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  <ul class="pf-grid">{{ range .Paginator.Items }}{{ template "project-card" . }}{{ end }}</ul>
+  {{ template "pagination" . }}
+</section>
+{{ end }}
