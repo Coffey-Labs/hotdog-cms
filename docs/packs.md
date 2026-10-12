@@ -29,10 +29,18 @@ Content-Security-Policy as the site's own.
 - `list` also names the packs that come with HotDog CMS:
   - **calendar**: events, an upcoming-events section and a feed people
     subscribe to (see [events.md](events.md));
+  - **docs**: a documentation section with a sidebar, part pages and
+    previous/next links, in the order `data/docs-nav.yaml` gives;
+  - **downloads**: files to download, with their type and size;
   - **faq**: questions that open to show their answers;
   - **gallery**: a grid of pictures that open full size, with no script;
   - **location-and-hours**: address, map link, phone, email and opening
     hours, from `data/location.yaml`, as a section or a partial;
+  - **menu-and-prices**: a price list in groups, and plans side by side;
+  - **portfolio**: projects with a cover, details and pictures, a list page
+    and a section;
+  - **share-links**: plain share links for Mastodon, Bluesky, LinkedIn and
+    email, with no tracking;
   - **team**: a page per person, a list of everyone and a section;
   - **testimonials**: quotes with a name and a role.
 - `-site` picks the site folder (default: the current one).

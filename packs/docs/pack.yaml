@@ -1,0 +1,30 @@
+name: docs
+version: 1.0.0
+title: Documentation
+description: A documentation section with a sidebar of parts and pages, a page for each part, and previous and next links, in the order you set.
+license: MIT
+author: Coffey Labs LLC
+collections:
+  docs:
+    layout: doc
+    list_layout: doc-index
+    sort: weight
+    search: true
+notes: |
+  Write pages as content/docs/<part>/<page>.md, give each part a title in
+  content/docs/<part>/_index.md, and the docs' front page in
+  content/docs/_index.md with layout: doc-home.
+
+  Then list the order in data/docs-nav.yaml:
+
+    - part: start
+      title: Start here
+      blurb: What it is and how it works.
+      pages: [what-it-is, how-it-works]
+    - part: install
+      title: Install
+      blurb: Getting it onto your computer.
+      pages: [linux, macos, windows]
+
+  That list draws the sidebar, each part's page and the previous and next
+  links. hotdogcms.org/docs is built with this pack.

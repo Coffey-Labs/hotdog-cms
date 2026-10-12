@@ -1,0 +1,35 @@
+name: menu-and-prices
+version: 1.0.0
+title: Menu and prices
+description: A price list in groups (a menu, a list of services) and plans side by side, on any page.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Two sections for any page.
+
+  "Price list": a menu or a list of services, in groups:
+
+    sections:
+      - price-list:
+          heading: Menu
+          groups:
+            - name: Bread
+              items:
+                - { name: Sourdough, description: Our own starter, price: $8 }
+                - { name: Rye, price: $7, tags: [vegan] }
+
+  "Plans": plans or packages side by side, with what each includes:
+
+    sections:
+      - plans:
+          heading: Prices
+          items:
+            - name: Small
+              price: $25
+              period: a month
+              features: |
+                One loaf a week
+                Pick up on Saturday
+              button: { text: Sign up, href: /contact/ }
+
+  Either can read its list from a file in data/ instead (from: menu).

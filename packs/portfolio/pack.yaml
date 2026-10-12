@@ -1,0 +1,30 @@
+name: portfolio
+version: 1.0.0
+title: Portfolio
+description: Your work, as projects with a cover picture, the details and more pictures, a page listing them all, and a section for any page.
+license: MIT
+author: Coffey Labs LLC
+collections:
+  work:
+    layout: project
+    list_layout: portfolio
+notes: |
+  Add each project as content/work/<name>.md:
+
+    ---
+    title: Garden room for the Lees
+    date: 2026-05-14
+    summary: A timber garden office, from sketch to the last coat of oil.
+    cover: /media/work/garden-room.jpg
+    cover_alt: The finished garden room at dusk, its lights on
+    client: The Lee family
+    services: Design, build
+    link: https://example.org/case-study
+    pictures:
+      - { image: /media/work/frame.jpg, alt: The timber frame going up }
+    ---
+    The story of the project, in Markdown.
+
+  /work/ lists every project, newest first, and the "Portfolio" section shows
+  the latest on any page. Give content/work/_index.md a title, such as
+  "Our work", to name that page.

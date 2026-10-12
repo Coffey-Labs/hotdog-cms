@@ -1,0 +1,36 @@
+{{/* section
+label: Downloads
+about: Files to download, each with its type and size.
+fields:
+  - { name: heading, type: text, default: Downloads }
+  - { name: intro, type: markdown }
+  - name: items
+    type: list
+    label: Files
+    fields:
+      - { name: title, type: text, required: true }
+      - { name: file, type: link, required: true, help: "A file in static/, such as /files/menu.pdf." }
+      - { name: description, type: text }
+      - { name: updated, type: text, help: "When it last changed, as you'd write it: March 2026." }
+  - { name: from, type: data, label: Files from, help: A file in data/ that holds the list. Leave empty to use the files above. }
+*/}}
+{{ $items := .Data.items }}{{ with .Data.from }}{{ $items = data . }}{{ end }}
+<link rel="stylesheet" href="{{ asset "packs/downloads/downloads.css" }}">
+<section class="block downloads">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    <ul class="dl-list">
+      {{ range $items }}{{ $parts := split "." .file }}{{ $ext := upper (index $parts (add (len $parts) -1)) }}{{ $size := fileSize .file }}
+      <li class="dl-item">
+        <span class="dl-type" aria-hidden="true">{{ $ext }}</span>
+        <div class="dl-text">
+          <a class="dl-title" href="{{ .file }}" download>{{ .title }}</a>
+          <p class="dl-meta">{{ $ext }}{{ with $size }} · {{ . }}{{ end }}{{ with .updated }} · {{ . }}{{ end }}</p>
+          {{ with .description }}<p class="dl-desc">{{ . }}</p>{{ end }}
+        </div>
+      </li>
+      {{ end }}
+    </ul>
+  </div>
+</section>

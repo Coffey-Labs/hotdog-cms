@@ -1,0 +1,19 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/docs/docs.css" }}">
+<section class="docs-hero">
+  <div class="wrap">
+    <h1>{{ .Title }}</h1>
+    {{ with .Summary }}<p class="lead">{{ . }}</p>{{ end }}
+  </div>
+</section>
+<div class="wrap">
+  {{ with .Content }}<div class="prose home-intro">{{ . }}</div>{{ end }}
+  <ol class="partgrid">
+    {{ range data "docs-nav" }}{{ $part := .part }}
+    <li>
+      <a href="/docs/{{ $part }}/"><strong>{{ .title }}</strong><span>{{ .blurb }}</span></a>
+    </li>
+    {{ end }}
+  </ol>
+</div>
+{{ end }}

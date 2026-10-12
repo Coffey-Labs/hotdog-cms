@@ -1,0 +1,24 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/portfolio/portfolio.css" }}">
+<article class="wrap page project">
+  {{ with index .Site.Lists .Collection }}<p class="eyebrow"><a href="{{ .Path }}">{{ .Title }}</a></p>{{ end }}
+  <h1>{{ .Title }}</h1>
+  {{ with .Summary }}<p class="lede">{{ . }}</p>{{ end }}
+  {{ with .Params.cover }}<img class="pf-hero" src="{{ . }}" alt="{{ $.Params.cover_alt }}">{{ end }}
+  {{ if or .Params.client .Params.services .Params.link (not .Date.IsZero) }}
+  <dl class="pf-facts">
+    {{ with .Params.client }}<div><dt>Client</dt><dd>{{ . }}</dd></div>{{ end }}
+    {{ with .Params.services }}<div><dt>What we did</dt><dd>{{ . }}</dd></div>{{ end }}
+    {{ if not .Date.IsZero }}<div><dt>When</dt><dd><time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "January 2006" }}</time></dd></div>{{ end }}
+    {{ with .Params.link }}<div><dt>See it</dt><dd><a href="{{ . }}">{{ hostOf . }}</a></dd></div>{{ end }}
+  </dl>
+  {{ end }}
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  {{ with .Params.pictures }}
+  <ul class="pf-pictures">
+    {{ range . }}<li><figure><img src="{{ .image }}" alt="{{ .alt }}" loading="lazy">{{ with .caption }}<figcaption>{{ . }}</figcaption>{{ end }}</figure></li>{{ end }}
+  </ul>
+  {{ end }}
+  <nav class="pf-next">{{ with .Prev }}<a href="{{ .Href }}">Newer: {{ .Title }}</a>{{ end }}{{ with .Next }}<a href="{{ .Href }}">Older: {{ .Title }}</a>{{ end }}</nav>
+</article>
+{{ end }}

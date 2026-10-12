@@ -1,0 +1,12 @@
+{{/* section
+label: Share links
+about: Links to share this page on Mastodon, Bluesky, LinkedIn or by email.
+fields:
+  - { name: heading, type: text, help: Optional, such as "Tell a friend". }
+*/}}
+<section class="block share-block">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ template "share-links" .Page }}
+  </div>
+</section>

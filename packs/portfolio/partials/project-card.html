@@ -1,0 +1,8 @@
+{{/* One project in a grid: its cover, title and summary. */}}
+<li class="pf-card">
+  <a href="{{ .Href }}">
+    {{ with .Params.cover }}<img class="pf-cover" src="{{ . }}" alt="{{ $.Params.cover_alt }}" loading="lazy">{{ else }}<span class="pf-cover pf-none" aria-hidden="true"></span>{{ end }}
+    <strong>{{ .Title }}</strong>
+  </a>
+  {{ with .Summary }}<p>{{ . }}</p>{{ end }}
+</li>

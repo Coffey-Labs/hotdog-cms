@@ -1,0 +1,11 @@
+{{/* Links to share the page: Mastodon, Bluesky, LinkedIn, email. Pass the page. */}}
+{{ $url := .Permalink }}{{ $text := printf "%s %s" .Title $url }}
+{{ $m := "mastodon.social" }}{{ with .Site.Config.Params }}{{ with index . "share_mastodon" }}{{ $m = . }}{{ end }}{{ end }}
+<link rel="stylesheet" href="{{ asset "packs/share-links/share.css" }}">
+<nav class="share" aria-label="Share this page">
+  <span class="share-label">Share</span>
+  <a href="https://{{ $m }}/share?text={{ urlquery $text }}">Mastodon</a>
+  <a href="https://bsky.app/intent/compose?text={{ urlquery $text }}">Bluesky</a>
+  <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ urlquery $url }}">LinkedIn</a>
+  <a href="mailto:?subject={{ urlquery .Title }}&amp;body={{ urlquery $url }}">Email</a>
+</nav>

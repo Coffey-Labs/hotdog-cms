@@ -1,0 +1,18 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/docs/docs.css" }}">
+<div class="wrap docs">
+  {{ template "docs-sidebar" . }}
+  <article class="doc">
+    {{ range data "docs-nav" }}{{ if eq (printf "/docs/%s/" .part) $.Path }}{{ $part := .part }}
+    <h1>{{ .title }}</h1>
+    <p class="lead">{{ .blurb }}</p>
+    {{ with $.Content }}<div class="prose">{{ . }}</div>{{ end }}
+    <ol class="pagelist">
+      {{ range .pages }}{{ with pageAt (printf "/docs/%s/%s/" $part .) }}
+      <li><a href="{{ .Path }}">{{ .Title }}</a>{{ with .Summary }}<p>{{ . }}</p>{{ end }}</li>
+      {{ end }}{{ end }}
+    </ol>
+    {{ end }}{{ end }}
+  </article>
+</div>
+{{ end }}

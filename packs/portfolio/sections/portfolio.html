@@ -1,0 +1,19 @@
+{{/* section
+label: Portfolio
+about: The latest projects, with their cover pictures.
+fields:
+  - { name: heading, type: text, default: Our work }
+  - { name: intro, type: markdown }
+  - { name: collection, type: collection, default: work, label: Projects from }
+  - { name: count, type: number, default: 6, label: How many }
+*/}}
+{{ $c := default "work" .Data.collection }}
+<link rel="stylesheet" href="{{ asset "packs/portfolio/portfolio.css" }}">
+<section class="block portfolio">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    <ul class="pf-grid">{{ range limit (default 6 .Data.count) (collection $c) }}{{ template "project-card" . }}{{ end }}</ul>
+    <p><a class="more" href="/{{ $c }}/">All our work</a></p>
+  </div>
+</section>

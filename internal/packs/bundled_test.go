@@ -72,6 +72,46 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 		}, map[string][]string{
 			"shop/index.html": {`id="gallery-0-1"`, `href="#gallery-0-1"`, `id="gallery-1-0"`, "gal-cols-2", "2 of 2", "Fresh at 7am.", `alt="The ovens"`},
 		}},
+		{"menu-and-prices", []page{
+			{"content/menu.md", "---\ntitle: Menu\nsummary: What we bake.\nsections:\n  - price-list:\n      groups:\n        - name: Bread\n          items:\n            - { name: Sourdough, description: Our own starter, price: $8 }\n            - { name: Rye, price: $7, tags: [vegan] }\n      note: Ask us about allergies.\n  - plans:\n      items:\n        - name: Small\n          price: $25\n          period: a month\n          features: \"One loaf a week\\nPick up on Saturday\"\n          button: { text: Sign up, href: /contact/ }\n        - { name: Large, price: $45, featured: true }\n---\n"},
+		}, map[string][]string{
+			"menu/index.html": {"Sourdough", "$8", `class="pl-tag">vegan`, "Ask us about allergies.", "<li>One loaf a week</li>", "<li>Pick up on Saturday</li>", "plan-featured", "Most popular", `href="/contact/">Sign up`},
+		}},
+		{"downloads", []page{
+			{"static/files/menu.pdf", strings.Repeat("x", 14400)},
+			{"content/files.md", "---\ntitle: Files\nsummary: Menus and forms.\nsections:\n  - downloads:\n      items:\n        - { title: Catering menu, file: /files/menu.pdf, description: Every season., updated: March 2026 }\n---\n"},
+		}, map[string][]string{
+			"files/index.html": {`href="/files/menu.pdf" download`, "PDF · 14 KB · March 2026", "Every season."},
+		}},
+		{"portfolio", []page{
+			{"content/work/_index.md", "---\ntitle: Our work\nsummary: Projects.\n---\n"},
+			{"content/work/garden-room.md", "---\ntitle: Garden room\ndate: 2026-05-14\nsummary: A timber garden office.\ncover: /media/a.png\ncover_alt: The garden room at dusk\nclient: The Lee family\nservices: Design, build\nlink: https://studio.example/case\npictures:\n  - { image: /media/b.png, alt: The frame going up, caption: Week two. }\n---\nHow it went.\n"},
+			{"content/index.md", "---\ntitle: Home\nsummary: Builders.\nlayout: landing\nsections:\n  - portfolio: { count: 3 }\n---\n"},
+		}, map[string][]string{
+			"work/index.html":             {"Our work", `href="/work/garden-room/"`, `alt="The garden room at dusk"`},
+			"work/garden-room/index.html": {"The Lee family", "Design, build", "May 2026", ">studio.example<", "Week two.", `alt="The frame going up"`},
+			"index.html":                  {`href="/work/garden-room/"`, "All our work"},
+		}},
+		{"share-links", []page{
+			{"content/news.md", "---\ntitle: Big news\nsummary: News.\nsections:\n  - share: { heading: Tell a friend }\n---\n"},
+			{"data/x.yaml", "a: 1\n"},
+		}, map[string][]string{
+			"news/index.html": {"Tell a friend", "https://mastodon.social/share?text=Big&#43;news&#43;https%3A%2F%2Fexample.org%2Fnews%2F", "https://bsky.app/intent/compose?text=", "linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fexample.org%2Fnews%2F", "mailto:?subject=Big&#43;news"},
+		}},
+		{"docs", []page{
+			{"data/docs-nav.yaml", "- part: start\n  title: Start here\n  blurb: The basics.\n  pages: [one, two]\n- part: more\n  title: More\n  blurb: The rest.\n  pages: [three]\n"},
+			{"content/docs/_index.md", "---\ntitle: Documentation\nsummary: All of it.\nlayout: doc-home\n---\n"},
+			{"content/docs/start/_index.md", "---\ntitle: Start here\nsummary: The basics.\n---\n"},
+			{"content/docs/start/one.md", "---\ntitle: Page one\nsummary: First.\nweight: 1\n---\nOne.\n"},
+			{"content/docs/start/two.md", "---\ntitle: Page two\nsummary: Second.\nweight: 2\n---\nTwo.\n"},
+			{"content/docs/more/_index.md", "---\ntitle: More\nsummary: The rest.\n---\n"},
+			{"content/docs/more/three.md", "---\ntitle: Page three\nsummary: Third.\n---\nThree.\n"},
+		}, map[string][]string{
+			"docs/index.html":           {`class="partgrid"`, `href="/docs/start/"`, "The basics."},
+			"docs/start/index.html":     {`class="pagelist"`, `href="/docs/start/one/"`, "First."},
+			"docs/start/two/index.html": {`<span>Previous</span>Page one`, `<span>Next</span>Page three`, `aria-current="page">Page two`},
+			"docs/search.json":          {`"/docs/start/one/"`},
+		}},
 	}
 	for _, c := range cases {
 		t.Run(c.pack, func(t *testing.T) {

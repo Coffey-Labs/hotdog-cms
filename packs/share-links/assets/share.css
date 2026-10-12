@@ -1,0 +1,5 @@
+/* The share links pack. Colors come from the theme's variables. */
+.share { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 28px 0; }
+.share-label { font-weight: 650; margin-right: 4px; }
+.share a { display: inline-block; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); text-decoration: none; font-size: .92rem; }
+.share a:hover { border-color: var(--accent); color: var(--accent); }

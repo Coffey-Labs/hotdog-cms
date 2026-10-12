@@ -5,5 +5,5 @@ package packs
 
 import "embed"
 
-//go:embed all:calendar all:faq all:gallery all:location-and-hours all:team all:testimonials
+//go:embed all:calendar all:docs all:downloads all:faq all:gallery all:location-and-hours all:menu-and-prices all:portfolio all:share-links all:team all:testimonials
 var FS embed.FS

@@ -1,0 +1,24 @@
+/* The menu and prices pack. Colors come from the theme's variables. */
+.pl-groups { display: grid; gap: 28px 48px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.pl-group h3 { margin: 0 0 4px; }
+.pl-note { margin: 0 0 10px; color: var(--muted); }
+.pl-items { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; }
+.pl-line { display: flex; align-items: baseline; gap: 8px; }
+.pl-name { font-weight: 650; }
+.pl-dots { flex: 1; border-bottom: 1px dotted var(--line); transform: translateY(-4px); min-width: 20px; }
+.pl-price { font-weight: 650; white-space: nowrap; }
+.pl-desc { margin: 2px 0 0; color: var(--muted); font-size: .95rem; }
+.pl-tag { display: inline-block; font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--text); }
+.pl-footnote { margin-top: 24px; color: var(--muted); font-size: .95rem; }
+.plan-grid { list-style: none; padding: 0; margin: 0; display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); align-items: stretch; }
+.plan { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 26px 24px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.plan h3 { margin: 0; }
+.plan-featured { border: 2px solid var(--accent); }
+.plan-badge { position: absolute; top: -12px; left: 20px; padding: 2px 10px; border-radius: 999px; background: var(--accent); color: var(--accent-text); font-size: .78rem; font-weight: 700; }
+.plan-price { margin: 0; } .plan-price strong { font-size: 1.8rem; } .plan-price span { color: var(--muted); }
+.plan-desc { margin: 0; color: var(--muted); }
+.plan-features { list-style: none; padding: 0; margin: 4px 0 8px; display: grid; gap: 6px; }
+.plan-features li { padding-left: 22px; position: relative; }
+.plan-features li::before { content: "\2713"; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+.plan .btn { margin-top: auto; text-align: center; }
+.plan-featured .btn { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
