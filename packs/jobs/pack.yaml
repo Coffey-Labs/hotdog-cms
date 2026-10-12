@@ -1,0 +1,29 @@
+name: jobs
+version: 1.0.0
+title: Jobs
+description: Job openings with where, what kind and when applications close; closed ones drop off by themselves, and search engines can list the open ones.
+license: MIT
+author: Coffey Labs LLC
+collections:
+  jobs:
+    layout: job
+    list_layout: job-list
+notes: |
+  Add each opening as content/jobs/<name>.md:
+
+    ---
+    title: Morning baker
+    date: 2026-10-10
+    summary: Bake bread from 4am, four days a week.
+    location: Springfield, IL
+    employment: Part-time
+    pay: $19 to $23 an hour
+    closes: 2026-11-15
+    apply: mailto:jobs@example.org
+    ---
+    What the job is, who you're looking for, and how to apply.
+
+  After its closes date (at the end of that day, in the site's timezone),
+  an opening leaves the list and its page says it's closed, from the next
+  build. location: Remote marks a remote job. employment is Full-time,
+  Part-time, Contract, Temporary, Internship or Volunteer.

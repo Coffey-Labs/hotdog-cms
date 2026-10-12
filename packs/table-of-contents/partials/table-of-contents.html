@@ -1,0 +1,11 @@
+{{/* The page's headings, linked, when it has three or more. Pass the page. */}}
+{{ $h := headings .Content }}
+{{ if and (ge (len $h) 3) (ne (printf "%v" .Params.toc) "false") }}
+<link rel="stylesheet" href="{{ asset "packs/table-of-contents/toc.css" }}">
+<details class="toc-box" open>
+  <summary>On this page</summary>
+  <ol class="toc-list">
+    {{ range $h }}<li class="toc-l{{ .Level }}"><a href="#{{ .ID }}">{{ .Text }}</a></li>{{ end }}
+  </ol>
+</details>
+{{ end }}

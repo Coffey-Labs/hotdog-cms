@@ -1,0 +1,17 @@
+{{/* section
+label: Recipes
+about: The latest recipes, with their photos.
+fields:
+  - { name: heading, type: text, default: Recipes }
+  - { name: collection, type: collection, default: recipes, label: Recipes from }
+  - { name: count, type: number, default: 3, label: How many }
+*/}}
+{{ $c := default "recipes" .Data.collection }}
+<link rel="stylesheet" href="{{ asset "packs/recipes/recipes.css" }}">
+<section class="block recipes">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    <ul class="rc-grid">{{ range limit (default 3 .Data.count) (collection $c) }}{{ template "recipe-card" . }}{{ end }}</ul>
+    <p><a class="more" href="/{{ $c }}/">Every recipe</a></p>
+  </div>
+</section>

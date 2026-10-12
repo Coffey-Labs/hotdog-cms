@@ -1,0 +1,14 @@
+name: related-posts
+version: 1.0.0
+title: Related posts
+description: At the end of an article, the articles that share the most tags with it.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Add this line to layouts/article.html, after {{ .Content }}:
+
+    {{ template "related-posts" . }}
+
+  It lists up to three articles from the same collection that share the most
+  tags with the one being read, newest first among equals. An article whose
+  tags no other article shares shows nothing, rather than something random.

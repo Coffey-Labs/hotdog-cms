@@ -1,0 +1,7 @@
+/* The related posts pack. Colors come from the theme's variables. */
+.related { margin: 40px 0 0; padding-top: 24px; border-top: 1px solid var(--line); }
+.related h2 { margin: 0 0 14px; font-size: 1.25rem; }
+.related-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.related-list li { padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.related-list a { font-weight: 650; }
+.related-list p { margin: 6px 0 0; color: var(--muted); font-size: .92rem; }

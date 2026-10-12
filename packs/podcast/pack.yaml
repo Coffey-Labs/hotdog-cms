@@ -1,0 +1,31 @@
+name: podcast
+version: 1.0.0
+title: Podcast
+description: Episodes with a player on each page, a page listing them, and the feed podcast apps subscribe to.
+license: MIT
+author: Coffey Labs LLC
+collections:
+  episodes:
+    layout: episode
+    list_layout: episode-list
+    feed: true
+    feed_format: podcast
+notes: |
+  Name the show in site.yaml, under collections: episodes: (feed_title,
+  feed_description, feed_image: a square picture of 1400 to 3000 pixels in
+  static/, podcast_category such as Arts or Business, podcast_email).
+
+  Put each episode's audio in static/, and add it as content/episodes/<name>.md:
+
+    ---
+    title: "1: Why we bake at 4am"
+    date: 2026-10-01
+    summary: Sam on starters, ovens and early mornings.
+    audio: /media/episodes/001.mp3
+    duration: "34:12"
+    episode: 1
+    ---
+    Show notes, in Markdown. A transcript helps people who can't listen.
+
+  /episodes/ lists them with a player, and /episodes/feed.xml is the feed to
+  give Apple Podcasts, Spotify and the rest.

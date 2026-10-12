@@ -34,16 +34,37 @@ Content-Security-Policy as the site's own.
   - **downloads**: files to download, with their type and size;
   - **faq**: questions that open to show their answers;
   - **gallery**: a grid of pictures that open full size, with no script;
+  - **jobs**: openings with closing dates; closed ones leave the list by
+    themselves;
   - **location-and-hours**: address, map link, phone, email and opening
     hours, from `data/location.yaml`, as a section or a partial;
   - **menu-and-prices**: a price list in groups, and plans side by side;
+  - **payment-links**: buy, book and donate buttons that open your payment
+    provider's own checkout (Stripe, PayPal, Square, Ko-fi, Liberapay…);
+  - **podcast**: episodes with a player, and the feed podcast apps
+    subscribe to (`feed_format: podcast`);
   - **portfolio**: projects with a cover, details and pictures, a list page
     and a section;
+  - **recipes**: ingredients, steps, times and servings;
+  - **related-posts**: at the end of an article, the ones sharing the most
+    tags with it;
   - **share-links**: plain share links for Mastodon, Bluesky, LinkedIn and
     email, with no tracking;
+  - **table-of-contents**: a long page's headings, linked, at its top;
   - **team**: a page per person, a list of everyone and a section;
   - **testimonials**: quotes with a name and a role.
 - `-site` picks the site folder (default: the current one).
+
+**Search engines.** The faq, location-and-hours, team, recipes and jobs packs
+are also written as schema.org data (FAQPage, LocalBusiness, Person, Recipe,
+JobPosting), which search engines use for richer results. A pack can't carry
+the `<script type="application/ld+json">` that holds it, so HotDog CMS
+builds it (`pageData` in templates) and the starter's `partials/schema.html`
+writes it. Sites started before HotDog CMS 0.2 can add the same two lines to
+theirs:
+
+    {{ range pageData . }}<script type="application/ld+json">{{ . }}</script>
+    {{ end }}
 
 ```yaml
 # site.yaml, written by hotdog-cms pack

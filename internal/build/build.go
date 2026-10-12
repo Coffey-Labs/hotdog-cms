@@ -168,8 +168,11 @@ func Run(opt Options) (*Result, error) {
 			continue
 		}
 		write := writeFeed
-		if cc.FeedFormat == "rss" {
+		switch cc.FeedFormat {
+		case "rss":
 			write = writeRSS
+		case "podcast":
+			write = writePodcast
 		}
 		p, err := write(s, name, cc, work)
 		if err != nil {

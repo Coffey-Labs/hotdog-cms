@@ -1,0 +1,29 @@
+name: payment-links
+version: 1.0.0
+title: Payment links
+description: Buy, book and donate buttons that open your payment provider's own checkout (Stripe, PayPal, Square, Ko-fi, Liberapay and others). No card details on your site, no script.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Make a payment link in your provider's dashboard (Stripe: Payment Links;
+  PayPal: a PayPal.me link or a hosted button's link; Square: a checkout
+  link), then add a "Buy buttons" section to any page:
+
+    sections:
+      - buy:
+          heading: Gift cards
+          items:
+            - name: $25 gift card
+              price: $25
+              description: Sent by email, good for a year.
+              image: /media/shop/gift-card.jpg
+              image_alt: A gift card with the bakery's name
+              link: https://buy.stripe.com/your-link
+              button: Buy
+
+  or a single "Donate" section with your donation page's address.
+
+  People pay on the provider's own page, so card details never touch your
+  site. Your provider handles receipts and refunds. Add the provider to your
+  privacy notice (privacy: extra: in site.yaml), since buyers' details go to
+  them.

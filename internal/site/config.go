@@ -118,9 +118,16 @@ type CollectionConfig struct {
 	Feed     bool   `yaml:"feed"`      // write an Atom feed
 	FeedPath string `yaml:"feed_path"` // where; default /<collection>/feed.xml
 	FeedSize int    `yaml:"feed_size"` // entries in the feed; default 20
-	// FeedFormat is atom (the default) or rss.
+	// FeedFormat is atom (the default), rss, or podcast: RSS with the
+	// iTunes fields podcast apps read, an enclosure per episode's audio.
 	FeedFormat string `yaml:"feed_format"`
-	FeedTitle  string `yaml:"feed_title"`
+	// For feed_format: podcast. The category is one of Apple's (Arts,
+	// Business, Comedy, Education, ...); email is where directories write to
+	// the show's owner; explicit marks the whole show as explicit.
+	PodcastCategory string `yaml:"podcast_category"`
+	PodcastEmail    string `yaml:"podcast_email"`
+	PodcastExplicit bool   `yaml:"podcast_explicit"`
+	FeedTitle       string `yaml:"feed_title"`
 	// FeedImage is the channel's logo in an RSS feed, a path in static/.
 	FeedImage       string `yaml:"feed_image"`
 	FeedDescription string `yaml:"feed_description"`
@@ -246,9 +253,9 @@ func LoadConfig(dir string) (*Config, error) {
 			return nil, fmt.Errorf("site.yaml: collection %s: feed_path %q should be a path on the site, like /%s/feed.xml", name, cc.FeedPath, name)
 		}
 		switch cc.FeedFormat {
-		case "", "atom", "rss":
+		case "", "atom", "rss", "podcast":
 		default:
-			return nil, fmt.Errorf("site.yaml: collection %s: feed_format %q is not atom or rss", name, cc.FeedFormat)
+			return nil, fmt.Errorf("site.yaml: collection %s: feed_format %q is not atom, rss or podcast", name, cc.FeedFormat)
 		}
 	}
 	switch c.Markdown.ExternalLinks {

@@ -7,3 +7,7 @@
 {{ else if and (eq .Kind "page") .Collection (not .Date.IsZero) }}
 <script type="application/ld+json">{{ dict "@context" "https://schema.org" "@type" "BlogPosting" "headline" .Title "url" .Permalink "datePublished" (date "rfc3339" .Date) "dateModified" (date "rfc3339" .Lastmod) "description" .Summary "author" (dict "@type" "Person" "name" .Site.Config.Author) }}</script>
 {{ end }}
+{{/* What packs put on the page: an FAQ, a business's details, a person, a
+     recipe, a job opening. */}}
+{{ range pageData . }}<script type="application/ld+json">{{ . }}</script>
+{{ end }}

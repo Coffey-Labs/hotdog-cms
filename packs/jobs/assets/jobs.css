@@ -1,0 +1,11 @@
+/* The jobs pack. Colors come from the theme's variables. */
+.job-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; max-width: 760px; }
+.job-row { padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.job-title { font-weight: 650; font-size: 1.1rem; }
+.job-meta { margin: 4px 0 0; color: var(--muted); font-size: .92rem; }
+.job-summary { margin: 8px 0 0; }
+.job-none { color: var(--muted); }
+.job-closed { padding: 12px 16px; border-radius: var(--radius); background: var(--accent-soft); font-weight: 600; }
+.job-facts { display: flex; flex-wrap: wrap; gap: 12px 32px; margin: 0 0 24px; padding: 14px 18px; border: 1px solid var(--line); border-radius: var(--radius); }
+.job-facts dt { color: var(--muted); font-size: .82rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.job-facts dd { margin: 2px 0 0; font-weight: 600; }

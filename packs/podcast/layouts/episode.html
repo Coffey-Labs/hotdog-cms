@@ -1,0 +1,11 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/podcast/podcast.css" }}">
+<article class="wrap page episode">
+  {{ with index .Site.Lists .Collection }}<p class="eyebrow"><a href="{{ .Path }}">{{ .Title }}</a></p>{{ end }}
+  <h1>{{ .Title }}</h1>
+  {{ if not .Date.IsZero }}<p class="ep-date"><time datetime="{{ .Date.Format "2006-01-02" }}">{{ .Date.Format "January 2, 2006" }}</time></p>{{ end }}
+  {{ with .Summary }}<p class="lede">{{ . }}</p>{{ end }}
+  {{ template "episode-player" . }}
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+</article>
+{{ end }}

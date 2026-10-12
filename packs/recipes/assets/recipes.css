@@ -1,0 +1,15 @@
+/* The recipes pack. Colors come from the theme's variables. */
+.rc-grid { list-style: none; padding: 0; margin: 0 0 20px; display: grid; gap: 20px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.rc-card a { display: grid; gap: 10px; color: var(--text); text-decoration: none; }
+.rc-card a:hover strong { color: var(--accent); }
+.rc-photo { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius); background: var(--accent-soft); display: block; }
+.rc-time { color: var(--muted); font-size: .9rem; }
+.rc-hero { width: 100%; max-height: 60vh; object-fit: cover; border-radius: var(--radius); margin: 8px 0 20px; }
+.rc-facts { display: flex; flex-wrap: wrap; gap: 12px 32px; margin: 0 0 28px; padding: 14px 18px; border: 1px solid var(--line); border-radius: var(--radius); }
+.rc-facts dt { color: var(--muted); font-size: .82rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.rc-facts dd { margin: 2px 0 0; font-weight: 650; }
+.rc-body { display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); margin-bottom: 28px; }
+@media (max-width: 720px) { .rc-body { grid-template-columns: minmax(0, 1fr); } }
+.rc-body h2 { margin-top: 0; }
+.rc-ingredients ul { padding-left: 20px; } .rc-ingredients li { margin: 6px 0; }
+.rc-steps ol { padding-left: 22px; } .rc-steps li { margin: 10px 0; padding-left: 4px; }

@@ -1,0 +1,7 @@
+{{/* The browser's own player for an episode's audio, with a download link. */}}
+{{ with .Params.audio }}
+<div class="ep-player">
+  <audio controls preload="none" src="{{ . }}"></audio>
+  <p class="ep-meta">{{ with $.Params.duration }}{{ . }} · {{ end }}<a href="{{ . }}" download>Download</a>{{ with fileSize . }} ({{ . }}){{ end }}</p>
+</div>
+{{ end }}

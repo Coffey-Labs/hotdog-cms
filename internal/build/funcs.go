@@ -192,6 +192,10 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 		"emailOffEnd": func() template.HTML { return "<!--/email_off-->" },
 		// formatDate "January 2006" "2025-03-04": a date written as text.
 		"formatDate": func(layout string, v any) (string, error) {
+			// YAML reads a bare date (closes: 2026-11-15) as a time already.
+			if t, ok := v.(time.Time); ok {
+				return t.Format(layout), nil
+			}
 			str := strings.TrimSpace(fmt.Sprint(v))
 			if str == "" || v == nil {
 				return "", nil
@@ -253,6 +257,16 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 		},
 		"print":   func(args ...any) (string, error) { return limitString(fmt.Sprint(args...)) },
 		"println": func(args ...any) (string, error) { return limitString(fmt.Sprintln(args...)) },
+		// pageData: schema.org objects for what packs put on the page (an
+		// FAQ, a business, a person, a recipe, a job), for search engines.
+		"pageData": func(p *site.Page) []map[string]any { return pageData(s, p) },
+		// closed "2026-11-01": whether that day is over, in the site's time
+		// zone, when the site is built (a job's closing date, say).
+		"closed": func(v any) bool { return closed(s, v) },
+		// related . 3: pages in the same collection sharing the most tags.
+		"related": func(p *site.Page, n int) []*site.Page { return related(s, p, n) },
+		// headings .Content: the h2 and h3 headings, for a table of contents.
+		"headings": headings,
 		"sectionContext": func(p *site.Page, sec site.Section, i int) SectionContext {
 			return SectionContext{Type: sec.Type, Data: sec.Data, Page: p, Site: s, Index: i}
 		},

@@ -1,0 +1,11 @@
+/* The podcast pack. Colors come from the theme's variables. */
+.ep-list { list-style: none; padding: 0; margin: 0 0 20px; display: grid; gap: 16px; max-width: 760px; }
+.ep-item { padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.ep-title { font-weight: 650; font-size: 1.1rem; }
+.ep-item p { margin: 6px 0 0; color: var(--muted); }
+.ep-player { margin: 14px 0 22px; max-width: 760px; }
+.ep-player audio { width: 100%; }
+.ep-meta { margin: 6px 0 0; color: var(--muted); font-size: .9rem; }
+.ep-date { color: var(--muted); margin: 0 0 8px; }
+.ep-subscribe { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 24px; }
+.ep-subscribe span { color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
