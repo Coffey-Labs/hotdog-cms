@@ -31,6 +31,11 @@ func policy(pages []*page) string {
 		}
 		return scheme + "://" + strings.ToLower(u.Host)
 	}
+	// A reference to the site's own files: a path, with no scheme or host.
+	own := func(ref string) bool {
+		u, err := url.Parse(ref)
+		return err == nil && ref != "" && u.Scheme == "" && u.Host == ""
+	}
 	for _, pg := range pages {
 		if pg.redirect {
 			continue
@@ -55,6 +60,19 @@ func policy(pages []*page) string {
 		for _, s := range pg.frames {
 			if o := origin(s); o != "" {
 				add("frame-src", o)
+			} else if own(s) {
+				add("frame-src", "'self'")
+			}
+		}
+		// <object> and <embed> are object-src, and Chrome also checks the
+		// document they open (an SVG drawing, say) against frame-src.
+		for _, s := range pg.objects {
+			if o := origin(s); o != "" {
+				add("object-src", o)
+				add("frame-src", o)
+			} else if own(s) {
+				add("object-src", "'self'")
+				add("frame-src", "'self'")
 			}
 		}
 		// A counter the consent script loads (only after consent): its own
@@ -92,7 +110,12 @@ func policy(pages []*page) string {
 	} else {
 		parts = append(parts, "frame-src 'none'")
 	}
-	parts = append(parts, "object-src 'none'", "base-uri 'self'", "form-action 'self'", "frame-ancestors 'self'")
+	if len(sets["object-src"]) > 0 {
+		parts = append(parts, list("object-src"))
+	} else {
+		parts = append(parts, "object-src 'none'")
+	}
+	parts = append(parts, "base-uri 'self'", "form-action 'self'", "frame-ancestors 'self'")
 	return strings.Join(parts, "; ")
 }
 

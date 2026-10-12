@@ -65,7 +65,18 @@ const nginxConf = `server {
     # hotdog-cms's own bookkeeping (.hotdog-cms-build, -redirects, -pages):
     # not for visitors.
     location ~ "^/\.hotdog-cms-" { return 404; }
-{{REDIRECTS}}    error_page 404 /404.html;
+{{REDIRECTS}}    # A "page not found" is never stored, by a browser or by a CDN in front.
+    # During a rollout, a page from an updated server can ask a server still on
+    # the old build for a file it doesn't have yet; a stored 404 would keep
+    # that file missing for the visitor long after every server is current.
+    error_page 404 /404.html;
+    location = /404.html {
+        internal;
+        add_header Cache-Control "no-store" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+    }
 }
 `
 
@@ -91,7 +102,20 @@ const caddyFile = `:8080 {
 	header @ics Content-Type "text/calendar; charset=utf-8"
 	respond /.hotdog-cms-* 404
 {{REDIRECTS}}	file_server
+	# Errors are never stored, by a browser or by a CDN in front: this replaces
+	# the year-long header a missing hashed file would otherwise carry. During
+	# a rollout, a page from an updated server can ask a server still on the
+	# old build for a file it doesn't have yet.
+	# The error response doesn't pass through the header block above, so it
+	# carries the same headers itself.
 	handle_errors {
+		header {
+			Cache-Control "no-store"
+			X-Content-Type-Options nosniff
+			Referrer-Policy strict-origin-when-cross-origin
+			X-Frame-Options SAMEORIGIN
+			-Server
+		}
 		@404 expression {err.status_code} == 404
 		rewrite @404 /404.html
 		file_server
@@ -182,7 +206,7 @@ func writeContext(ctx, out, server, csp string) error {
 		}
 		h := `add_header Content-Security-Policy "` + csp + `" always;`
 		nconf = strings.ReplaceAll(nconf, `add_header X-Content-Type-Options "nosniff" always;`, `add_header X-Content-Type-Options "nosniff" always;`+"\n        "+h)
-		cconf = strings.Replace(cconf, "\t\tX-Content-Type-Options nosniff", "\t\tX-Content-Type-Options nosniff\n\t\tContent-Security-Policy \""+csp+"\"", 1)
+		cconf = strings.ReplaceAll(cconf, "X-Content-Type-Options nosniff\n", "X-Content-Type-Options nosniff\n\t\tContent-Security-Policy \""+csp+"\"\n")
 	}
 	files := map[string]string{"Containerfile": nginxContainerfile, "nginx.conf": strings.Replace(nconf, "{{REDIRECTS}}", nginxRules.String(), 1)}
 	if server == "caddy" {
