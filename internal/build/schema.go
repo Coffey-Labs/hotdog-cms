@@ -3,6 +3,7 @@ package build
 import (
 	"fmt"
 	"html/template"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -118,7 +119,7 @@ func faqData(s *site.Site, d map[string]any) map[string]any {
 			continue
 		}
 		qs = append(qs, map[string]any{"@type": "Question", "name": q,
-			"acceptedAnswer": map[string]any{"@type": "Answer", "text": a}})
+			"acceptedAnswer": map[string]any{"@type": "Answer", "text": plainText(a)}})
 	}
 	if len(qs) == 0 {
 		return nil
@@ -496,4 +497,22 @@ func productData(s *site.Site, p *site.Page) map[string]any {
 	}
 	out["brand"] = map[string]any{"@type": "Brand", "name": s.Config.Name}
 	return out
+}
+
+var (
+	mdLink      = regexp.MustCompile(`!?\[([^\]]*)\]\([^)]*\)`)
+	mdStrong    = regexp.MustCompile("(\\*\\*|__|\\*|`)")
+	mdUnderline = regexp.MustCompile(`(^|[\s(])_+|_+($|[\s).,;:!?])`)
+	mdLineMark  = regexp.MustCompile(`(?m)^\s{0,3}(#{1,6}\s+|>\s?|[-*+]\s+|\d+\.\s+)`)
+)
+
+// plainText is Markdown as plain words, for search engines: answers are
+// written in Markdown, and "**three days' notice**" should read as words.
+// Underscores inside a word (snake_case) stay.
+func plainText(md string) string {
+	s := mdLink.ReplaceAllString(md, "$1")
+	s = mdLineMark.ReplaceAllString(s, "")
+	s = mdStrong.ReplaceAllString(s, "")
+	s = mdUnderline.ReplaceAllString(s, "$1$2")
+	return strings.Join(strings.Fields(s), " ")
 }
