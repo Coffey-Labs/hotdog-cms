@@ -1,0 +1,27 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/shop/shop.css" }}">
+{{ $soldOut := eq (printf "%v" .Params.sold_out) "true" }}{{ $cur := .Params.currency }}
+<article class="wrap page product">
+  {{ with index .Site.Lists .Collection }}<p class="eyebrow"><a href="{{ .Path }}">{{ .Title }}</a></p>{{ end }}
+  <div class="product-main">
+    <div class="product-photos">
+      {{ range $i, $p := .Params.photos }}<img class="{{ if eq $i 0 }}product-photo-main{{ else }}product-photo{{ end }}" src="{{ $p.image }}" alt="{{ $p.alt }}"{{ if gt $i 0 }} loading="lazy"{{ end }}>{{ end }}
+    </div>
+    <div class="product-buy">
+      <h1>{{ .Title }}</h1>
+      {{ with .Params.price }}<p class="product-price">{{ money . $cur }}</p>{{ end }}
+      {{ with .Summary }}<p class="product-summary">{{ . }}</p>{{ end }}
+      {{ if $soldOut }}
+      <p class="product-sold-out">Sold out</p>
+      {{ else }}
+      <div class="product-actions">
+        {{ with .Params.buy }}<a class="btn primary" href="{{ . }}" rel="noopener">{{ default "Buy" $.Params.button }}</a>{{ end }}
+        {{ range .Params.options }}<a class="btn" href="{{ .buy }}" rel="noopener">{{ .name }}{{ with .price }} · {{ money . $cur }}{{ end }}</a>{{ end }}
+      </div>
+      <p class="product-secure">You'll pay on our payment provider's secure page.</p>
+      {{ end }}
+    </div>
+  </div>
+  {{ with .Content }}<div class="prose product-details">{{ . }}</div>{{ end }}
+</article>
+{{ end }}

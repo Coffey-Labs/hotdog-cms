@@ -260,6 +260,8 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 		// pageData: schema.org objects for what packs put on the page (an
 		// FAQ, a business, a person, a recipe, a job), for search engines.
 		"pageData": func(p *site.Page) []map[string]any { return pageData(s, p) },
+		// money 24 "USD" -> "$24.00": a price as people read it.
+		"money": money,
 		// closed "2026-11-01": whether that day is over, in the site's time
 		// zone, when the site is built (a job's closing date, say).
 		"closed": func(v any) bool { return closed(s, v) },

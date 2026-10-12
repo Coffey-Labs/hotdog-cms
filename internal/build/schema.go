@@ -46,6 +46,8 @@ func pageData(s *site.Site, p *site.Page) []map[string]any {
 		out = append(out, personData(s, p))
 	case "recipe":
 		out = append(out, recipeData(s, p))
+	case "product":
+		out = append(out, productData(s, p))
 	case "job":
 		// A closed opening isn't advertised: search engines drop listings
 		// whose validThrough has passed, and say so.
@@ -422,4 +424,76 @@ func headings(content template.HTML) []Heading {
 			}
 		}
 	}
+}
+
+// amount reads a price written as a number (24, 24.5, "24.50").
+func amount(v any) (float64, bool) {
+	switch t := v.(type) {
+	case int:
+		return float64(t), true
+	case float64:
+		return t, true
+	case string:
+		f, err := strconv.ParseFloat(strings.TrimSpace(strings.TrimLeft(t, "$€£¥")), 64)
+		return f, err == nil
+	}
+	return 0, false
+}
+
+var currencySigns = map[string]string{"USD": "$", "CAD": "CA$", "AUD": "A$", "NZD": "NZ$", "EUR": "€", "GBP": "£", "JPY": "¥", "INR": "₹", "MXN": "MX$", "BRL": "R$"}
+
+// money writes a price the way people read it: 24 "USD" is $24.00, 24 "SEK"
+// is 24.00 SEK. Whole yen have no decimals.
+func money(v any, currency string) string {
+	f, ok := amount(v)
+	if !ok {
+		return str(v)
+	}
+	cur := strings.ToUpper(strings.TrimSpace(currency))
+	if cur == "" {
+		cur = "USD"
+	}
+	n := strconv.FormatFloat(f, 'f', 2, 64)
+	if cur == "JPY" {
+		n = strconv.FormatFloat(f, 'f', 0, 64)
+	}
+	if sign, ok := currencySigns[cur]; ok {
+		return sign + n
+	}
+	return n + " " + cur
+}
+
+func productData(s *site.Site, p *site.Page) map[string]any {
+	out := ldBase("Product")
+	out["name"] = p.Title
+	out["url"] = p.Permalink
+	if p.Summary != "" {
+		out["description"] = p.Summary
+	}
+	var images []string
+	for _, ph := range list(p.Params["photos"]) {
+		m, _ := ph.(map[string]any)
+		if im := str(m["image"]); im != "" {
+			images = append(images, abs(s, im))
+		}
+	}
+	if len(images) > 0 {
+		out["image"] = images
+	}
+	if v := str(p.Params["sku"]); v != "" {
+		out["sku"] = v
+	}
+	if f, ok := amount(p.Params["price"]); ok {
+		cur := strings.ToUpper(str(p.Params["currency"]))
+		if cur == "" {
+			cur = "USD"
+		}
+		avail := "https://schema.org/InStock"
+		if str(p.Params["sold_out"]) == "true" {
+			avail = "https://schema.org/OutOfStock"
+		}
+		out["offers"] = map[string]any{"@type": "Offer", "price": strconv.FormatFloat(f, 'f', 2, 64), "priceCurrency": cur, "availability": avail, "url": p.Permalink}
+	}
+	out["brand"] = map[string]any{"@type": "Brand", "name": s.Config.Name}
+	return out
 }

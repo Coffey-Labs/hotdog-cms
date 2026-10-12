@@ -344,3 +344,15 @@ func TestHeadingsAndMinutes(t *testing.T) {
 		}
 	}
 }
+
+func TestMoney(t *testing.T) {
+	for _, c := range []struct {
+		v    any
+		cur  string
+		want string
+	}{{24, "USD", "$24.00"}, {24.5, "eur", "€24.50"}, {"1200", "JPY", "¥1200"}, {9, "SEK", "9.00 SEK"}, {7, "", "$7.00"}, {"Ask us", "USD", "Ask us"}} {
+		if got := money(c.v, c.cur); got != c.want {
+			t.Errorf("money(%v, %q) = %q, want %q", c.v, c.cur, got, c.want)
+		}
+	}
+}
