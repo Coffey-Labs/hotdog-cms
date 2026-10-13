@@ -76,24 +76,26 @@
 /* ---- Documentation syntax (admonitions, collapsible blocks, content tabs,
    keys, definition lists): the markup MkDocs writes, so a site moved from it
    keeps its pages as they are. Colors come from the theme's variables; each
-   kind of admonition has its own, as in MkDocs Material. ---- */
-.admonition, details.note, details.abstract, details.info, details.tip, details.success,
-details.question, details.warning, details.failure, details.danger, details.bug,
-details.example, details.quote, .prose details {
-  --adm: var(--accent);
+   kind of admonition has its own, as in MkDocs Material. Only blocks in a
+   page's text: a <details> in the page around it (a contents box, a menu)
+   keeps its own look. ---- */
+.admonition, :is(.prose details:not(.toc-box), details:is(.note, .abstract, .info, .tip, .success, .question, .warning, .failure, .danger, .bug, .example, .quote)) {
   margin: 1.4em 0; padding: 0 16px; border: 1px solid var(--line);
   border-left: 4px solid var(--adm); border-radius: 10px;
   background: color-mix(in srgb, var(--adm) 7%, var(--surface));
 }
-.admonition > :last-child, details > :last-child { margin-bottom: 14px; }
-.admonition-title, details > summary {
+.admonition > :last-child, :is(.prose details:not(.toc-box), details:is(.note, .abstract, .info, .tip, .success, .question, .warning, .failure, .danger, .bug, .example, .quote)) > :last-child { margin-bottom: 14px; }
+.admonition-title, :is(.prose details:not(.toc-box), details:is(.note, .abstract, .info, .tip, .success, .question, .warning, .failure, .danger, .bug, .example, .quote)) > summary {
   margin: 0 -16px; padding: 10px 16px; font-weight: 650; color: var(--text);
   background: color-mix(in srgb, var(--adm) 13%, var(--surface));
 }
 .admonition-title { margin-bottom: 10px; border-radius: 0 9px 0 0; }
 .admonition > .admonition-title:first-child + * { margin-top: 0; }
-details > summary { cursor: pointer; list-style-position: inside; border-radius: 0 9px 9px 0; }
-details[open] > summary { margin-bottom: 10px; border-radius: 0 9px 0 0; }
+:is(.prose details:not(.toc-box), details:is(.note, .abstract, .info, .tip, .success, .question, .warning, .failure, .danger, .bug, .example, .quote)) > summary { cursor: pointer; list-style-position: inside; border-radius: 0 9px 9px 0; }
+:is(.prose details:not(.toc-box), details:is(.note, .abstract, .info, .tip, .success, .question, .warning, .failure, .danger, .bug, .example, .quote))[open] > summary { margin-bottom: 10px; border-radius: 0 9px 0 0; }
+/* The accent unless the kind has a color of its own; :where() keeps this
+   from outranking the kinds below. */
+:where(.admonition, details) { --adm: var(--accent); }
 :is(.admonition, details):is(.note, .abstract, .summary, .tldr, .info, .todo) { --adm: #2f7fd1; }
 :is(.admonition, details):is(.tip, .hint, .important) { --adm: #0f9d8a; }
 :is(.admonition, details):is(.success, .check, .done) { --adm: #2e9e48; }

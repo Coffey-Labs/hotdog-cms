@@ -352,7 +352,7 @@ func writeSearch(s *site.Site, name string, out string) error {
 			continue
 		}
 		e := entry{URL: p.Path, Title: p.Title, Summary: site.Excerpt(220, p.Summary), Text: p.Raw}
-		for _, h := range p.Headings {
+		for _, h := range headings(p.Content) {
 			e.Heads = append(e.Heads, [2]string{h.ID, h.Text})
 		}
 		if !p.Date.IsZero() {

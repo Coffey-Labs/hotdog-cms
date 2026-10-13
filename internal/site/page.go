@@ -32,7 +32,6 @@ type Page struct {
 	ImageAlt   string // what the social card shows, for people who can't see it
 	Weight     int
 	Content    template.HTML
-	Headings   []Heading      // the body's h2 and h3, for an "on this page" list (headings.go)
 	Params     map[string]any // every front matter key, as written
 	Sections   []Section
 	Collection string              // first folder under content/, if any

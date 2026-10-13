@@ -1,10 +1,11 @@
 {{/* On this page: the page's h2 and h3 headings, beside it on a wide
      screen. Left out of pages with fewer than two. */}}
-{{ if gt (len .Headings) 1 }}
+{{ $h := headings .Content }}
+{{ if gt (len $h) 1 }}
 <nav class="onpage" aria-label="On this page">
   <p>On this page</p>
   <ul>
-    {{ range .Headings }}<li class="h{{ .Level }}"><a href="#{{ .ID }}">{{ .Text }}</a></li>
+    {{ range $h }}<li class="h{{ .Level }}"><a href="#{{ .ID }}">{{ .Text }}</a></li>
     {{ end }}
   </ul>
 </nav>
