@@ -5,8 +5,8 @@
 > the tool it's on now. They're not for copying sites, posts or pictures that
 > belong to someone else, and they say so every time they run.
 
-`hotdog-cms import` brings a site in from WordPress, Hugo, Jekyll or Ghost,
-into a HotDog CMS site made with `hotdog-cms new`:
+`hotdog-cms import` brings a site in from WordPress, Hugo, Jekyll, Ghost or
+MkDocs, into a HotDog CMS site made with `hotdog-cms new`:
 
     hotdog-cms new mysite && cd mysite
     hotdog-cms import wordpress -url https://old.example.com
@@ -19,9 +19,10 @@ into a HotDog CMS site made with `hotdog-cms new`:
 | Ghost | `import ghost -file export.json -url https://old.example.com` (Settings → Labs → Export) |
 | Hugo | `import hugo -from ../oldsite` (`-rename posts=articles` by default) |
 | Jekyll | `import jekyll -from ../oldsite` |
+| MkDocs | `import mkdocs -from ../docs-site` (the folder holding `mkdocs.yml`); see [Documentation from MkDocs](#documentation-from-mkdocs) |
 
-Every importer takes `-site DIR` (default `.`), `-posts COLLECTION` (default
-`articles`) and `-overwrite`.
+Every importer takes `-site DIR` (default `.`) and `-overwrite`; the blog
+importers take `-posts COLLECTION` (default `articles`) too.
 
 ## What happens
 
@@ -49,6 +50,48 @@ Every importer takes `-site DIR` (default `.`), `-posts COLLECTION` (default
 
 The report goes to `IMPORT-REPORT.md` in the site. Read it, then run
 `hotdog-cms check` and `hotdog-cms serve`.
+
+## Documentation from MkDocs
+
+    hotdog-cms new docs && cd docs && rm content/index.md
+    hotdog-cms import mkdocs -from ../old-docs
+    hotdog-cms check
+
+A documentation site keeps its addresses, its reading order and the way its
+pages are written:
+
+- **Pages come across as written.** HotDog reads MkDocs' own syntax:
+  admonitions (`!!! note`, `??? tip`), content tabs (`=== "Linux"`), keys
+  (`++ctrl+k++`), definition lists, `{ .class }` attributes, Markdown in HTML
+  (`markdown` on a tag), code blocks' file names (`title="…"`). A page's
+  first heading becomes its title, and `index.md` (or `README.md`) its
+  folder's own page.
+- **Addresses stay.** The docs go into the docs pack's collection (the pack
+  is added if the site hasn't got it) with `path: /`, so `run/sizing.md` is
+  still `/run/sizing/`. Use `-path /docs/` to put them under `/docs/` on a
+  site that has its own front page; the front page is why `content/index.md`
+  has to go with `-path /`.
+- **Links keep landing.** Links to other pages' `.md` files are followed to
+  their addresses at build time, and headings get the anchors MkDocs gives
+  them (`markdown.heading_ids: mkdocs`), so `sizing.md#memory` still finds its
+  section. Links to pictures and downloads in the docs are made to work from
+  the page's address. Everything else in `docs_dir` goes into `static/`.
+- **The nav becomes `data/docs-nav.yaml`**, the docs pack's reading order:
+  sections, a section's index page as its own, links elsewhere. Without a
+  nav, the files' order is used, as MkDocs does.
+- **Settings:** the site's name, address and description, if `site.yaml`
+  still has the new site's; pymdownx.keys' `key_map` (as `markdown.keys`).
+
+What doesn't come across is listed in `IMPORT-REPORT.md`, page by page:
+snippet includes (`--8<--`), template tags (the macros plugin),
+abbreviations, icons and emoji (`:material-check:`), Mermaid diagrams (shown
+as code), code highlighting and annotations, and the theme's overrides and
+extra CSS and JavaScript: the site's own look replaces the theme.
+
+MkDocs passes any HTML in a page through as it is; HotDog sanitizes it, so
+an inline `<svg>`, a `<script>` or a `style=""` is removed, and the report
+lists each. If everyone who writes the docs can be trusted with scripts,
+`-trust-html` turns the sanitizer off for the site (`markdown.trust_html`).
 
 ## The WordPress password
 

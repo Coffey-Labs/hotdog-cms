@@ -160,3 +160,7 @@
 dl { margin: 1.2em 0; }
 dt { font-weight: 650; margin-top: .8em; }
 dd { margin: .2em 0 0 1.4em; color: var(--text); }
+
+/* A code block's file name (```json title="servers.json"). */
+.highlight > .filename { display: block; margin-top: 1.2em; padding: 6px 14px; font: 600 .85em var(--font-mono, monospace); color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-bottom: 0; border-radius: 10px 10px 0 0; }
+.highlight > .filename + pre { margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }

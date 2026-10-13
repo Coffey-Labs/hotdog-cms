@@ -62,16 +62,24 @@ func TestTabs(t *testing.T) {
 }
 
 func TestKeys(t *testing.T) {
-	got := render(t, MarkdownConfig{}, "Press ++ctrl+alt+del++, ++cmd+k++ or ++f5++; C++ and a++b stay text.\n")
+	// As pymdownx.keys writes them: a key's own name in the class, whatever
+	// name it was written with, and unknown keys left as text.
+	got := render(t, MarkdownConfig{}, "Press ++ctrl+alt+del++, ++cmd+k++ or ++f5++; ++question++, ++hash++; C++ and a++b stay text.\n")
 	for _, want := range []string{
-		`<span class="keys"><kbd class="key-ctrl">Ctrl</kbd><span>+</span><kbd class="key-alt">Alt</kbd><span>+</span><kbd class="key-del">Del</kbd></span>`,
-		`<kbd class="key-cmd">Cmd</kbd><span>+</span><kbd class="key-k">K</kbd>`,
+		`<span class="keys"><kbd class="key-control">Ctrl</kbd><span>+</span><kbd class="key-alt">Alt</kbd><span>+</span><kbd class="key-delete">Del</kbd></span>`,
+		`<kbd class="key-command">Cmd</kbd><span>+</span><kbd class="key-k">K</kbd>`,
 		`<kbd class="key-f5">F5</kbd>`,
+		`<span class="keys"><kbd class="key-question">?</kbd></span>, ++hash++;`,
 		"C++ and a++b stay text.",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q in\n%s", want, got)
 		}
+	}
+	// The site's own names (pymdownx.keys' key_map).
+	got = render(t, MarkdownConfig{Keys: map[string]string{"hash": "#", "ctrl": "Control"}}, "++hash++ and ++ctrl+k++\n")
+	if !strings.Contains(got, `<kbd class="key-hash">#</kbd>`) || !strings.Contains(got, `<kbd class="key-control">Control</kbd>`) {
+		t.Errorf("site keys: %s", got)
 	}
 }
 
@@ -119,5 +127,63 @@ func TestTabsSurviveTheSanitizer(t *testing.T) {
 	}
 	if strings.Contains(got, `type="text"`) || strings.Contains(got, "onfocus") {
 		t.Errorf("the sanitizer let an author's input through:\n%s", got)
+	}
+}
+
+func TestMkDocsHeadingIDs(t *testing.T) {
+	for in, want := range map[string]string{
+		"On Linux & BSD":       "on-linux-bsd",
+		"Größe und Gewicht":    "groe-und-gewicht",
+		"  What's   new?  ":    "whats-new",
+		"snake_case -- dashes": "snake_case-dashes",
+		"日本語":                  "",
+	} {
+		if got := mkdocsSlug(in); got != want {
+			t.Errorf("mkdocsSlug(%q) = %q, want %q", in, got, want)
+		}
+	}
+	md := NewMarkdown(MarkdownConfig{HeadingIDs: "mkdocs"}, "example.org")
+	out, err := md.Render([]byte("## On Linux & BSD\n\n## On Linux & BSD\n\n## On Linux & BSD\n\n## 日本語\n\n## Mine {#on-linux-bsd_3}\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`id="on-linux-bsd"`, `id="on-linux-bsd_1"`, `id="on-linux-bsd_2"`, `id="_1"`, `id="on-linux-bsd_3"`} {
+		if !strings.Contains(string(out), want) {
+			t.Errorf("missing %s in\n%s", want, out)
+		}
+	}
+	plain, _ := NewMarkdown(MarkdownConfig{}, "example.org").Render([]byte("## On Linux & BSD\n"))
+	if !strings.Contains(string(plain), `id="on-linux--bsd"`) {
+		t.Errorf("the default is unchanged: %s", plain)
+	}
+}
+
+// A written title is Markdown, as Python-Markdown reads it.
+func TestAdmonitionTitleMarkdown(t *testing.T) {
+	got := render(t, MarkdownConfig{}, "!!! quote \"Which is what `SOURCE_URL` is for\"\n\n    Body *text*.\n\n??? note \"`--max` and **bold**\"\n\n    Folded.\n\n!!! tip \"\"\n\n    No title.\n\n!!! warning\n\n    Default title.\n")
+	for _, want := range []string{
+		"<div class=\"admonition quote\">\n<p class=\"admonition-title\">Which is what <code>SOURCE_URL</code> is for</p>\n<p>Body <em>text</em>.</p>\n</div>",
+		"<details class=\"note\">\n<summary><code>--max</code> and <strong>bold</strong></summary>\n<p>Folded.</p>\n</details>",
+		"<div class=\"admonition tip\">\n<p>No title.</p>\n</div>",
+		"<div class=\"admonition warning\">\n<p class=\"admonition-title\">Warning</p>\n<p>Default title.</p>\n</div>",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q in\n%s", want, got)
+		}
+	}
+}
+
+func TestCodeTitle(t *testing.T) {
+	got := render(t, MarkdownConfig{}, "```json title=\"servers.json\"\n{\"a\": 1}\n```\n\n```sh\nls\n```\n")
+	for _, want := range []string{
+		"<div class=\"highlight\"><span class=\"filename\">servers.json</span><pre><code class=\"language-json\">{&quot;a&quot;: 1}\n</code></pre>\n</div>",
+		"<pre><code class=\"language-sh\">ls\n</code></pre>",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q in\n%s", want, got)
+		}
+	}
+	if strings.Count(got, "filename") != 1 {
+		t.Errorf("a block without a title has none:\n%s", got)
 	}
 }
