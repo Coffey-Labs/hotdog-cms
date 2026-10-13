@@ -369,3 +369,21 @@ func TestPlainText(t *testing.T) {
 		}
 	}
 }
+
+// A search index carries each page's section headings, so a result can go
+// to the section.
+func TestSearchHeadings(t *testing.T) {
+	dir := writeStarter(t)
+	os.MkdirAll(filepath.Join(dir, "content", "docs"), 0o755)
+	os.WriteFile(filepath.Join(dir, "content", "docs", "install.md"), []byte("---\ntitle: Install\n---\n## On Linux\n\nx\n\n### With *Docker*\n\ny\n"), 0o644)
+	cfg, _ := os.ReadFile(filepath.Join(dir, "site.yaml"))
+	os.WriteFile(filepath.Join(dir, "site.yaml"), []byte(strings.Replace(string(cfg), "collections:\n", "collections:\n  docs:\n    search: true\n", 1)), 0o644)
+	res, err := Run(Options{SiteDir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(filepath.Join(res.Out, "docs", "search.json"))
+	if !strings.Contains(string(b), `"h":[["on-linux","On Linux"],["with-docker","With Docker"]]`) {
+		t.Errorf("search.json has no headings:\n%s", b)
+	}
+}
