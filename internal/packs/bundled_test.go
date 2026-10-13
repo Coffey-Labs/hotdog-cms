@@ -109,7 +109,8 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 		}, map[string][]string{
 			"docs/index.html":           {`class="partgrid"`, `href="/docs/start/"`, "The basics."},
 			"docs/start/index.html":     {`class="pagelist"`, `href="/docs/start/one/"`, "First."},
-			"docs/start/two/index.html": {`<span>Previous</span>Page one`, `<span>Next</span>Page three`, `aria-current="page">Page two`},
+			"docs/start/two/index.html": {`<span>Previous</span>Page one`, `<span>Next</span>More`, `aria-current="page">Page two`, `<p class="crumb"><a href="/docs/start/">Start here</a></p>`},
+			"docs/more/index.html":      {`<span>Previous</span>Page two`, `<span>Next</span>Page three`, `href="/docs/more/three/"`},
 			"docs/search.json":          {`"/docs/start/one/"`},
 		}},
 		{"recipes", []page{

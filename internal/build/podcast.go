@@ -98,7 +98,7 @@ func writePodcast(s *site.Site, name string, cc site.CollectionConfig, out strin
 	}
 	rfc := func(t time.Time) string { return t.UTC().Format("Mon, 02 Jan 2006 15:04:05") + " GMT" }
 	ch := channel{
-		Title: title, Link: s.Config.URL + "/" + name + "/",
+		Title: title, Link: s.Config.URL + s.CollectionPath(name),
 		AtomLink:    atomLink{Href: s.Config.URL + feedPath, Rel: "self", Type: "application/rss+xml"},
 		Description: desc, Language: strings.ToLower(s.Config.Language),
 		Author: s.Config.Author, Explicit: yesNo(cc.PodcastExplicit),

@@ -29,8 +29,10 @@ type Site struct {
 	Lists       map[string]*Page   // collection -> its list page
 	Taxonomies  map[string]map[string][]*Page
 	Data        map[string]any // data/*.yaml and data/*.json, by file name without extension
-	BuildTime   time.Time
-	Dev         bool // built by `hotdog-cms serve`
+
+	bySource  map[string]*Page // PageFrom's index, built on first use
+	BuildTime time.Time
+	Dev       bool // built by `hotdog-cms serve`
 	// NextScheduled is the earliest moment a rebuild will change the site
 	// without a new commit: a publish_at still in the future, or an event
 	// ending (it leaves the upcoming lists).
@@ -179,6 +181,7 @@ func Load(dir string, opt Options) (*Site, error) {
 			return nil, err
 		}
 	}
+	s.placeCollections()
 	s.resolveSourceLinks()
 	s.assemble()
 	if err := s.checkPaths(); err != nil {
@@ -463,7 +466,7 @@ func (s *Site) assemble() {
 		}
 		list, ok := s.Lists[name]
 		if !ok {
-			list = &Page{Kind: KindList, Title: titleCase(name), Path: "/" + name + "/", Collection: name,
+			list = &Page{Kind: KindList, Title: titleCase(name), Path: s.CollectionPath(name), Collection: name,
 				Params: map[string]any{}, Terms: map[string][]string{}, Site: s}
 			list.Permalink = cfg.URL + list.Path
 			s.Lists[name] = list
@@ -524,6 +527,30 @@ func (s *Site) PageAt(path string) *Page {
 // collection (content/docs/install/_index.md) rather than the collection's.
 func (p *Page) subList() bool {
 	return p.Source != "" && path.Dir(p.Source) != p.Collection
+}
+
+// CollectionPath is the address of a collection's own page: /<name>/, or
+// the path site.yaml gives it.
+func (s *Site) CollectionPath(name string) string {
+	if p := s.Config.Collections[name].Path; p != "" {
+		return p
+	}
+	return "/" + name + "/"
+}
+
+// placeCollections moves the pages of a collection that has a path of its own
+// there: content/docs/run/sizing.md is /run/sizing/ when docs has path: /.
+// A page with its own url: stays where it says.
+func (s *Site) placeCollections() {
+	for _, p := range s.Pages {
+		if p.Collection == "" || p.Params["url"] != nil {
+			continue
+		}
+		from, to := "/"+p.Collection+"/", s.CollectionPath(p.Collection)
+		if from != to && strings.HasPrefix(p.Path, from) {
+			p.Path = to + strings.TrimPrefix(p.Path, from)
+		}
+	}
 }
 
 // Collection returns a collection's pages in order; nil if there is none.

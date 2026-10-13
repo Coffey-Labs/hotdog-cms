@@ -3,7 +3,7 @@
 <div class="wrap docs{{ if gt (len (headings .Content)) 1 }} has-onpage{{ end }}">
   {{ template "docs-sidebar" . }}
   <article class="doc">
-    {{ range data "docs-nav" }}{{ if hasPrefix (printf "/docs/%s/" .part) $.Path }}<p class="crumb"><a href="/docs/{{ .part }}/">{{ .title }}</a></p>{{ end }}{{ end }}
+    {{ with (nav "docs-nav" .).Trail }}<p class="crumb">{{ range $i, $t := . }}{{ if $i }} › {{ end }}{{ if .Page }}<a href="{{ .URL }}">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}{{ end }}</p>{{ end }}
     <h1>{{ .Title }}</h1>
     {{ with .Summary }}<p class="lead">{{ . }}</p>{{ end }}
     <div class="prose">{{ .Content }}</div>

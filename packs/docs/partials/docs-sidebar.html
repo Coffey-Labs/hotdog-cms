@@ -1,19 +1,8 @@
-{{/* The sidebar: every part of the docs, in reading order
-     (data/docs-nav.yaml). The part being read shows its pages. */}}
+{{/* The sidebar: the docs' navigation tree (data/docs-nav.yaml), with the
+     part being read open. */}}
 <aside class="side" aria-label="Documentation">
   <details class="toc" open>
     <summary>All the docs</summary>
-    <ul class="parts">
-      {{ range data "docs-nav" }}{{ $part := .part }}{{ $here := hasPrefix (printf "/docs/%s/" $part) $.Path }}
-      <li{{ if $here }} class="here"{{ end }}>
-        <a class="part" href="/docs/{{ $part }}/"{{ if eq $.Path (printf "/docs/%s/" $part) }} aria-current="page"{{ end }}>{{ .title }}</a>
-        {{ if $here }}<ul>
-          {{ range .pages }}{{ with pageAt (printf "/docs/%s/%s/" $part .) }}
-          <li><a href="{{ .Path }}"{{ if eq .Path $.Path }} aria-current="page"{{ end }}>{{ .Title }}</a></li>
-          {{ end }}{{ end }}
-        </ul>{{ end }}
-      </li>
-      {{ end }}
-    </ul>
+    <ul class="parts">{{ template "docs-nav-items" (nav "docs-nav" .).Items }}</ul>
   </details>
 </aside>

@@ -9,11 +9,11 @@
 <div class="wrap">
   {{ with .Content }}<div class="prose home-intro">{{ . }}</div>{{ end }}
   <ol class="partgrid">
-    {{ range data "docs-nav" }}{{ $part := .part }}
+    {{ range (nav "docs-nav" .).Items }}{{ if and (not .Here) (or .Page .Children) }}
     <li>
-      <a href="/docs/{{ $part }}/"><strong>{{ .title }}</strong><span>{{ .blurb }}</span></a>
+      <a href="{{ with .Page }}{{ .Path }}{{ else }}{{ with index .Children 0 }}{{ .URL }}{{ end }}{{ end }}"><strong>{{ .Title }}</strong><span>{{ with .Blurb }}{{ . }}{{ else }}{{ with .Page }}{{ .Summary }}{{ end }}{{ end }}</span></a>
     </li>
-    {{ end }}
+    {{ end }}{{ end }}
   </ol>
 </div>
 {{ end }}

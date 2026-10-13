@@ -113,8 +113,12 @@ type Redirect struct {
 // content/articles/. Every folder of Markdown is a collection whether it is
 // named here or not; this only changes the defaults.
 type CollectionConfig struct {
-	Layout   string `yaml:"layout"`    // layout for the collection's pages
-	Sort     string `yaml:"sort"`      // date (newest first, the default), title or weight
+	Layout string `yaml:"layout"` // layout for the collection's pages
+	Sort   string `yaml:"sort"`   // date (newest first, the default), title or weight
+	// Path is where the collection's pages live: /docs/ by default for
+	// content/docs/, / for a docs site whose pages sit at the root of its
+	// host. Its search index, feed and calendar stay at /<collection>/.
+	Path     string `yaml:"path"`
 	Feed     bool   `yaml:"feed"`      // write an Atom feed
 	FeedPath string `yaml:"feed_path"` // where; default /<collection>/feed.xml
 	FeedSize int    `yaml:"feed_size"` // entries in the feed; default 20
@@ -248,6 +252,9 @@ func LoadConfig(dir string) (*Config, error) {
 		case "", "date", "title", "weight", "start":
 		default:
 			return nil, fmt.Errorf("site.yaml: collection %s: sort %q is not date, title, weight or start", name, cc.Sort)
+		}
+		if cc.Path != "" && (!strings.HasPrefix(cc.Path, "/") || !strings.HasSuffix(cc.Path, "/") || !SafeURLPath(cc.Path)) {
+			return nil, fmt.Errorf("site.yaml: collection %s: path %q should be a folder on the site, like / or /%s/", name, cc.Path, name)
 		}
 		if cc.FeedPath != "" && !SafeURLPath(cc.FeedPath) {
 			return nil, fmt.Errorf("site.yaml: collection %s: feed_path %q should be a path on the site, like /%s/feed.xml", name, cc.FeedPath, name)
