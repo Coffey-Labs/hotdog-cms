@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"html"
 	"io/fs"
 	"os"
 	"path"
@@ -360,10 +361,10 @@ func convertMkDocsPage(rel string, raw []byte, files map[string]bool, prefix str
 			continue
 		}
 		if m := atxH1Re.FindStringSubmatch(l); m != nil {
-			title = strings.TrimSpace(attrTailRe.ReplaceAllString(m[1], ""))
+			title = plainTitle(attrTailRe.ReplaceAllString(m[1], ""))
 			lines = lines[i+1:]
 		} else if i+1 < len(lines) && strings.TrimSpace(lines[i+1]) != "" && strings.Trim(strings.TrimSpace(lines[i+1]), "=") == "" {
-			title = strings.TrimSpace(attrTailRe.ReplaceAllString(l, ""))
+			title = plainTitle(attrTailRe.ReplaceAllString(l, ""))
 			lines = lines[i+2:]
 		}
 		break
@@ -534,6 +535,24 @@ func escapeCodePipes(row string) string {
 		return row
 	}
 	return b.String()
+}
+
+var (
+	titleLinkRe = regexp.MustCompile(`!?\[([^\]]*)\](?:\([^)]*\)|\[[^\]]*\])`)
+	titleTagRe  = regexp.MustCompile(`<[^>]*>`)
+	titleMarkRe = regexp.MustCompile("`|\\*\\*|__")
+	titleEscRe  = regexp.MustCompile(`\\([!-/:-@\[-` + "`" + `{-~])`)
+)
+
+// plainTitle is a heading as the words it shows, for a page's title, which
+// HotDog writes as text: "ASN &amp; GeoIP" is ASN & GeoIP, and code and bold
+// marks go.
+func plainTitle(h string) string {
+	h = titleLinkRe.ReplaceAllString(h, "$1")
+	h = titleTagRe.ReplaceAllString(h, "")
+	h = titleMarkRe.ReplaceAllString(h, "")
+	h = titleEscRe.ReplaceAllString(h, "$1")
+	return strings.TrimSpace(html.UnescapeString(h))
 }
 
 // mkdocsNav turns mkdocs.yml's nav into the docs pack's tree. Its entries

@@ -123,6 +123,20 @@ nav:
 	}
 }
 
+func TestPlainTitle(t *testing.T) {
+	for in, want := range map[string]string{
+		"ASN &amp; GeoIP":             "ASN & GeoIP",
+		"The `serve` command":         "The serve command",
+		"**Bold** and [a link](x.md)": "Bold and a link",
+		"Use \\* wildcards":           "Use * wildcards",
+		"Plain":                       "Plain",
+	} {
+		if got := plainTitle(in); got != want {
+			t.Errorf("plainTitle(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestEscapeCodePipes(t *testing.T) {
 	for in, want := range map[string]string{
 		"| a | `(|(x=?)(y=?))` |":  "| a | `(\\|(x=?)(y=?))` |",
