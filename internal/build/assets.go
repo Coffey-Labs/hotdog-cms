@@ -110,6 +110,12 @@ func writeAssets(srcDir, out string) (*Assets, error) {
 // copyTree copies a folder as it is, for static/ and the non-Markdown files
 // that live beside pages in content/.
 func copyTree(src, dst string, skip func(rel string, d fs.DirEntry) bool) error {
+	return copyTreeTo(src, dst, skip, func(rel string) string { return rel })
+}
+
+// copyTreeTo is copyTree with each file's place in dst given by dest, from
+// its slash-separated path in src.
+func copyTreeTo(src, dst string, skip func(rel string, d fs.DirEntry) bool, dest func(rel string) string) error {
 	err := filepath.WalkDir(src, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -127,10 +133,10 @@ func copyTree(src, dst string, skip func(rel string, d fs.DirEntry) bool) error 
 		if skip != nil && skip(filepath.ToSlash(rel), d) {
 			return nil
 		}
-		target := filepath.Join(dst, rel)
 		if d.IsDir() {
-			return os.MkdirAll(target, 0o755)
+			return nil // made for the files in it; an empty folder isn't published
 		}
+		target := filepath.Join(dst, filepath.FromSlash(dest(filepath.ToSlash(rel))))
 		if d.Type()&fs.ModeSymlink != 0 {
 			return fmt.Errorf("%s is a symlink; copy the file in instead", p)
 		}

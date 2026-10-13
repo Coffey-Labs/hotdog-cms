@@ -433,3 +433,35 @@ func TestSearchHeadings(t *testing.T) {
 		t.Errorf("search.json has no headings:\n%s", b)
 	}
 }
+
+// A picture beside a page goes out beside it, where its collection's path:
+// puts the page; folders with nothing to publish aren't written.
+func TestContentFilesFollowThePath(t *testing.T) {
+	dir := writeStarter(t)
+	os.MkdirAll(filepath.Join(dir, "content", "docs", "run"), 0o755)
+	os.MkdirAll(filepath.Join(dir, "content", "docs", "empty"), 0o755)
+	os.WriteFile(filepath.Join(dir, "content", "docs", "run", "sizing.md"), []byte("---\ntitle: Sizing\n---\n![Chart](chart.png)\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "content", "docs", "run", "chart.png"), []byte("png"), 0o644)
+	os.WriteFile(filepath.Join(dir, "content", "docs", "empty", "only.md"), []byte("---\ntitle: Only\n---\n"), 0o644)
+	os.Remove(filepath.Join(dir, "content", "index.md"))
+	cfg, _ := os.ReadFile(filepath.Join(dir, "site.yaml"))
+	os.WriteFile(filepath.Join(dir, "site.yaml"), []byte(strings.Replace(string(cfg), "collections:\n", "collections:\n  docs:\n    path: /\n", 1)), 0o644)
+	res, err := Run(Options{SiteDir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(res.Out, "run", "chart.png")); err != nil {
+		t.Errorf("the picture isn't beside its page at /run/: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(res.Out, "docs")); err == nil {
+		t.Error("an empty /docs/run/ or /docs/empty/ was written")
+	}
+	filepath.WalkDir(res.Out, func(p string, d fs.DirEntry, err error) error {
+		if d != nil && d.IsDir() {
+			if entries, _ := os.ReadDir(p); len(entries) == 0 {
+				t.Errorf("empty folder %s", p)
+			}
+		}
+		return nil
+	})
+}
