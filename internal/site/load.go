@@ -362,6 +362,7 @@ func loadPage(raw []byte, rel string, md *Markdown) (*Page, error) {
 	default:
 		return nil, fmt.Errorf("format %q is not markdown or html", str(fm["format"]))
 	}
+	p.Headings = headings(p.Content)
 	p.Raw = string(body)
 	p.WordCount = CountWords(PlainMarkdown(p.Raw))
 	if p.Title == "" {

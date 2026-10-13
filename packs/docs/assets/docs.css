@@ -51,6 +51,20 @@
 .partgrid strong { display: block; font-size: 1.15rem; margin-bottom: 4px; }
 .partgrid span { color: var(--muted); font-size: .95rem; }
 
+/* On this page: a third column on wide screens, left out on narrower ones,
+   where the page's own headings are close enough. */
+.onpage { display: none; }
+.doc .prose :is(h2, h3)[id] { scroll-margin-top: 84px; }
+@media (min-width: 1201px) {
+  .wrap.docs.has-onpage { width: min(1380px, 100% - 32px); grid-template-columns: 250px minmax(0, 1fr) 210px; gap: 44px; }
+  .onpage { display: block; position: sticky; top: 84px; max-height: calc(100vh - 100px); overflow: auto; font-size: .88rem; }
+  .onpage p { margin: 6px 0 8px; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .onpage ul { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--line); }
+  .onpage a { display: block; padding: 4px 0 4px 12px; line-height: 1.35; color: var(--muted); text-decoration: none; }
+  .onpage li.h3 a { padding-left: 24px; font-size: .95em; }
+  .onpage a:hover { color: var(--text); }
+}
+
 @media (max-width: 900px) {
   .wrap.docs { grid-template-columns: minmax(0, 1fr); gap: 20px; padding-top: 16px; }
   .side { position: static; max-height: none; overflow: visible; }

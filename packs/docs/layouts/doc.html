@@ -1,6 +1,6 @@
 {{ define "main" }}
 <link rel="stylesheet" href="{{ asset "packs/docs/docs.css" }}">
-<div class="wrap docs">
+<div class="wrap docs{{ if gt (len .Headings) 1 }} has-onpage{{ end }}">
   {{ template "docs-sidebar" . }}
   <article class="doc">
     {{ range data "docs-nav" }}{{ if hasPrefix (printf "/docs/%s/" .part) $.Path }}<p class="crumb"><a href="/docs/{{ .part }}/">{{ .title }}</a></p>{{ end }}{{ end }}
@@ -9,5 +9,6 @@
     <div class="prose">{{ .Content }}</div>
     {{ template "docs-prevnext" . }}
   </article>
+  {{ template "docs-onpage" . }}
 </div>
 {{ end }}
