@@ -43,6 +43,7 @@ func TestNavTreeAtRoot(t *testing.T) {
 - docs/using.md
 - title: Run it
   page: docs/run/_index.md
+  icon: server
   children:
     - docs/run/sizing.md
     - docs/run/later.md
@@ -85,6 +86,9 @@ func TestNavTreeAtRoot(t *testing.T) {
 	}
 	if nav.Prev == nil || nav.Prev.Title != "Sizing" || nav.Next != nil {
 		t.Errorf("prev %+v next %+v", nav.Prev, nav.Next)
+	}
+	if nav.Items[2].Params["icon"] != "server" || len(nav.Items[0].Params) != 0 {
+		t.Errorf("params: %v, %v", nav.Items[2].Params, nav.Items[0].Params)
 	}
 	if !nav.Items[2].Open || nav.Items[1].Open {
 		t.Error("only the headings over the page are open")
