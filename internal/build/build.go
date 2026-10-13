@@ -89,9 +89,16 @@ func Run(opt Options) (*Result, error) {
 	if err := copyTree(filepath.Join(siteDir, "static"), work, nil); err != nil {
 		return nil, fmt.Errorf("static: %w", err)
 	}
-	// Images and downloads kept beside a page in content/ go out beside it.
-	if err := copyTree(filepath.Join(siteDir, "content"), work, func(rel string, d fs.DirEntry) bool {
+	// Images and downloads kept beside a page in content/ go out beside it,
+	// where its collection's path: puts it.
+	if err := copyTreeTo(filepath.Join(siteDir, "content"), work, func(rel string, d fs.DirEntry) bool {
 		return !d.IsDir() && strings.HasSuffix(rel, ".md")
+	}, func(rel string) string {
+		col, rest, ok := strings.Cut(rel, "/")
+		if !ok || s.Config.Collections[col].Path == "" {
+			return rel
+		}
+		return strings.TrimPrefix(s.CollectionPath(col), "/") + rest
 	}); err != nil {
 		return nil, fmt.Errorf("content: %w", err)
 	}
