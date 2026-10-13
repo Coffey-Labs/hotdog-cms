@@ -21,7 +21,8 @@ import (
 //	- title: Back to the main site
 //	  url: https://example.org/
 //
-// url: may also be an address on the site (/about/). The docs pack's first
+// url: may also be an address on the site (/about/). Any other key (icon:,
+// color:) is kept in the entry's .Params for the theme. The docs pack's first
 // format, parts and page names, still reads:
 //
 //	- part: start
@@ -43,6 +44,9 @@ type NavItem struct {
 	Here     bool // this is the page being shown
 	Open     bool // the page being shown is this one or under it
 	Parent   *NavItem
+	// Params holds the entry's other keys, as written (icon: rocket, say),
+	// for a theme to draw with.
+	Params map[string]any
 }
 
 // Nav is a navigation tree as seen from one page: where that page is in it,
@@ -133,6 +137,14 @@ func (s *Site) navItems(name string, list []any, parent *NavItem) ([]*NavItem, e
 			}
 		case map[string]any:
 			it.Title, it.Blurb = str(e["title"]), str(e["blurb"])
+			it.Params = map[string]any{}
+			for k, v := range e {
+				switch k {
+				case "title", "blurb", "page", "url", "children", "part", "pages":
+				default:
+					it.Params[k] = v
+				}
+			}
 			if part := str(e["part"]); part != "" {
 				// The docs pack's first format: a part's page and its pages by name.
 				it.Page = s.PageFrom("docs/" + part + "/_index.md")

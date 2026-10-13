@@ -215,8 +215,9 @@ more entries (with a page of its own or not), or a link elsewhere:
 ```
 
 What comes back has `.Items` (each with `.Title`, `.URL`, `.Page`,
-`.Children`, `.External`, `.Here` for the page being shown and `.Open` for
-the headings above it), `.Here`, `.Trail` (those headings, from the top),
+`.Children`, `.External`, `.Here` for the page being shown, `.Open` for
+the headings above it, and `.Params` with any other keys the entry has, such
+as an `icon:` for the theme to draw), `.Here`, `.Trail` (those headings, from the top),
 and `.Prev` and `.Next` in reading order: every entry with a page, depth
 first, a heading's page before what's under it. An entry whose page isn't
 in the build, a draft say, is left out. The docs pack draws its sidebar,
