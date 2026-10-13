@@ -167,8 +167,10 @@ It writes Markdown, never HTML, and only rewrites what you change:
   wrapping included, so a diff shows only your edit.
 - **New and edited blocks** are written plainly: `-` bullets, `*` emphasis.
 - **What it can't represent exactly** (tables, raw HTML, footnotes, task
-  lists, `{#id}` attributes, strikethrough) is shown read-only, marked "Kept
-  as written", and edited in the Markdown view.
+  lists, `{#id}` and `{ .class }` attributes, strikethrough, definition lists,
+  and the documentation syntax: admonitions, collapsible blocks and content
+  tabs, each kept whole with its indented body) is shown read-only, marked
+  "Kept as written", and edited in the Markdown view.
 
 Pictures dropped or pasted in still go through Insert picture, so they're
 re-encoded and need alt text.
