@@ -243,6 +243,34 @@ func TestContainerCSP(t *testing.T) {
 	}
 }
 
+// Both images run unprivileged, so either can run with every capability
+// dropped and a read-only root: nginx-unprivileged by its base, Caddy as
+// nobody, with no file capability, no admin API and its state in /tmp.
+func TestContainerImagesUnprivileged(t *testing.T) {
+	out := built(t)
+	ctx := filepath.Join(t.TempDir(), "ctx")
+	if err := Run("image", Target{Type: "container", Server: "caddy", Context: ctx}, out, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	cf, _ := os.ReadFile(filepath.Join(ctx, "Containerfile"))
+	for _, want := range []string{"USER 65534:65534", "cp /usr/bin/caddy", "XDG_DATA_HOME=/tmp"} {
+		if !strings.Contains(string(cf), want) {
+			t.Errorf("Caddy Containerfile lacks %q:\n%s", want, cf)
+		}
+	}
+	conf, _ := os.ReadFile(filepath.Join(ctx, "Caddyfile"))
+	if !strings.Contains(string(conf), "admin off") {
+		t.Errorf("Caddyfile leaves the admin API on:\n%s", conf)
+	}
+	ctx = filepath.Join(t.TempDir(), "ctx")
+	if err := Run("image", Target{Type: "container", Context: ctx}, out, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	if cf, _ := os.ReadFile(filepath.Join(ctx, "Containerfile")); !strings.Contains(string(cf), "nginx-unprivileged") {
+		t.Errorf("nginx image isn't the unprivileged one:\n%s", cf)
+	}
+}
+
 func TestBeforeAndAfterSteps(t *testing.T) {
 	out := built(t)
 	root := filepath.Join(t.TempDir(), "www")
