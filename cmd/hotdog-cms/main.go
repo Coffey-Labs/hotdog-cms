@@ -46,7 +46,7 @@ Usage:
   hotdog-cms ci <platform>         write the CI file for github, gitea, forgejo, gitlab, bitbucket, woodpecker, or a git hook
   hotdog-cms endpoint -config FILE the small server for form submissions and search, behind your web server
   hotdog-cms pack add|remove|list|check   extensions as files: sections, layouts, styles (docs/packs.md)
-  hotdog-cms import <from> ...     move your own site in: wordpress, wxr, ghost, hugo or jekyll (docs/importing.md)
+  hotdog-cms import <from> ...     move your own site in: wordpress, wxr, ghost, hugo, jekyll or mkdocs (docs/importing.md)
   hotdog-cms editor -config FILE   the editor: sign in with your git platform and work on sites (never on a site's host)
 
 Platforms: GitHub, GitLab, Gitea, Forgejo/Codeberg, Gogs, Bitbucket, or any git server.
@@ -492,9 +492,12 @@ func report(r *build.Result) {
 
 func cmdImport(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: hotdog-cms import <wordpress|wxr|ghost|hugo|jekyll> [flags] (hotdog-cms import <from> -h for each)\n" + importer.Ownership)
+		return errors.New("usage: hotdog-cms import <wordpress|wxr|ghost|hugo|jekyll|mkdocs> [flags] (hotdog-cms import <from> -h for each)\n" + importer.Ownership)
 	}
 	from, args := args[0], args[1:]
+	if from == "mkdocs" {
+		return importMkDocs(args)
+	}
 	fl := flag.NewFlagSet("import "+from, flag.ExitOnError)
 	siteDir := fl.String("site", ".", "the HotDog CMS site to import into (made with hotdog-cms new)")
 	posts := fl.String("posts", "articles", "the collection posts go into")
@@ -516,7 +519,7 @@ func cmdImport(args []string) error {
 	case "jekyll":
 		dir = fl.String("from", "", "the Jekyll site's folder (required)")
 	default:
-		return fmt.Errorf("can't import from %q: wordpress, wxr, ghost, hugo or jekyll", from)
+		return fmt.Errorf("can't import from %q: wordpress, wxr, ghost, hugo, jekyll or mkdocs", from)
 	}
 	_ = fl.Parse(args)
 	fmt.Printf("%s\n\n", importer.Ownership)
@@ -591,6 +594,40 @@ func cmdImport(args []string) error {
 	}
 	fmt.Printf("\n%d written, %d skipped, %d kept as HTML, %d picture(s), %d redirect(s). Details: %s\nThen: hotdog-cms check\n",
 		len(rep.Written), len(rep.Skipped), len(rep.KeptHTML), rep.Pictures, len(rep.Redirects), report)
+	return nil
+}
+
+// importMkDocs moves an MkDocs documentation site in: its pages and files,
+// its nav as the docs pack's reading order, its addresses kept.
+func importMkDocs(args []string) error {
+	fl := flag.NewFlagSet("import mkdocs", flag.ExitOnError)
+	siteDir := fl.String("site", ".", "the HotDog CMS site to import into (made with hotdog-cms new)")
+	from := fl.String("from", "", "the MkDocs site's folder, holding mkdocs.yml (required)")
+	at := fl.String("path", "/", "where the docs live on the site: / keeps MkDocs' addresses on a docs host of their own; /docs/ puts them under /docs/")
+	overwrite := fl.Bool("overwrite", false, "replace pages and files that are already there")
+	trust := fl.Bool("trust-html", false, "turn the HTML sanitizer off (MkDocs has none): only if everyone who writes the docs can be trusted with scripts")
+	_ = fl.Parse(args)
+	if *from == "" {
+		return errors.New("-from is required")
+	}
+	fmt.Printf("%s\n\n", importer.Ownership)
+	if _, err := os.Stat(filepath.Join(*siteDir, "layouts", "doc.html")); err != nil {
+		ref, err := packs.Add(*siteDir, "docs", false)
+		if err != nil {
+			return fmt.Errorf("adding the docs pack: %w", err)
+		}
+		fmt.Printf("added the docs pack (%s)\n", ref.Version)
+	}
+	rep, err := importer.FromMkDocs(importer.MkDocsOptions{From: *from, SiteDir: *siteDir, Path: *at, Overwrite: *overwrite, TrustHTML: *trust})
+	if err != nil {
+		return err
+	}
+	report := filepath.Join(*siteDir, "IMPORT-REPORT.md")
+	if err := os.WriteFile(report, []byte(rep.Markdown(*from)), 0o644); err != nil {
+		return err
+	}
+	fmt.Printf("%d page(s), %d other file(s), %d skipped, %d nav entries; %d page(s) to look at. Details: %s\nThen: hotdog-cms check\n",
+		len(rep.Pages), len(rep.Files), len(rep.Skipped), rep.NavItems, len(rep.Notes), report)
 	return nil
 }
 

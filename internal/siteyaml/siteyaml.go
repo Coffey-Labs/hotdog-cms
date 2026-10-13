@@ -138,3 +138,78 @@ func AddEntry(text, key, child string, value any) (string, error) {
 	}
 	return out, nil
 }
+
+// SetEntry replaces child: under the top-level mapping key: (one collection
+// under collections:, say) with value, leaving every other line as written,
+// its siblings' comments included. A child that isn't there is added.
+func SetEntry(text, key, child string, value any) (string, error) {
+	lines := strings.SplitAfter(text, "\n")
+	start := -1
+	for i, l := range lines {
+		if strings.HasPrefix(l, key+":") {
+			start = i
+			break
+		}
+	}
+	if start < 0 {
+		return AddEntry(text, key, child, value)
+	}
+	// Find child: among the block's entries, and where its own lines end:
+	// at the next line indented no deeper than it, or the block's end.
+	from, to, indent := -1, len(lines), ""
+	for i := start + 1; i < len(lines); i++ {
+		l := lines[i]
+		t := strings.TrimSpace(l)
+		if t == "" {
+			continue
+		}
+		if l[0] != ' ' && l[0] != '\t' {
+			if from >= 0 && to == len(lines) {
+				to = i
+			}
+			break
+		}
+		ind := l[:len(l)-len(strings.TrimLeft(l, " \t"))]
+		if from >= 0 {
+			if len(ind) <= len(indent) {
+				to = i
+				break
+			}
+			continue
+		}
+		if strings.HasPrefix(t, child+":") {
+			from, indent = i, ind
+		}
+	}
+	if from < 0 {
+		return AddEntry(text, key, child, value)
+	}
+	// Blank lines, and comments at the entries' own indent, just before the
+	// next entry belong to it; a comment indented under child is child's.
+	for to > from+1 {
+		l := lines[to-1]
+		t := strings.TrimSpace(l)
+		if t != "" && !(strings.HasPrefix(t, "#") && len(l)-len(strings.TrimLeft(l, " \t")) <= len(indent)) {
+			break
+		}
+		to--
+	}
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(map[string]any{child: value}); err != nil {
+		return "", err
+	}
+	var add strings.Builder
+	for _, l := range strings.SplitAfter(buf.String(), "\n") {
+		if l != "" {
+			add.WriteString(indent + l)
+		}
+	}
+	out := strings.Join(lines[:from], "") + add.String() + strings.Join(lines[to:], "")
+	var check map[string]any
+	if err := yaml.Unmarshal([]byte(out), &check); err != nil {
+		return "", fmt.Errorf("site.yaml wouldn't be valid YAML after the change: %w", err)
+	}
+	return out, nil
+}

@@ -98,6 +98,14 @@ type MarkdownConfig struct {
 	// browsers how wide they'll show so they fetch the right file. The default
 	// suits a text column up to 50rem wide.
 	ImageSizes string `yaml:"image_sizes"`
+	// HeadingIDs picks how headings get their anchors: the default, or
+	// mkdocs for the ones MkDocs gives (on-linux-bsd for "On Linux & BSD"),
+	// so links into a site moved from it still land.
+	HeadingIDs string `yaml:"heading_ids"`
+	// Keys names keys for ++ctrl+k++ shortcuts, where the name shown isn't
+	// the key's own capitalized: {hash: "#"} shows ++hash++ as #. MkDocs'
+	// pymdownx.keys calls it key_map.
+	Keys map[string]string `yaml:"keys"`
 }
 
 // AutolinkOn reports whether bare URLs become links.
@@ -135,8 +143,9 @@ type CollectionConfig struct {
 	// FeedImage is the channel's logo in an RSS feed, a path in static/.
 	FeedImage       string `yaml:"feed_image"`
 	FeedDescription string `yaml:"feed_description"`
-	// Paginate overrides the site's paginate for this collection's list.
-	Paginate int `yaml:"paginate"`
+	// Paginate overrides the site's paginate for this collection's list; 0
+	// keeps it on one page, for a list nobody pages through (the docs').
+	Paginate *int `yaml:"paginate"`
 	// ListLayout is the layout for the collection's own page (/<collection>/);
 	// default list.
 	ListLayout string `yaml:"list_layout"`
@@ -264,6 +273,11 @@ func LoadConfig(dir string) (*Config, error) {
 		default:
 			return nil, fmt.Errorf("site.yaml: collection %s: feed_format %q is not atom, rss or podcast", name, cc.FeedFormat)
 		}
+	}
+	switch c.Markdown.HeadingIDs {
+	case "", "default", "mkdocs":
+	default:
+		return nil, fmt.Errorf("site.yaml: markdown.heading_ids %q is not default or mkdocs", c.Markdown.HeadingIDs)
 	}
 	switch c.Markdown.ExternalLinks {
 	case "", "new_tab":

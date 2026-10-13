@@ -13,8 +13,8 @@ func (s *Site) paginate() {
 		}
 		per := s.Config.Paginate
 		if p.Kind == KindList {
-			if n := s.Config.Collections[p.Collection].Paginate; n > 0 {
-				per = n
+			if n := s.Config.Collections[p.Collection].Paginate; n != nil {
+				per = *n
 			}
 		}
 		items := p.Pages

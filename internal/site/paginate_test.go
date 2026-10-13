@@ -106,3 +106,33 @@ func TestFolderListPages(t *testing.T) {
 		t.Error("the docs' own list is still split")
 	}
 }
+
+// paginate: 0 on a collection keeps its list on one page whatever the site's.
+func TestPaginateOff(t *testing.T) {
+	dir := t.TempDir()
+	files := map[string]string{
+		"site.yaml":              "name: T\nurl: https://example.org\npaginate: 2\ncollections:\n  docs:\n    paginate: 0\n",
+		"content/docs/_index.md": "---\ntitle: Docs\n---\n",
+		"content/docs/a.md":      "---\ntitle: A\n---\n",
+		"content/docs/b.md":      "---\ntitle: B\n---\n",
+		"content/docs/c.md":      "---\ntitle: C\n---\n",
+		"content/news/a.md":      "---\ntitle: A\n---\n",
+		"content/news/b.md":      "---\ntitle: B\n---\n",
+		"content/news/c.md":      "---\ntitle: C\n---\n",
+	}
+	for name, body := range files {
+		p := filepath.Join(dir, filepath.FromSlash(name))
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		os.WriteFile(p, []byte(body), 0o644)
+	}
+	s, err := Load(dir, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.PageAt("/docs/page/2/") != nil || len(s.PageAt("/docs/").Paginator.Items) != 3 {
+		t.Error("the docs were split")
+	}
+	if s.PageAt("/news/page/2/") == nil {
+		t.Error("the site's paginate no longer applies")
+	}
+}

@@ -22,12 +22,13 @@ import (
 // on, and even then it passes a sanitizer, so a page can carry a <figure> or a
 // <details> but not a <script> or an onclick.
 type Markdown struct {
-	trust    bool
-	md       goldmark.Markdown
-	sanitize *bluemonday.Policy
-	emailOff bool
-	newTab   bool
-	host     string // this site's host, for telling external links apart
+	trust     bool
+	md        goldmark.Markdown
+	sanitize  *bluemonday.Policy
+	emailOff  bool
+	newTab    bool
+	mkdocsIDs bool   // heading anchors as MkDocs makes them (headingids.go)
+	host      string // this site's host, for telling external links apart
 
 	media      map[string]*MediaPicture // static/media/, by main file address
 	imageSizes string
@@ -37,7 +38,7 @@ type Markdown struct {
 // own host name, so links elsewhere can be told apart.
 func NewMarkdown(c MarkdownConfig, host string) *Markdown {
 	exts := []goldmark.Extender{extension.Table, extension.Strikethrough, extension.TaskList, extension.Footnote,
-		extension.DefinitionList, docsSyntax{anyAttribute: c.TrustHTML}}
+		extension.DefinitionList, docsSyntax{anyAttribute: c.TrustHTML, keys: c.Keys}}
 	if c.AutolinkOn() {
 		exts = append(exts, extension.Linkify)
 	}
@@ -50,7 +51,7 @@ func NewMarkdown(c MarkdownConfig, host string) *Markdown {
 		// would be raw HTML by another name.
 		rendererOpts = append(rendererOpts, goldmark.WithParserOptions(parser.WithASTTransformers(util.Prioritized(idClassOnly{}, 1000))))
 	}
-	m := &Markdown{trust: c.TrustHTML, emailOff: c.EmailOff, newTab: c.ExternalLinks == "new_tab", host: strings.ToLower(host), imageSizes: c.ImageSizes}
+	m := &Markdown{trust: c.TrustHTML, emailOff: c.EmailOff, newTab: c.ExternalLinks == "new_tab", mkdocsIDs: c.HeadingIDs == "mkdocs", host: strings.ToLower(host), imageSizes: c.ImageSizes}
 	if m.imageSizes == "" {
 		m.imageSizes = defaultImageSizes
 	}
@@ -192,13 +193,35 @@ func (m *Markdown) markNewTab(out []byte) []byte {
 	})
 }
 
+// explicitIDRe finds a heading's own anchor: ## Value {#value}.
+var explicitIDRe = regexp.MustCompile(`(?m)^ {0,3}#{1,6}[ \t].*\{[^}\n]*#([A-Za-z][\w:.-]*)[^}\n]*\}[ \t]*$`)
+
 // Render turns Markdown into HTML that is safe to place in a page.
-func (m *Markdown) Render(src []byte) (template.HTML, error) {
+func (m *Markdown) Render(src []byte) (template.HTML, error) { return m.RenderTitled(src, "") }
+
+// RenderTitled renders a page's body knowing its title. With MkDocs' heading
+// anchors, the title takes its anchor first, as the page's first heading
+// does in MkDocs, so a section named like the page is #user-account_1 there
+// and here.
+func (m *Markdown) RenderTitled(src []byte, title string) (template.HTML, error) {
 	if m.trust || m.sanitize != nil {
 		src = mdInHTML(src)
 	}
 	var buf bytes.Buffer
-	if err := m.md.Convert(src, &buf); err != nil {
+	var opts []parser.ParseOption
+	if m.mkdocsIDs {
+		// Python-Markdown knows every heading's own {#id} before it makes
+		// one up, so "## Value" before "### Value {#value}" is value_1.
+		ids := &mkdocsIDs{used: map[string]bool{}}
+		for _, m := range explicitIDRe.FindAllSubmatch(src, -1) {
+			ids.Put(m[1])
+		}
+		if title != "" {
+			ids.Generate([]byte(title), ast.KindHeading)
+		}
+		opts = append(opts, parser.WithContext(parser.NewContext(parser.WithIDs(ids))))
+	}
+	if err := m.md.Convert(src, &buf, opts...); err != nil {
 		return "", err
 	}
 	out := buf.Bytes()

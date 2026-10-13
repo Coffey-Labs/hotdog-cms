@@ -35,15 +35,20 @@ import (
 
 var (
 	kindAdmonition = ast.NewNodeKind("Admonition")
+	kindAdmTitle   = ast.NewNodeKind("AdmonitionTitle")
 	kindTab        = ast.NewNodeKind("Tab")
 	kindTabSet     = ast.NewNodeKind("TabSet")
 	kindKeys       = ast.NewNodeKind("Keys")
+	kindCodeTitle  = ast.NewNodeKind("CodeTitle")
 )
 
 // docsSyntax is the goldmark extension for all of the above. anyAttribute
 // is the site trusting its authors' HTML: without it, attributes written
 // after a picture or a link are limited to id and class.
-type docsSyntax struct{ anyAttribute bool }
+type docsSyntax struct {
+	anyAttribute bool
+	keys         map[string]string // site.yaml markdown.keys: names for keys, as pymdownx.keys' key_map
+}
 
 func (d docsSyntax) Extend(m goldmark.Markdown) {
 	m.Parser().AddOptions(
@@ -51,13 +56,14 @@ func (d docsSyntax) Extend(m goldmark.Markdown) {
 			util.Prioritized(admonitionParser{}, 150),
 			util.Prioritized(tabParser{}, 150),
 		),
-		parser.WithInlineParsers(util.Prioritized(keysParser{}, 150)),
+		parser.WithInlineParsers(util.Prioritized(keysParser{keys: d.keys}, 150)),
 		parser.WithASTTransformers(
 			util.Prioritized(tabSets{}, 3000),
 			util.Prioritized(trailingAttributes{anyAttribute: d.anyAttribute}, 2000),
+			util.Prioritized(codeTitles{}, 2000),
 		),
 	)
-	m.Renderer().AddOptions(renderer.WithNodeRenderers(util.Prioritized(docsRenderer{}, 500)))
+	m.Renderer().AddOptions(renderer.WithNodeRenderers(util.Prioritized(docsRenderer{keys: d.keys}, 500)))
 }
 
 // --- admonitions and collapsible blocks -------------------------------------
@@ -68,6 +74,16 @@ type admonition struct {
 	Title       string
 	Collapsible bool // ??? : a <details>
 	Open        bool // ???+ : open to start with
+	TitleNode   bool // a written title, in its own child so its Markdown is read
+}
+
+// admonitionTitle is a written title: "Which is what `SOURCE_URL` is for"
+// keeps its code, as MkDocs keeps it.
+type admonitionTitle struct{ ast.BaseBlock }
+
+func (n *admonitionTitle) Kind() ast.NodeKind { return kindAdmTitle }
+func (n *admonitionTitle) Dump(src []byte, level int) {
+	ast.DumpHelper(n, src, level, nil, nil)
 }
 
 func (n *admonition) Kind() ast.NodeKind { return kindAdmonition }
@@ -85,12 +101,13 @@ type admonitionParser struct{}
 func (admonitionParser) Trigger() []byte { return []byte{'!', '?'} }
 
 func (admonitionParser) Open(parent ast.Node, reader text.Reader, pc parser.Context) (ast.Node, parser.State) {
-	line, _ := reader.PeekLine()
+	line, seg := reader.PeekLine()
 	w, pos := util.IndentWidth(line, reader.LineOffset())
 	if w > 3 {
 		return nil, parser.NoChildren
 	}
-	m := admonitionRe.FindSubmatch(util.TrimRightSpace(line[pos:]))
+	rest := util.TrimRightSpace(line[pos:])
+	m := admonitionRe.FindSubmatch(rest)
 	if m == nil {
 		return nil, parser.NoChildren
 	}
@@ -98,6 +115,13 @@ func (admonitionParser) Open(parent ast.Node, reader text.Reader, pc parser.Cont
 	n := &admonition{Classes: classes, Collapsible: m[1][0] == '?', Open: bytes.HasSuffix(m[1], []byte("+"))}
 	if m[3] != nil {
 		n.Title = string(m[3])
+		if n.Title != "" {
+			idx := admonitionRe.FindSubmatchIndex(rest)
+			t := &admonitionTitle{}
+			t.Lines().Append(text.NewSegment(seg.Start+pos+idx[6], seg.Start+pos+idx[7]))
+			n.AppendChild(n, t)
+			n.TitleNode = true
+		}
 	} else {
 		n.Title = strings.ToUpper(classes[0][:1]) + classes[0][1:]
 	}
@@ -228,34 +252,50 @@ func (n *keys) Dump(src []byte, level int) {
 
 var keysRe = regexp.MustCompile(`^\+\+([A-Za-z0-9][A-Za-z0-9_-]*(?:\+[A-Za-z0-9][A-Za-z0-9_-]*)*)\+\+`)
 
-type keysParser struct{}
+// keysParser reads ++ctrl+alt+del++. As pymdownx.keys does, it takes only
+// keys it knows (keymap.go, and the site's own markdown.keys); anything else
+// stays text.
+type keysParser struct{ keys map[string]string }
 
 func (keysParser) Trigger() []byte { return []byte{'+'} }
 
-func (keysParser) Parse(parent ast.Node, block text.Reader, pc parser.Context) ast.Node {
+func (kp keysParser) Parse(parent ast.Node, block text.Reader, pc parser.Context) ast.Node {
 	line, _ := block.PeekLine()
 	m := keysRe.FindSubmatch(line)
 	if m == nil {
 		return nil
 	}
+	ks := strings.Split(strings.ToLower(string(m[1])), "+")
+	for _, k := range ks {
+		_, mine := kp.keys[k]
+		_, known := keyLabels[keyName(k)]
+		if !mine && !known {
+			return nil
+		}
+	}
 	block.Advance(len(m[0]))
-	return &keys{Keys: strings.Split(strings.ToLower(string(m[1])), "+")}
+	return &keys{Keys: ks}
 }
 
-// keyNames are the names pymdownx.keys knows that don't just capitalize.
-var keyNames = map[string]string{
-	"ctrl": "Ctrl", "control": "Ctrl", "alt": "Alt", "option": "Option", "shift": "Shift",
-	"cmd": "Cmd", "command": "Cmd", "meta": "Meta", "super": "Super", "windows": "Win", "win": "Win",
-	"enter": "Enter", "return": "Return", "esc": "Esc", "escape": "Esc", "tab": "Tab", "space": "Space",
-	"backspace": "Backspace", "del": "Del", "delete": "Del", "insert": "Ins", "ins": "Ins",
-	"home": "Home", "end": "End", "page-up": "Page Up", "page-down": "Page Down",
-	"pgup": "Page Up", "pgdn": "Page Down", "up": "Up", "down": "Down", "left": "Left", "right": "Right",
-	"arrow-up": "Up", "arrow-down": "Down", "arrow-left": "Left", "arrow-right": "Right",
-	"caps-lock": "Caps Lock", "print-screen": "Print Screen", "fn": "Fn",
+// keyName is a key's own name, for a shortcut written with another of its
+// names (ctrl for control, esc for escape), as pymdownx.keys has them
+// (keymap.go).
+func keyName(k string) string {
+	if n, ok := keyAliases[k]; ok {
+		return n
+	}
+	return k
 }
 
-func keyLabel(k string) string {
-	if n, ok := keyNames[k]; ok {
+func (r docsRenderer) keyLabel(k string) string {
+	if n, ok := r.keys[k]; ok {
+		return n
+	}
+	name := keyName(k)
+	if n, ok := r.keys[name]; ok {
+		return n
+	}
+	if n, ok := keyLabels[name]; ok {
 		return n
 	}
 	if len(k) == 1 || (k[0] == 'f' && len(k) <= 3 && strings.Trim(k[1:], "0123456789") == "") {
@@ -345,13 +385,15 @@ func (ta trailingAttributes) Transform(doc *ast.Document, reader text.Reader, _ 
 
 // --- rendering ---------------------------------------------------------------
 
-type docsRenderer struct{}
+type docsRenderer struct{ keys map[string]string }
 
-func (docsRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
+func (r docsRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer) {
 	reg.Register(kindAdmonition, renderAdmonition)
+	reg.Register(kindAdmTitle, renderAdmonitionTitle)
 	reg.Register(kindTabSet, renderTabSet)
 	reg.Register(kindTab, renderTab)
-	reg.Register(kindKeys, renderKeys)
+	reg.Register(kindKeys, r.renderKeys)
+	reg.Register(kindCodeTitle, renderCodeTitle)
 }
 
 func renderAdmonition(w util.BufWriter, _ []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -363,7 +405,10 @@ func renderAdmonition(w util.BufWriter, _ []byte, node ast.Node, entering bool) 
 			if n.Open {
 				open = " open"
 			}
-			fmt.Fprintf(w, "<details class=\"%s\"%s>\n<summary>%s</summary>\n", cls, open, html.EscapeString(n.Title))
+			fmt.Fprintf(w, "<details class=\"%s\"%s>\n", cls, open)
+			if !n.TitleNode {
+				fmt.Fprintf(w, "<summary>%s</summary>\n", html.EscapeString(n.Title))
+			}
 		} else {
 			w.WriteString("</details>\n")
 		}
@@ -371,9 +416,71 @@ func renderAdmonition(w util.BufWriter, _ []byte, node ast.Node, entering bool) 
 	}
 	if entering {
 		fmt.Fprintf(w, "<div class=\"admonition %s\">\n", cls)
-		if n.Title != "" {
+		if n.Title != "" && !n.TitleNode {
 			fmt.Fprintf(w, "<p class=\"admonition-title\">%s</p>\n", html.EscapeString(n.Title))
 		}
+	} else {
+		w.WriteString("</div>\n")
+	}
+	return ast.WalkContinue, nil
+}
+
+func renderAdmonitionTitle(w util.BufWriter, _ []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	summary := node.Parent().(*admonition).Collapsible
+	switch {
+	case entering && summary:
+		w.WriteString("<summary>")
+	case entering:
+		w.WriteString(`<p class="admonition-title">`)
+	case summary:
+		w.WriteString("</summary>\n")
+	default:
+		w.WriteString("</p>\n")
+	}
+	return ast.WalkContinue, nil
+}
+
+// --- a code block's file name ------------------------------------------------
+
+// codeTitle wraps a fenced code block whose info names a file, ```json
+// title="servers.json", as pymdownx.highlight shows it: the name above the
+// code.
+type codeTitle struct {
+	ast.BaseBlock
+	Title string
+}
+
+func (n *codeTitle) Kind() ast.NodeKind { return kindCodeTitle }
+func (n *codeTitle) Dump(src []byte, level int) {
+	ast.DumpHelper(n, src, level, map[string]string{"Title": n.Title}, nil)
+}
+
+var codeTitleRe = regexp.MustCompile(`\btitle=(?:"([^"]*)"|'([^']*)')`)
+
+type codeTitles struct{}
+
+func (codeTitles) Transform(doc *ast.Document, reader text.Reader, _ parser.Context) {
+	var found []*ast.FencedCodeBlock
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		if fc, ok := n.(*ast.FencedCodeBlock); ok && entering && fc.Info != nil {
+			found = append(found, fc)
+		}
+		return ast.WalkContinue, nil
+	})
+	for _, fc := range found {
+		m := codeTitleRe.FindSubmatch(fc.Info.Segment.Value(reader.Source()))
+		if m == nil {
+			continue
+		}
+		t := &codeTitle{Title: string(m[1]) + string(m[2])}
+		fc.Parent().ReplaceChild(fc.Parent(), fc, t)
+		t.AppendChild(t, fc)
+	}
+}
+
+func renderCodeTitle(w util.BufWriter, _ []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+	if entering {
+		fmt.Fprintf(w, "<div class=\"highlight\"><span class=\"filename\">%s</span>", html.EscapeString(node.(*codeTitle).Title))
 	} else {
 		w.WriteString("</div>\n")
 	}
@@ -424,7 +531,7 @@ func renderTab(w util.BufWriter, _ []byte, _ ast.Node, entering bool) (ast.WalkS
 	return ast.WalkContinue, nil
 }
 
-func renderKeys(w util.BufWriter, _ []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
+func (r docsRenderer) renderKeys(w util.BufWriter, _ []byte, node ast.Node, entering bool) (ast.WalkStatus, error) {
 	if !entering {
 		return ast.WalkContinue, nil
 	}
@@ -434,7 +541,7 @@ func renderKeys(w util.BufWriter, _ []byte, node ast.Node, entering bool) (ast.W
 		if i > 0 {
 			w.WriteString("<span>+</span>")
 		}
-		fmt.Fprintf(w, `<kbd class="key-%s">%s</kbd>`, html.EscapeString(k), html.EscapeString(keyLabel(k)))
+		fmt.Fprintf(w, `<kbd class="key-%s">%s</kbd>`, html.EscapeString(keyName(k)), html.EscapeString(r.keyLabel(k)))
 	}
 	w.WriteString(`</span>`)
 	return ast.WalkSkipChildren, nil
