@@ -80,14 +80,31 @@ const nginxConf = `server {
 }
 `
 
-const caddyContainerfile = `# Written by hotdog-cms. The site, served by Caddy on port 8080.
+const caddyContainerfile = `# Written by hotdog-cms. The site, served by Caddy on port 8080, as a user
+# with no privileges: it can run with every capability dropped and a
+# read-only root, like the nginx image.
 FROM docker.io/library/caddy:2-alpine
+# Copied, the binary loses the file capability that lets it bind ports below
+# 1024. It listens on 8080 and needs none, and with it a container whose
+# capabilities are all dropped won't start at all.
+RUN cp /usr/bin/caddy /usr/bin/caddy.new && mv /usr/bin/caddy.new /usr/bin/caddy
+# What Caddy keeps (certificates it never gets here, its last config) goes to
+# /tmp, the one place a locked-down container can write.
+ENV XDG_CONFIG_HOME=/tmp XDG_DATA_HOME=/tmp
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY site/ /srv/
+USER 65534:65534
 EXPOSE 8080
 `
 
-const caddyFile = `:8080 {
+const caddyFile = `# No admin API (it listens inside the container by default) and nothing
+# saved: the config is this file.
+{
+	admin off
+	persist_config off
+}
+
+:8080 {
 	root * /srv
 	header {
 		X-Content-Type-Options nosniff

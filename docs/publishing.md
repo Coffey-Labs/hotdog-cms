@@ -73,6 +73,28 @@ change that). In the editor, `publish.yaml` and CI pipeline files (`.github/`,
 changed only by maintainers of the repository. For the strongest separation,
 keep the targets file outside the repository and pass it with `-targets`.
 
+### Running the image locked down
+
+The image only serves files, so it can run with almost everything a
+container is allowed taken away. Both web servers run as an unprivileged user
+on port 8080 (nginx as uid 101, Caddy as nobody, with its admin API off), so
+the same flags work for either:
+
+```
+docker run -d -p 80:8080 \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,nodev \
+  --cap-drop ALL --security-opt no-new-privileges \
+  --memory 256m --pids-limit 128 \
+  registry.example.org/example-site:latest
+```
+
+`--read-only` keeps the image as it was built; `/tmp` is the one writable
+place, and nothing written there can run. With every capability dropped and
+no way to gain one, nothing in the container can act as root. The limits
+stop one site from starving others on the same machine: a static site uses
+under 10 MB of memory and a handful of processes.
+
 ## Pull: the agent on the server
 
     hotdog-cms pull -repo https://git.example.org/me/site.git -out /var/www/example.org -every 1m
