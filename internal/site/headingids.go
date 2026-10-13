@@ -1,6 +1,7 @@
 package site
 
 import (
+	"html"
 	"regexp"
 	"strconv"
 	"strings"
@@ -37,7 +38,7 @@ func mkdocsSlug(s string) string {
 }
 
 func (m *mkdocsIDs) Generate(value []byte, _ ast.NodeKind) []byte {
-	id := mkdocsSlug(string(value))
+	id := mkdocsSlug(headingText(string(value)))
 	// Python-Markdown's unique(): an empty or taken id gets _1, then _2...
 	for id == "" || m.used[id] {
 		if mt := slugNumRe.FindStringSubmatch(id); mt != nil {
@@ -49,6 +50,22 @@ func (m *mkdocsIDs) Generate(value []byte, _ ast.NodeKind) []byte {
 	}
 	m.used[id] = true
 	return []byte(id)
+}
+
+var (
+	mdLinkTextRe = regexp.MustCompile(`!?\[([^\]]*)\](?:\([^)]*\)|\[[^\]]*\])`)
+	mdTagRe      = regexp.MustCompile(`<[^>]*>`)
+	mdEscapeRe   = regexp.MustCompile(`\\([!-/:-@\[-` + "`" + `{-~])`)
+)
+
+// headingText is a heading as written, as the text it shows: goldmark hands
+// the anchor maker the source ("Groups &amp; [roles](roles.md)"), where
+// Python-Markdown slugifies what the heading reads ("Groups & roles").
+func headingText(s string) string {
+	s = mdLinkTextRe.ReplaceAllString(s, "$1")
+	s = mdTagRe.ReplaceAllString(s, "")
+	s = mdEscapeRe.ReplaceAllString(s, "$1")
+	return html.UnescapeString(s)
 }
 
 func (m *mkdocsIDs) Put(value []byte) { m.used[string(value)] = true }

@@ -441,6 +441,9 @@ func convertMkDocsPage(rel string, raw []byte, files map[string]bool, prefix str
 				notes["HTML the sanitizer removes, "+what+" (markdown.trust_html keeps it)"]++
 			}
 		}
+		if strings.HasPrefix(strings.TrimSpace(l), "|") {
+			l = escapeCodePipes(l)
+		}
 		l = mdLinkRe.ReplaceAllStringFunc(l, func(s string) string {
 			m := mdLinkRe.FindStringSubmatch(s)
 			return m[1] + fix(m[2])
@@ -492,6 +495,45 @@ type navEntry struct {
 	Page     string `yaml:"page,omitempty"`
 	URL      string `yaml:"url,omitempty"`
 	Children []any  `yaml:"children,omitempty"`
+}
+
+// escapeCodePipes writes a table row's | inside `code` as \|. Python-Markdown
+// doesn't split a cell inside code; GitHub's tables, which HotDog reads, do
+// unless the pipe is escaped, and show \| in code as |.
+func escapeCodePipes(row string) string {
+	var b strings.Builder
+	open := 0 // the length of the backtick run that opened the span, 0 outside one
+	for i := 0; i < len(row); {
+		c := row[i]
+		switch {
+		case c == '`':
+			n := 1
+			for i+n < len(row) && row[i+n] == '`' {
+				n++
+			}
+			if open == 0 {
+				open = n
+			} else if n == open {
+				open = 0
+			}
+			b.WriteString(row[i : i+n])
+			i += n
+			continue
+		case c == '\\' && open == 0 && i+1 < len(row):
+			b.WriteString(row[i : i+2])
+			i += 2
+			continue
+		case c == '|' && open > 0 && (i == 0 || row[i-1] != '\\'):
+			b.WriteString("\\|")
+		default:
+			b.WriteByte(c)
+		}
+		i++
+	}
+	if open > 0 { // an unclosed span is no span: leave the row as it was
+		return row
+	}
+	return b.String()
 }
 
 // mkdocsNav turns mkdocs.yml's nav into the docs pack's tree. Its entries
@@ -636,6 +678,9 @@ func mkdocsSiteYAML(opt MkDocsOptions, cfg *mkdocsConfig, anyHTML bool, rep *MkD
 	docsColl := colls["docs"]
 	if docsColl == nil {
 		docsColl = map[string]any{"layout": "doc", "list_layout": "doc-index", "sort": "weight", "search": true}
+	}
+	if _, ok := docsColl["paginate"]; !ok {
+		docsColl["paginate"] = 0 // the docs are read through the sidebar, not paged
 	}
 	if opt.Path != "/docs/" {
 		docsColl["path"] = opt.Path

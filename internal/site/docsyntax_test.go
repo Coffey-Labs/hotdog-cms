@@ -152,6 +152,14 @@ func TestMkDocsHeadingIDs(t *testing.T) {
 			t.Errorf("missing %s in\n%s", want, out)
 		}
 	}
+	// A heading's own anchor is known before any is made up; the title takes
+	// its anchor first; what's slugified is what the heading reads.
+	out, _ = md.RenderTitled([]byte("## Value\n\n### Value {#value}\n\n## User account\n\n## Groups &amp; [roles](roles.md)\n"), "User account")
+	for _, want := range []string{`<h2 id="value_1">`, `<h3 id="value">`, `<h2 id="user-account_1">`, `<h2 id="groups-roles">`} {
+		if !strings.Contains(string(out), want) {
+			t.Errorf("missing %s in\n%s", want, out)
+		}
+	}
 	plain, _ := NewMarkdown(MarkdownConfig{}, "example.org").Render([]byte("## On Linux & BSD\n"))
 	if !strings.Contains(string(plain), `id="on-linux--bsd"`) {
 		t.Errorf("the default is unchanged: %s", plain)

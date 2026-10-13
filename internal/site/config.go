@@ -143,8 +143,9 @@ type CollectionConfig struct {
 	// FeedImage is the channel's logo in an RSS feed, a path in static/.
 	FeedImage       string `yaml:"feed_image"`
 	FeedDescription string `yaml:"feed_description"`
-	// Paginate overrides the site's paginate for this collection's list.
-	Paginate int `yaml:"paginate"`
+	// Paginate overrides the site's paginate for this collection's list; 0
+	// keeps it on one page, for a list nobody pages through (the docs').
+	Paginate *int `yaml:"paginate"`
 	// ListLayout is the layout for the collection's own page (/<collection>/);
 	// default list.
 	ListLayout string `yaml:"list_layout"`

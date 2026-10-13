@@ -193,15 +193,33 @@ func (m *Markdown) markNewTab(out []byte) []byte {
 	})
 }
 
+// explicitIDRe finds a heading's own anchor: ## Value {#value}.
+var explicitIDRe = regexp.MustCompile(`(?m)^ {0,3}#{1,6}[ \t].*\{[^}\n]*#([A-Za-z][\w:.-]*)[^}\n]*\}[ \t]*$`)
+
 // Render turns Markdown into HTML that is safe to place in a page.
-func (m *Markdown) Render(src []byte) (template.HTML, error) {
+func (m *Markdown) Render(src []byte) (template.HTML, error) { return m.RenderTitled(src, "") }
+
+// RenderTitled renders a page's body knowing its title. With MkDocs' heading
+// anchors, the title takes its anchor first, as the page's first heading
+// does in MkDocs, so a section named like the page is #user-account_1 there
+// and here.
+func (m *Markdown) RenderTitled(src []byte, title string) (template.HTML, error) {
 	if m.trust || m.sanitize != nil {
 		src = mdInHTML(src)
 	}
 	var buf bytes.Buffer
 	var opts []parser.ParseOption
 	if m.mkdocsIDs {
-		opts = append(opts, parser.WithContext(parser.NewContext(parser.WithIDs(&mkdocsIDs{used: map[string]bool{}}))))
+		// Python-Markdown knows every heading's own {#id} before it makes
+		// one up, so "## Value" before "### Value {#value}" is value_1.
+		ids := &mkdocsIDs{used: map[string]bool{}}
+		for _, m := range explicitIDRe.FindAllSubmatch(src, -1) {
+			ids.Put(m[1])
+		}
+		if title != "" {
+			ids.Generate([]byte(title), ast.KindHeading)
+		}
+		opts = append(opts, parser.WithContext(parser.NewContext(parser.WithIDs(ids))))
 	}
 	if err := m.md.Convert(src, &buf, opts...); err != nil {
 		return "", err

@@ -356,7 +356,7 @@ func loadPage(raw []byte, rel string, md *Markdown) (*Page, error) {
 
 	switch str(fm["format"]) {
 	case "", "markdown":
-		if p.Content, err = md.Render(body); err != nil {
+		if p.Content, err = md.RenderTitled(body, p.Title); err != nil {
 			return nil, err
 		}
 	case "html":

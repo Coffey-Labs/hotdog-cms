@@ -78,8 +78,8 @@ nav:
 			"[missing](../nope.png)", "(https://example.com/a.png)", `<img src="/img/shot.png"`, "![not a link](../img/shot.png)"},
 		"content/docs/install/mac.md": {"title: Mac\n"},
 		"static/img/shot.png":         {"png"},
-		"data/docs-nav.yaml": {"- title: Home\n  page: docs/_index.md\n- title: Install it\n  page: docs/install/_index.md\n  children:\n    - title: On Linux\n      page: docs/install/linux.md\n    - title: Elsewhere\n      children:\n        - docs/install/mac.md\n- title: Back to the site\n  url: https://example.org/\n"},
-		"site.yaml": {"name: Example docs\n", "url: https://docs.example.org\n", "    path: /\n", "heading_ids: mkdocs", "hash: '#'", "unsafe_html: true"},
+		"data/docs-nav.yaml":          {"- title: Home\n  page: docs/_index.md\n- title: Install it\n  page: docs/install/_index.md\n  children:\n    - title: On Linux\n      page: docs/install/linux.md\n    - title: Elsewhere\n      children:\n        - docs/install/mac.md\n- title: Back to the site\n  url: https://example.org/\n"},
+		"site.yaml":                   {"name: Example docs\n", "url: https://docs.example.org\n", "    path: /\n", "heading_ids: mkdocs", "hash: '#'", "unsafe_html: true"},
 	} {
 		got := read(t, filepath.Join(dir, file))
 		for _, w := range wants {
@@ -120,5 +120,19 @@ nav:
 	rep, _ = FromMkDocs(MkDocsOptions{From: mk, SiteDir: dir})
 	if len(rep.Pages) != 0 || len(rep.Skipped) != 7 {
 		t.Errorf("again: wrote %v, skipped %v", rep.Pages, rep.Skipped)
+	}
+}
+
+func TestEscapeCodePipes(t *testing.T) {
+	for in, want := range map[string]string{
+		"| a | `(|(x=?)(y=?))` |":  "| a | `(\\|(x=?)(y=?))` |",
+		"| `` a|b `` | c |":        "| `` a\\|b `` | c |",
+		"| `a\\|b` | already |":    "| `a\\|b` | already |",
+		"| \\` | not code | x` |":  "| \\` | not code | x` |",
+		"| `open | never closed |": "| `open | never closed |",
+	} {
+		if got := escapeCodePipes(in); got != want {
+			t.Errorf("escapeCodePipes(%q) = %q, want %q", in, got, want)
+		}
 	}
 }
