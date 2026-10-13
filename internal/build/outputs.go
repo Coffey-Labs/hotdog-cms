@@ -333,8 +333,9 @@ func strList(v any) []string {
 }
 
 // writeSearch writes /<collection>/search.json: per page its address, title,
-// date, terms, summary and Markdown body, for a search box to load when
-// someone actually searches.
+// date, terms, summary, section headings and Markdown body, for a search box
+// to load when someone actually searches. The headings ([anchor, text]) let a
+// result go to the section a word is in.
 func writeSearch(s *site.Site, name string, out string) error {
 	type entry struct {
 		URL     string      `json:"u"`
@@ -342,6 +343,7 @@ func writeSearch(s *site.Site, name string, out string) error {
 		Date    string      `json:"d,omitempty"`
 		Terms   [][2]string `json:"g,omitempty"` // [as written, address]
 		Summary string      `json:"s,omitempty"`
+		Heads   [][2]string `json:"h,omitempty"` // [anchor, text]
 		Text    string      `json:"x"`
 	}
 	var entries []entry
@@ -350,6 +352,9 @@ func writeSearch(s *site.Site, name string, out string) error {
 			continue
 		}
 		e := entry{URL: p.Path, Title: p.Title, Summary: site.Excerpt(220, p.Summary), Text: p.Raw}
+		for _, h := range headings(p.Content) {
+			e.Heads = append(e.Heads, [2]string{h.ID, h.Text})
+		}
 		if !p.Date.IsZero() {
 			e.Date = p.Date.Format("2006-01-02")
 		}

@@ -176,6 +176,26 @@ numbers, marks the current page for screen readers, and its head adds
 pages keep their own canonical address. The duplicate-title check leaves
 them out.
 
+## On this page
+
+`headings .Content` lists a page's h2 and h3 headings, in order, each with
+its `.Level` (2 or 3), `.ID` (the anchor) and `.Text`. A contents list for
+long pages is a few lines:
+
+```
+{{ $h := headings .Content }}
+{{ if gt (len $h) 1 }}
+<nav aria-label="On this page"><ul>
+  {{ range $h }}<li class="h{{ .Level }}"><a href="#{{ .ID }}">{{ .Text }}</a></li>{{ end }}
+</ul></nav>
+{{ end }}
+```
+
+The table-of-contents pack puts one at the top of a page; the docs pack
+draws one beside each page. Search indexes carry the headings too (`h`, as
+`[anchor, text]` pairs), so a search box can send someone to the section a
+word is in rather than the top of the page.
+
 ## What the starter offers
 
 The starter's sections are hero (with an optional picture beside the text),

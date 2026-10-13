@@ -1,7 +1,7 @@
 name: docs
-version: 1.1.0
+version: 1.2.0
 title: Documentation
-description: A documentation section with a sidebar of parts and pages, a page for each part, and previous and next links, in the order you set.
+description: A documentation section with a sidebar of parts and pages, an on-this-page list, a page for each part, and previous and next links, in the order you set.
 license: MIT
 author: Coffey Labs LLC
 collections:
