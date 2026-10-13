@@ -436,7 +436,11 @@ func (s *Site) assemble() {
 		p.Permalink = cfg.URL + p.Path
 		switch p.Kind {
 		case KindList:
-			s.Lists[p.Collection] = p
+			// content/docs/_index.md is the docs' own page; a folder's
+			// _index.md under it (docs/install/_index.md) is that folder's.
+			if !p.subList() {
+				s.Lists[p.Collection] = p
+			}
 		case KindPage:
 			if p.Collection != "" {
 				s.Collections[p.Collection] = append(s.Collections[p.Collection], p)
@@ -466,6 +470,21 @@ func (s *Site) assemble() {
 			s.Pages = append(s.Pages, list)
 		}
 		list.Pages = pages
+	}
+	// A folder's own page lists the pages in that folder.
+	for _, p := range s.Pages {
+		if p.Kind == KindList && p.subList() {
+			dir := path.Dir(p.Source)
+			for _, q := range s.Collections[p.Collection] {
+				qdir := path.Dir(q.Source)
+				if path.Base(q.Source) == "index.md" { // a page in a folder of its own
+					qdir = path.Dir(qdir)
+				}
+				if qdir == dir {
+					p.Pages = append(p.Pages, q)
+				}
+			}
+		}
 	}
 
 	s.assembleTaxonomies()
@@ -499,6 +518,12 @@ func (s *Site) PageAt(path string) *Page {
 		}
 	}
 	return nil
+}
+
+// subList reports whether a list page is a folder's own page inside a
+// collection (content/docs/install/_index.md) rather than the collection's.
+func (p *Page) subList() bool {
+	return p.Source != "" && path.Dir(p.Source) != p.Collection
 }
 
 // Collection returns a collection's pages in order; nil if there is none.

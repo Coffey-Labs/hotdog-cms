@@ -18,7 +18,9 @@ func (s *Site) paginate() {
 			}
 		}
 		items := p.Pages
-		if per <= 0 || len(items) <= per {
+		// A folder's own page inside a collection lists its folder whole:
+		// numbered pages of it would be pages nobody links to.
+		if per <= 0 || len(items) <= per || p.Kind == KindList && p.subList() {
 			p.Paginator = &Paginator{Number: 1, TotalPages: 1, TotalItems: len(items), Items: items, First: p, All: []*Page{p}}
 			continue
 		}

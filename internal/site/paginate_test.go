@@ -59,3 +59,50 @@ func TestMarkdownAttributes(t *testing.T) {
 		t.Errorf("attributes: %s", s)
 	}
 }
+
+// A folder's _index.md inside a collection is that folder's page: it lists
+// the folder's pages, and the collection's own page keeps the collection.
+func TestFolderListPages(t *testing.T) {
+	dir := t.TempDir()
+	files := map[string]string{
+		"site.yaml":                     "name: T\nurl: https://example.org\npaginate: 2\n",
+		"content/docs/_index.md":        "---\ntitle: Docs\n---\n",
+		"content/docs/a.md":             "---\ntitle: A\n---\n",
+		"content/docs/b/_index.md":      "---\ntitle: B\n---\n",
+		"content/docs/b/one.md":         "---\ntitle: One\n---\n",
+		"content/docs/b/two.md":         "---\ntitle: Two\n---\n",
+		"content/docs/b/three/index.md": "---\ntitle: Three\n---\n",
+		"content/docs/b/c/deep.md":      "---\ntitle: Deep\n---\n",
+	}
+	for name, body := range files {
+		p := filepath.Join(dir, filepath.FromSlash(name))
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		os.WriteFile(p, []byte(body), 0o644)
+	}
+	s, err := Load(dir, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if l := s.Lists["docs"]; l == nil || l.Path != "/docs/" || len(l.Pages) != 5 {
+		t.Fatalf("the docs' list: %+v", l)
+	}
+	b := s.PageAt("/docs/b/")
+	var got []string
+	for _, p := range b.Pages {
+		got = append(got, p.Title)
+	}
+	if strings.Join(got, ",") != "One,Three,Two" && strings.Join(got, ",") != "One,Two,Three" {
+		t.Errorf("/docs/b/ lists %v", got)
+	}
+	if b.Paginator.TotalPages != 1 || len(b.Paginator.Items) != 3 {
+		t.Errorf("/docs/b/ is split: %+v", b.Paginator)
+	}
+	for _, p := range s.Pages {
+		if strings.HasPrefix(p.Path, "/docs/b/page/") {
+			t.Errorf("stray page %s", p.Path)
+		}
+	}
+	if s.PageAt("/docs/page/2/") == nil {
+		t.Error("the docs' own list is still split")
+	}
+}
