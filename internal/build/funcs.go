@@ -79,6 +79,9 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 		// pageAt "/articles/x/": the page at an address, or nil.
 		"pageAt": s.PageAt,
 		"menu":   s.Menu,
+		// nav "docs-nav" .: the navigation tree in data/docs-nav.yaml as this
+		// page sees it: .Items, .Here, .Trail, .Prev, .Next (site/nav.go).
+		"nav": s.NavFor,
 		"data": func(name string) (any, error) {
 			v, ok := s.Data[name]
 			if !ok {

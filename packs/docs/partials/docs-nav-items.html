@@ -1,0 +1,14 @@
+{{/* One level of the docs' navigation tree, and the levels under it. A
+     heading over more pages folds away unless the page being read is in it. */}}
+{{ range . }}
+<li{{ if .Open }} class="here"{{ end }}>
+  {{ if .Children }}
+  <details{{ if .Open }} open{{ end }}>
+    <summary>{{ if .Page }}<a class="part" href="{{ .URL }}"{{ if .Here }} aria-current="page"{{ end }}>{{ .Title }}</a>{{ else }}<span class="part">{{ .Title }}</span>{{ end }}</summary>
+    <ul>{{ template "docs-nav-items" .Children }}</ul>
+  </details>
+  {{ else }}
+  <a href="{{ .URL }}"{{ if .Here }} aria-current="page"{{ end }}{{ if .External }} class="out"{{ end }}>{{ .Title }}</a>
+  {{ end }}
+</li>
+{{ end }}

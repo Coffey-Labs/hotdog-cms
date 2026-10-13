@@ -114,7 +114,7 @@ func writeFeed(s *site.Site, name string, cc site.CollectionConfig, out string) 
 		NS:    "http://www.w3.org/2005/Atom",
 		Title: title,
 		ID:    s.Config.URL + path,
-		Links: []atomLink{{Href: s.Config.URL + path, Rel: "self"}, {Href: s.Config.URL + "/" + name + "/"}},
+		Links: []atomLink{{Href: s.Config.URL + path, Rel: "self"}, {Href: s.Config.URL + s.CollectionPath(name)}},
 	}
 	if s.Config.Author != "" {
 		f.Author = &author{Name: s.Config.Author}
@@ -268,7 +268,7 @@ func writeRSS(s *site.Site, name string, cc site.CollectionConfig, out string) (
 	}
 	rfc := func(t time.Time) string { return t.UTC().Format("Mon, 02 Jan 2006 15:04:05") + " GMT" }
 	ch := channel{
-		Title: title, Link: s.Config.URL + "/" + name + "/",
+		Title: title, Link: s.Config.URL + s.CollectionPath(name),
 		AtomLink:    atomLink{Href: s.Config.URL + path, Rel: "self", Type: "application/rss+xml"},
 		Description: desc, Language: strings.ToLower(s.Config.Language), LastBuildDate: rfc(s.BuildTime),
 	}

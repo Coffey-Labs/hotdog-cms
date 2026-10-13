@@ -196,6 +196,37 @@ draws one beside each page. Search indexes carry the headings too (`h`, as
 `[anchor, text]` pairs), so a search box can send someone to the section a
 word is in rather than the top of the page.
 
+## Navigation trees
+
+`nav "docs-nav" .` reads a navigation tree from `data/docs-nav.yaml` and
+places the page in it. Each entry is a page's source file, a heading over
+more entries (with a page of its own or not), or a link elsewhere:
+
+```
+- docs/_index.md
+- title: Run it
+  page: docs/run/_index.md
+  children:
+    - docs/run/sizing.md
+    - title: Compliance
+      children: [docs/run/audit-log.md, docs/run/legal-holds.md]
+- title: Back to the main site
+  url: https://example.org/
+```
+
+What comes back has `.Items` (each with `.Title`, `.URL`, `.Page`,
+`.Children`, `.External`, `.Here` for the page being shown and `.Open` for
+the headings above it), `.Here`, `.Trail` (those headings, from the top),
+and `.Prev` and `.Next` in reading order: every entry with a page, depth
+first, a heading's page before what's under it. An entry whose page isn't
+in the build, a draft say, is left out. The docs pack draws its sidebar,
+breadcrumb and previous and next links from it.
+
+A collection's pages live under `/<collection>/`; `path:` in its
+`collections:` entry puts them elsewhere. `path: /` puts a docs site's pages
+at the root of its own host. Its search index and feed stay at
+`/<collection>/`.
+
 ## What the starter offers
 
 The starter's sections are hero (with an optional picture beside the text),

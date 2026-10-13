@@ -9,9 +9,18 @@
 .parts a { display: block; padding: 6px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; }
 .parts a:hover { color: var(--text); background: var(--accent-soft); }
 .parts a.part { font-weight: 650; color: var(--text); }
-.parts li.here > a.part { color: var(--accent); }
 .parts ul { margin: 2px 0 10px 10px; border-left: 2px solid var(--line); padding-left: 6px; }
 .parts a[aria-current="page"] { color: var(--text); background: var(--accent-soft); font-weight: 600; }
+/* A heading over more pages folds away; its arrow opens it, its name goes
+   to its page if it has one. */
+.parts details > summary { display: flex; align-items: center; list-style: none; cursor: pointer; }
+.parts details > summary::-webkit-details-marker { display: none; }
+.parts details > summary > .part { flex: 1; }
+.parts details > summary::after { content: ""; flex: none; width: .4em; height: .4em; margin: 0 12px 0 8px; border: solid var(--muted); border-width: 0 2px 2px 0; transform: rotate(-45deg); transition: transform .15s; }
+.parts details[open] > summary::after { transform: rotate(45deg); }
+.parts span.part { display: block; padding: 6px 10px; font-weight: 650; color: var(--text); }
+.parts li.here > details > summary > .part { color: var(--accent); }
+.parts a.out::after { content: " ↗"; }
 
 
 .doc { min-width: 0; max-width: 780px; }
