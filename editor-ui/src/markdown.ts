@@ -75,8 +75,39 @@ function rawReason(b: Block, text: string): string {
   if (b.inline.includes('s_open')) return 'strikethrough'
   if (/^\s*\[\^[^\]]+\]:/m.test(text) || /\[\^[^\]]+\]/.test(text)) return 'a footnote'
   if (/^\s*[-*+] \[[ xX]\] /m.test(text)) return 'a task list'
-  if (/\{[#.][^}]*\}\s*$/m.test(text)) return 'attributes ({#id})'
+  if (/\{[#.][^}]*\}\s*$/m.test(text) || /[)\]]\{\s*:?\s*[#.][^}]*\}/.test(text)) return 'attributes ({#id})'
+  if (/^:\s{1,3}\S/m.test(text)) return 'a definition list'
   return ''
+}
+
+// The documentation syntax HotDog reads the way MkDocs writes it (an
+// admonition, a collapsible block, content tabs: a first line, then the body
+// indented four spaces). markdown-it doesn't know it and would read it as a
+// paragraph and some indented code, so each one is kept whole, as one block.
+type Span = { start: number; end: number; why: string }
+const docsOpener = /^ {0,3}(?:(!!!|\?\?\?\+?)[ \t]+[A-Za-z][\w-]*|===[+!]{0,2}[ \t]+")/
+
+function docsBlocks(lines: string[]): Span[] {
+  const out: Span[] = []
+  let fence = false
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*(```|~~~)/.test(lines[i])) fence = !fence
+    const m = !fence && docsOpener.exec(lines[i])
+    if (!m) continue
+    let end = i + 1
+    for (let j = i + 1; j < lines.length; j++) {
+      const l = lines[j]
+      if (l.trim() === '') continue
+      if (/^( {4}|\t)/.test(l)) { end = j + 1; continue }
+      // Tabs that follow one another are one set.
+      if (docsOpener.test(l) && l.trimStart().startsWith('===') && m[0].trimStart().startsWith('===')) { end = j + 1; continue }
+      break
+    }
+    const why = m[1] === '!!!' ? 'an admonition' : m[1] ? 'a collapsible block' : 'content tabs'
+    out.push({ start: i, end, why })
+    i = end - 1
+  }
+  return out
 }
 
 export type Loaded = { doc: Node; origins: WeakMap<Node, string>; raw: string[] }
@@ -95,7 +126,17 @@ export function load(markdown: string): Loaded {
     raw.push(why)
   }
   let prev = 0
+  const spans = docsBlocks(lines)
   for (const b of topBlocks(src)) {
+    if (b.end <= prev) continue // inside a block kept whole below
+    const sp = spans.find((s) => s.start >= prev && s.start < b.end)
+    if (sp) {
+      const gap = lines.slice(prev, sp.start).join('\n')
+      if (gap.trim()) keep(gap.replace(/^\n+|\n+$/g, ''), 'link definitions or other Markdown kept as it is')
+      keep(lines.slice(sp.start, sp.end).join('\n').replace(/\n+$/, ''), sp.why)
+      prev = sp.end
+      continue
+    }
     // Lines no block covers (link definitions, say) are kept as they are.
     const gap = lines.slice(prev, b.start).join('\n')
     if (gap.trim()) keep(gap.replace(/^\n+|\n+$/g, ''), 'link definitions or other Markdown kept as it is')

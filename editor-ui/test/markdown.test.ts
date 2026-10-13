@@ -50,3 +50,20 @@ test('escaping is not a reason to lock a paragraph', () => {
   const { raw } = load('Use site_name and 2*3 in text.\n')
   assert.deepEqual(raw, [])
 })
+
+test('documentation syntax is kept whole, read-only', () => {
+  const src = [
+    'Intro paragraph.',
+    '!!! note "Title"\n    Body with **bold**.\n\n    ```sh\n    a command\n    ```',
+    '???+ tip\n    Open to start.',
+    '=== "Linux"\n    One.\n\n=== "macOS"\n    Two.',
+    'Press ++ctrl+k++ to search.',
+    '![A screenshot](shot.png){ .shot }',
+    'Term\n:   Its definition.',
+    'Last paragraph.',
+  ].join('\n\n') + '\n'
+  const { doc, origins, raw } = load(src)
+  assert.deepEqual(raw, ['an admonition', 'a collapsible block', 'content tabs', 'attributes ({#id})', 'a definition list'])
+  assert.equal(doc.child(0).type.name, 'paragraph')
+  assert.equal(save(doc, origins), src)
+})

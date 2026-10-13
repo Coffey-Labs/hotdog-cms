@@ -36,7 +36,8 @@ type Markdown struct {
 // NewMarkdown builds the renderer for a site's settings. host is the site's
 // own host name, so links elsewhere can be told apart.
 func NewMarkdown(c MarkdownConfig, host string) *Markdown {
-	exts := []goldmark.Extender{extension.Table, extension.Strikethrough, extension.TaskList, extension.Footnote}
+	exts := []goldmark.Extender{extension.Table, extension.Strikethrough, extension.TaskList, extension.Footnote,
+		extension.DefinitionList, docsSyntax{anyAttribute: c.TrustHTML}}
 	if c.AutolinkOn() {
 		exts = append(exts, extension.Linkify)
 	}
@@ -63,6 +64,15 @@ func NewMarkdown(c MarkdownConfig, host string) *Markdown {
 		p.AllowAttrs("srcset", "sizes", "type", "media").OnElements("source", "img")
 		p.AllowAttrs("controls", "poster", "src", "preload", "muted", "loop", "playsinline").OnElements("video", "audio")
 		p.AllowAttrs("loading", "decoding", "width", "height").OnElements("img")
+		// Collapsible blocks and content tabs (docsyntax.go): the tabs are
+		// radio buttons and labels, so those are allowed, and nothing else
+		// about them.
+		p.AllowAttrs("open").OnElements("details")
+		p.AllowElements("kbd", "label")
+		p.AllowAttrs("for").OnElements("label")
+		p.AllowAttrs("data-tabs").OnElements("div")
+		p.AllowAttrs("type").Matching(regexp.MustCompile(`^radio$`)).OnElements("input")
+		p.AllowAttrs("name", "checked").OnElements("input")
 		m.sanitize = p
 	}
 	m.md = goldmark.New(rendererOpts...)
@@ -184,6 +194,9 @@ func (m *Markdown) markNewTab(out []byte) []byte {
 
 // Render turns Markdown into HTML that is safe to place in a page.
 func (m *Markdown) Render(src []byte) (template.HTML, error) {
+	if m.trust || m.sanitize != nil {
+		src = mdInHTML(src)
+	}
 	var buf bytes.Buffer
 	if err := m.md.Convert(src, &buf); err != nil {
 		return "", err
