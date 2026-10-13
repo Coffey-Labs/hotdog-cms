@@ -326,14 +326,6 @@ func (c *CardsConfig) UnmarshalYAML(n *yaml.Node) error {
 // On reports whether cards are drawn.
 func (c *CardsConfig) On() bool { return c != nil && c.Enabled }
 
-// Signature is what, besides the title, changes a card's picture.
-func (c *CardsConfig) Signature() string {
-	if c == nil {
-		return ""
-	}
-	return strings.Join([]string{c.Font, c.FontSmall, c.Background, c.Text, c.Accent, c.Logo}, "\x00")
-}
-
 var fediverseRe = regexp.MustCompile(`^@[^@\s]+@[^@\s]+\.[^@\s]+$`)
 
 // AnalyticsConfig sets up visit counting. It starts only after a visitor
