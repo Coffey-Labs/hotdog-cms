@@ -2,6 +2,9 @@ package build
 
 import (
 	"fmt"
+	"image"
+	"image/color"
+	"image/draw"
 	"image/png"
 	"io/fs"
 	"os"
@@ -322,6 +325,49 @@ func TestSocialCards(t *testing.T) {
 	home2, _ := os.ReadFile(filepath.Join(res.Out, "index.html"))
 	if strings.Contains(string(home2), m[1]) {
 		t.Error("the card's address didn't change with its title")
+	}
+
+	// A card the last build drew is copied, not drawn again: its name says
+	// what's on it.
+	homeCard := func() string {
+		h, _ := os.ReadFile(filepath.Join(dir, "public", "index.html"))
+		m := regexp.MustCompile(`/cards/home\.[0-9a-f]{8}\.png`).FindString(string(h))
+		if m == "" {
+			t.Fatal("no home card")
+		}
+		return m
+	}
+	c2 := homeCard()
+	os.WriteFile(filepath.Join(dir, "public", c2), []byte("kept"), 0o644)
+	if _, err := Run(Options{SiteDir: dir}); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(dir, "public", c2)); string(b) != "kept" {
+		t.Error("the card was drawn again")
+	}
+
+	// A logo replaced under the same name draws a different card, so it
+	// gets a new name.
+	logo := func(c color.Color) {
+		img := image.NewRGBA(image.Rect(0, 0, 4, 4))
+		draw.Draw(img, img.Bounds(), &image.Uniform{c}, image.Point{}, draw.Src)
+		f, _ := os.Create(filepath.Join(dir, "static", "logo.png"))
+		png.Encode(f, img)
+		f.Close()
+	}
+	cfg, _ := os.ReadFile(filepath.Join(dir, "site.yaml"))
+	os.WriteFile(filepath.Join(dir, "site.yaml"), []byte(strings.Replace(string(cfg), "cards: true", "cards:\n  logo: /logo.png", 1)), 0o644)
+	logo(color.RGBA{255, 0, 0, 255})
+	if _, err := Run(Options{SiteDir: dir}); err != nil {
+		t.Fatal(err)
+	}
+	c3 := homeCard()
+	logo(color.RGBA{0, 0, 255, 255})
+	if _, err := Run(Options{SiteDir: dir}); err != nil {
+		t.Fatal(err)
+	}
+	if c4 := homeCard(); c3 == c4 || c3 == c2 {
+		t.Errorf("cards %s, %s, %s: a new logo should be a new name", c2, c3, c4)
 	}
 }
 

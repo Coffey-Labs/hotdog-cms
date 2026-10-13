@@ -13,8 +13,10 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	xdraw "golang.org/x/image/draw"
 	"golang.org/x/image/font"
@@ -31,13 +33,19 @@ import (
 // its own image. 1200×630, the page's title large, the site's name small, in
 // the site's colors. Drawn in Go with the Go fonts unless the site brings its
 // own, so the build needs nothing installed. The file name carries a hash of
-// what's on the card, so a changed title is a new address and previews
-// refresh.
+// what's on the card and how it's drawn (colors, fonts, logo), so a changed
+// title or a new logo is a new address and previews refresh; and a card the
+// last build already drew is copied from it rather than drawn again.
 
 const cardW, cardH = 1200, 630
 
+// cardsDrawing changes whenever drawCard draws differently, so every card
+// gets a new name.
+const cardsDrawing = "1"
+
 // cardPath is where a page's card is published, or "" if it gets none.
-func cardPath(s *site.Site, p *site.Page) string {
+// look is the card style's fingerprint.
+func cardPath(s *site.Site, p *site.Page, look string) string {
 	cc := s.Config.Cards
 	if !cc.On() || p.Image != "" || p.RedirectTo != "" || p.NoIndex || (p.Kind != site.KindPage && p.Kind != site.KindList) {
 		return ""
@@ -47,17 +55,24 @@ func cardPath(s *site.Site, p *site.Page) string {
 	if name == "" {
 		name = "home"
 	}
-	sum := sha256.Sum256([]byte(p.Title + "\x00" + p.Summary + "\x00" + s.Config.Name + "\x00" + cc.Signature()))
+	sum := sha256.Sum256([]byte(p.Title + "\x00" + p.Summary + "\x00" + s.Config.Name + "\x00" + look))
 	return "/cards/" + name + "." + hex.EncodeToString(sum[:4]) + ".png"
 }
 
 // assignCards points every page that will get a card at it, so templates
-// write og:image for it, and returns the cards to draw. The live preview does
-// this too, without drawing.
-func assignCards(s *site.Site) map[*site.Page]string {
+// write og:image for it, and returns the cards to draw and how. The live
+// preview does this too, without drawing.
+func assignCards(siteDir string, s *site.Site) (map[*site.Page]string, *cardStyle, error) {
 	cards := map[*site.Page]string{}
+	if !s.Config.Cards.On() {
+		return cards, nil, nil
+	}
+	st, err := loadCardStyle(siteDir, s)
+	if err != nil {
+		return nil, nil, err
+	}
 	for _, p := range s.Pages {
-		if c := cardPath(s, p); c != "" {
+		if c := cardPath(s, p, st.sum); c != "" {
 			cards[p] = c
 			p.Image = c
 			if p.ImageAlt == "" {
@@ -65,13 +80,14 @@ func assignCards(s *site.Site) map[*site.Page]string {
 			}
 		}
 	}
-	return cards
+	return cards, st, nil
 }
 
 type cardStyle struct {
 	bg, fg, accent color.Color
 	title, small   *opentype.Font
 	logo           image.Image
+	sum            string // a fingerprint of all of the above, for card names
 }
 
 func parseHex(h string, def color.Color) color.Color {
@@ -113,13 +129,18 @@ func loadCardStyle(siteDir string, s *site.Site) (*cardStyle, error) {
 		fg:     parseHex(pick(cc.Text, "band-text", "bg"), color.RGBA{0xf5, 0xf1, 0xea, 255}),
 		accent: parseHex(pick(cc.Accent, "accent"), color.RGBA{0xf4, 0xbe, 0x2c, 255}),
 	}
+	h := sha256.New()
+	fmt.Fprintf(h, "%s\x00%v\x00%v\x00%v\x00", cardsDrawing, st.bg, st.fg, st.accent)
 	var err error
-	if st.title, err = loadFont(siteDir, cc.Font, gobold.TTF); err != nil {
+	var data []byte
+	if st.title, data, err = loadFont(siteDir, cc.Font, gobold.TTF); err != nil {
 		return nil, err
 	}
-	if st.small, err = loadFont(siteDir, cc.FontSmall, goregular.TTF); err != nil {
+	h.Write(data)
+	if st.small, data, err = loadFont(siteDir, cc.FontSmall, goregular.TTF); err != nil {
 		return nil, err
 	}
+	h.Write(data)
 	logo := cc.Logo
 	if logo == "" {
 		logo = look["logo"]
@@ -134,30 +155,32 @@ func loadCardStyle(siteDir string, s *site.Site) (*cardStyle, error) {
 			// can claim a huge picture.
 			if cfg, _, err := image.DecodeConfig(bytes.NewReader(data)); err == nil && cfg.Width > 0 && cfg.Height > 0 && cfg.Width*cfg.Height <= maxLogoPixels {
 				st.logo, _, _ = image.Decode(bytes.NewReader(data))
+				h.Write(data)
 			}
 			break
 		}
 	}
+	st.sum = hex.EncodeToString(h.Sum(nil))
 	return st, nil
 }
 
 // maxLogoPixels bounds a card logo: far more than any logo needs.
 const maxLogoPixels = 16_000_000
 
-func loadFont(siteDir, rel string, fallback []byte) (*opentype.Font, error) {
+func loadFont(siteDir, rel string, fallback []byte) (*opentype.Font, []byte, error) {
 	data := fallback
 	if rel != "" {
 		b, err := site.ReadFile(siteDir, rel, 16<<20)
 		if err != nil {
-			return nil, fmt.Errorf("cards: font %s: %w", rel, err)
+			return nil, nil, fmt.Errorf("cards: font %s: %w", rel, err)
 		}
 		data = b
 	}
 	f, err := opentype.Parse(data)
 	if err != nil {
-		return nil, fmt.Errorf("cards: font %s: %w", rel, err)
+		return nil, nil, fmt.Errorf("cards: font %s: %w", rel, err)
 	}
-	return f, nil
+	return f, data, nil
 }
 
 func face(f *opentype.Font, size float64) font.Face {
@@ -257,26 +280,56 @@ func drawCard(st *cardStyle, title, summary, siteName string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// writeCards draws the cards assignCards gave out.
-func writeCards(siteDir, out string, s *site.Site, cards map[*site.Page]string) error {
+// writeCards draws the cards assignCards gave out into work, several at
+// once. A card the last build (in prev) already has is copied from it: its
+// name says everything that is on it.
+func writeCards(prev, work string, st *cardStyle, s *site.Site, cards map[*site.Page]string) error {
 	if len(cards) == 0 {
 		return nil
 	}
-	st, err := loadCardStyle(siteDir, s)
-	if err != nil {
+	if err := os.MkdirAll(filepath.Join(work, "cards"), 0o755); err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Join(out, "cards"), 0o755); err != nil {
-		return err
+	type job struct {
+		p *site.Page
+		c string
+	}
+	jobs := make(chan job)
+	errs := make(chan error, 1)
+	var wg sync.WaitGroup
+	for range runtime.NumCPU() {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := range jobs {
+				rel := filepath.FromSlash(strings.TrimPrefix(j.c, "/"))
+				data, err := os.ReadFile(filepath.Join(prev, rel))
+				if err != nil {
+					if data, err = drawCard(st, j.p.Title, j.p.Summary, s.Config.Name); err != nil {
+						err = fmt.Errorf("card for %s: %w", j.p.Path, err)
+					}
+				}
+				if err == nil {
+					err = os.WriteFile(filepath.Join(work, rel), data, 0o644)
+				}
+				if err != nil {
+					select {
+					case errs <- err:
+					default:
+					}
+				}
+			}
+		}()
 	}
 	for p, c := range cards {
-		data, err := drawCard(st, p.Title, p.Summary, s.Config.Name)
-		if err != nil {
-			return fmt.Errorf("card for %s: %w", p.Path, err)
-		}
-		if err := os.WriteFile(filepath.Join(out, filepath.FromSlash(strings.TrimPrefix(c, "/"))), data, 0o644); err != nil {
-			return err
-		}
+		jobs <- job{p, c}
 	}
-	return nil
+	close(jobs)
+	wg.Wait()
+	select {
+	case err := <-errs:
+		return err
+	default:
+		return nil
+	}
 }
