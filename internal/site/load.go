@@ -179,6 +179,7 @@ func Load(dir string, opt Options) (*Site, error) {
 			return nil, err
 		}
 	}
+	s.resolveSourceLinks()
 	s.assemble()
 	if err := s.checkPaths(); err != nil {
 		return nil, err
