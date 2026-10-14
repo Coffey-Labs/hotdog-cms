@@ -3,6 +3,7 @@ package forms
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -97,6 +98,25 @@ func TestRenderEscapes(t *testing.T) {
 		if !strings.Contains(s, want) {
 			t.Errorf("form is missing %s", want)
 		}
+	}
+}
+
+// The script finds each form by the data attribute the markup sets, and asks
+// for that form's token by the name in it. A rename once left them apart, and
+// every form asked for the token of a form called "undefined".
+func TestScriptReadsTheFormsAttribute(t *testing.T) {
+	f := load(t, contact)
+	h, err := f.Render("/f.js", "/f.css")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := regexp.MustCompile(`data-([a-z]+)-form="contact"`).FindStringSubmatch(string(h))
+	if m == nil {
+		t.Fatalf("no data-…-form attribute in:\n%s", h)
+	}
+	js := string(Script)
+	if !strings.Contains(js, "form[data-"+m[1]+"-form]") || !strings.Contains(js, "form.dataset."+m[1]+"Form") {
+		t.Errorf("the script doesn't read data-%s-form, the attribute the form has", m[1])
 	}
 }
 

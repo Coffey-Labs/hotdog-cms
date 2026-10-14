@@ -10,7 +10,7 @@
     form.querySelectorAll('[aria-invalid]').forEach(function (el) { el.removeAttribute('aria-invalid'); });
   }
   function token(form) {
-    return fetch('/_hotdog/forms/' + form.dataset.clForm + '/token', { credentials: 'omit' })
+    return fetch('/_hotdog/forms/' + form.dataset.hotdogForm + '/token', { credentials: 'omit' })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(function (d) { form.querySelector('input[name="_t"]').value = d.token; });
   }
