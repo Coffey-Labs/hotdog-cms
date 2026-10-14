@@ -1,0 +1,13 @@
+/* The timeline pack. Colors come from the theme's variables. */
+.tl-list { list-style: none; margin: 0; padding: 0; max-width: 760px; position: relative; }
+.tl-list::before { content: ""; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: var(--line); }
+.tl-item { position: relative; padding: 0 0 28px 36px; }
+.tl-item:last-child { padding-bottom: 0; }
+.tl-item::before { content: ""; position: absolute; left: 0; top: 5px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg, var(--surface)); border: 3px solid var(--accent); box-sizing: border-box; }
+.tl-when { margin: 0; color: var(--accent); font-weight: 700; font-size: .9rem; letter-spacing: .03em; }
+.tl-title { margin: 2px 0 0; font-size: 1.15rem; }
+.tl-text { margin-top: 4px; }
+.tl-text > :first-child { margin-top: 0; }
+.tl-text > :last-child { margin-bottom: 0; }
+.tl-image { display: block; margin-top: 12px; max-width: 100%; border-radius: var(--radius); border: 1px solid var(--line); }
+@media (min-width: 760px) { .tl-item { display: grid; grid-template-columns: 140px 1fr; gap: 0 24px; padding-left: 36px; } .tl-when { padding-top: 2px; } }

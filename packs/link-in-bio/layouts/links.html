@@ -1,0 +1,17 @@
+{{/* A page of links, for a social profile: no menu, only the links. */}}
+{{/* No banner or menu here. A template whose body is empty doesn't replace
+     the site's, so each holds an empty string. */}}
+{{ define "banner" }}{{ "" }}{{ end }}
+{{ define "nav" }}{{ "" }}{{ end }}
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/link-in-bio/link-in-bio.css" }}">
+<div class="lib">
+  {{ with .Params.photo }}<img class="lib-photo" src="{{ . }}" alt="{{ $.Params.photo_alt }}" width="112" height="112">{{ end }}
+  <h1 class="lib-name">{{ .Title }}</h1>
+  {{ with .Content }}<div class="lib-bio">{{ . }}</div>{{ end }}
+  <ul class="lib-links">
+    {{ range .Params.links }}<li><a class="lib-link" href="{{ .url }}"><span>{{ .text }}</span>{{ with .note }}<small>{{ . }}</small>{{ end }}</a></li>{{ end }}
+  </ul>
+  <p class="lib-home"><a href="/">{{ .Site.Config.Name }}</a></p>
+</div>
+{{ end }}

@@ -1,0 +1,17 @@
+{{/* section
+label: Latest videos
+about: The newest videos from the video library, with their posters.
+fields:
+  - { name: heading, type: text, default: Latest videos }
+  - { name: collection, type: collection, default: videos, label: Videos from }
+  - { name: count, type: number, default: 3, label: How many }
+*/}}
+{{ $c := default "videos" .Data.collection }}
+<link rel="stylesheet" href="{{ asset "packs/videos/videos.css" }}">
+<section class="block videos">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    <ul class="vid-grid">{{ range limit (default 3 .Data.count) (collection $c) }}{{ template "video-card" . }}{{ end }}</ul>
+    <p><a class="more" href="/{{ $c }}/">Every video</a></p>
+  </div>
+</section>

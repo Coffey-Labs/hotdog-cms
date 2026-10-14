@@ -1,0 +1,32 @@
+{{/* section
+label: Status
+about: Whether each service is working, the overall picture, and recent incidents.
+fields:
+  - { name: heading, type: text }
+  - { name: from, type: data, default: status, label: Status from, help: The file in data/ with your components. }
+  - { name: collection, type: collection, default: incidents, label: Incidents from }
+  - { name: count, type: number, default: 5, label: Recent incidents to show }
+*/}}
+{{ $d := data (default "status" .Data.from) }}{{ $c := default "incidents" .Data.collection }}
+{{ $down := false }}{{ $part := false }}{{ $maint := false }}
+{{ range $d.components }}{{ $s := print .status }}{{ if eq $s "outage" }}{{ $down = true }}{{ else if eq $s "degraded" }}{{ $part = true }}{{ else if eq $s "maintenance" }}{{ $maint = true }}{{ end }}{{ end }}
+{{ $open := list }}{{ $past := list }}{{ range collection $c }}{{ if eq (print .Params.status) "resolved" }}{{ $past = append $past . }}{{ else }}{{ $open = append $open . }}{{ end }}{{ end }}
+<link rel="stylesheet" href="{{ asset "packs/status-page/status-page.css" }}">
+<section class="block status">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    <p class="st-overall {{ if $down }}st-outage{{ else if or $part $open }}st-degraded{{ else if $maint }}st-maintenance{{ else }}st-operational{{ end }}">{{ if $down }}Something is down.{{ else if or $part $open }}Some things aren't working as they should.{{ else if $maint }}Maintenance is under way.{{ else }}Everything is working.{{ end }} <small>As of {{ date "January 2, 2006, 3:04 PM" now }}.</small></p>
+    {{ with $open }}
+    <h3 class="st-h">Now</h3>
+    <ul class="st-incidents">{{ range . }}{{ template "incident-row" . }}{{ end }}</ul>
+    {{ end }}
+    <ul class="st-components">
+      {{ range $d.components }}<li><span class="st-name">{{ .name }}{{ with .note }}<small>{{ . }}</small>{{ end }}</span><span class="st-badge st-{{ default "operational" .status }}">{{ template "status-label" (default "operational" .status) }}</span></li>{{ end }}
+    </ul>
+    {{ with $past }}
+    <h3 class="st-h">Past incidents</h3>
+    <ul class="st-incidents">{{ range limit (default 5 $.Data.count) . }}{{ template "incident-row" . }}{{ end }}</ul>
+    {{ end }}
+    <p class="st-more"><a href="/{{ $c }}/">Every incident</a> · <a href="/{{ $c }}/feed.xml">Follow in a feed reader</a></p>
+  </div>
+</section>

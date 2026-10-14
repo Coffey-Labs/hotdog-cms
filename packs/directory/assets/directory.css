@@ -1,0 +1,19 @@
+/* The directory pack. Colors come from the theme's variables. */
+.dir-cats ul { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.dir-cats a { display: inline-block; padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-weight: 600; font-size: .92rem; text-decoration: none; }
+.dir-cats a:hover { border-color: var(--accent); }
+.dir-cat { margin-top: 32px; scroll-margin-top: 80px; }
+.dir-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.dir-card { display: flex; gap: 14px; align-items: flex-start; padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.dir-logo { flex: none; width: 52px; height: 52px; border-radius: 10px; object-fit: contain; background: var(--bg, #fff); border: 1px solid var(--line); }
+.dir-logo-big { width: 84px; height: 84px; }
+.dir-name { font-weight: 650; font-size: 1.05rem; }
+.dir-summary { margin: 4px 0 0; color: var(--muted); }
+.dir-reach { margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .9rem; }
+.dir-reach:empty { display: none; }
+.dir-head { display: flex; gap: 18px; align-items: center; }
+.dir-head h1 { margin: 0; }
+.dir-facts { display: grid; gap: 14px 32px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin: 24px 0; padding: 18px 20px; border: 1px solid var(--line); border-radius: var(--radius); }
+.dir-facts dt { color: var(--muted); font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.dir-facts dd { margin: 4px 0 0; }
+.dir-facts address { font-style: normal; white-space: pre-line; }

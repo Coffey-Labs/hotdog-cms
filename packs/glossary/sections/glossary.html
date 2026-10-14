@@ -1,0 +1,35 @@
+{{/* section
+label: Glossary
+about: Terms and what they mean, A to Z, each with its own link.
+fields:
+  - { name: heading, type: text, default: Glossary }
+  - { name: intro, type: markdown }
+  - name: items
+    type: list
+    label: Terms
+    fields:
+      - { name: term, type: text, required: true }
+      - { name: definition, type: markdown, required: true }
+      - { name: see_also, type: list, label: See also, help: Other terms in this glossary, one per line. }
+  - { name: from, type: data, label: Terms from, help: A file in data/ that holds the terms. Leave empty to use the terms above. }
+*/}}
+{{ $items := .Data.items }}{{ with .Data.from }}{{ $items = data . }}{{ end }}{{ $items = sortBy "term" $items }}
+{{ $letters := list }}{{ $last := "" }}{{ range $items }}{{ $l := upper (printf "%.1s" (print .term)) }}{{ if ne $l $last }}{{ $letters = append $letters $l }}{{ $last = $l }}{{ end }}{{ end }}
+{{ $id := printf "g%d" .Index }}
+<link rel="stylesheet" href="{{ asset "packs/glossary/glossary.css" }}">
+<section class="block glossary">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    {{ if gt (len $letters) 1 }}<nav class="gl-letters" aria-label="Jump to a letter"><ul>{{ range $letters }}<li><a href="#{{ $id }}-{{ slugify . }}">{{ . }}</a></li>{{ end }}</ul></nav>{{ end }}
+    <dl class="gl-list">
+      {{ $last = "" }}{{ range $items }}{{ $l := upper (printf "%.1s" (print .term)) }}
+      {{ if ne $l $last }}<div class="gl-letter" id="{{ $id }}-{{ slugify $l }}" aria-hidden="true">{{ $l }}</div>{{ $last = $l }}{{ end }}
+      <div class="gl-entry" id="{{ slugify .term }}">
+        <dt><a class="gl-anchor" href="#{{ slugify .term }}">{{ .term }}</a></dt>
+        <dd>{{ markdownify .definition }}{{ with .see_also }}<p class="gl-see">See also: {{ range $i, $t := . }}{{ if $i }}, {{ end }}<a href="#{{ slugify $t }}">{{ $t }}</a>{{ end }}</p>{{ end }}</dd>
+      </div>
+      {{ end }}
+    </dl>
+  </div>
+</section>

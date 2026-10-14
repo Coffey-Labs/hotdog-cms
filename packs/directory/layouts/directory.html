@@ -1,0 +1,14 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/directory/directory.css" }}">
+<section class="wrap page directory">
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  {{ $all := sortBy "category" (sortBy "Title" (collection .Collection)) }}
+  {{ $cats := list }}{{ $last := "<none>" }}{{ range $all }}{{ $c := default "Other" .Params.category }}{{ if ne (print $c) $last }}{{ $cats = append $cats $c }}{{ $last = print $c }}{{ end }}{{ end }}
+  {{ if gt (len $cats) 1 }}<nav class="dir-cats" aria-label="Categories"><ul>{{ range $cats }}<li><a href="#{{ slugify . }}">{{ . }}</a></li>{{ end }}</ul></nav>{{ end }}
+  {{ range $cats }}{{ $cat := print . }}
+  <h2 class="dir-cat" id="{{ slugify $cat }}">{{ $cat }}</h2>
+  <ul class="dir-list">{{ range $all }}{{ if eq (print (default "Other" .Params.category)) $cat }}{{ template "listing-card" . }}{{ end }}{{ end }}</ul>
+  {{ else }}<p>Nothing listed yet.</p>{{ end }}
+</section>
+{{ end }}

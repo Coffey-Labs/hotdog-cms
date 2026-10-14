@@ -1,0 +1,14 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/status-page/status-page.css" }}">
+<article class="wrap page incident">
+  {{ with index .Site.Lists .Collection }}<p class="eyebrow"><a href="{{ .Path }}">{{ .Title }}</a></p>{{ end }}
+  <h1>{{ .Title }}</h1>
+  <dl class="st-facts">
+    <div><dt>Status</dt><dd><span class="st-badge st-{{ default "investigating" .Params.status }}">{{ template "status-label" (default "investigating" .Params.status) }}</span></dd></div>
+    <div><dt>Started</dt><dd><time datetime="{{ date "rfc3339" .Date }}">{{ date "January 2, 2006, 3:04 PM" .Date }}</time></dd></div>
+    {{ with .Params.resolved }}<div><dt>Fixed</dt><dd>{{ formatDate "January 2, 2006, 3:04 PM" . }}</dd></div>{{ end }}
+    {{ with .Params.affects }}<div><dt>Affects</dt><dd>{{ if kindIs "list" . }}{{ joinAny ", " . }}{{ else }}{{ . }}{{ end }}</dd></div>{{ end }}
+  </dl>
+  {{ with .Content }}<div class="prose st-updates">{{ . }}</div>{{ end }}
+</article>
+{{ end }}

@@ -1,0 +1,33 @@
+name: directory
+version: 1.0.0
+title: Directory
+description: A listing of businesses, members or places, grouped by category, with a page each.
+license: MIT
+author: Coffey Labs LLC
+collections:
+  directory:
+    layout: listing
+    list_layout: directory
+    sort: title
+    paginate: 0
+notes: |
+  Add each entry as content/directory/<name>.md:
+
+    ---
+    title: Main Street Books
+    summary: New and used books, and a reading corner for kids.
+    category: Shops
+    address: |
+      40 Main Street
+      Springfield, IL 62701
+    phone: (217) 555-0170
+    email: hello@example.org
+    website: https://example.com
+    logo: /media/main-street-books.webp
+    ---
+    More about them.
+
+  /directory/ lists every entry, A to Z within each category, with a row
+  of categories at the top to jump with. Entries without a category go
+  under Other, at the end. Give the list a title and an
+  introduction in content/directory/_index.md.

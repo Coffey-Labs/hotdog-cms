@@ -1,0 +1,11 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/videos/videos.css" }}">
+<article class="wrap page video-page">
+  {{ with index .Site.Lists .Collection }}<p class="eyebrow"><a href="{{ .Path }}">{{ .Title }}</a></p>{{ end }}
+  <h1>{{ .Title }}</h1>
+  <p class="vid-meta">{{ if not .Date.IsZero }}<time datetime="{{ date "iso" .Date }}">{{ date "January 2, 2006" .Date }}</time>{{ end }}{{ with .Params.duration }} · {{ . }}{{ end }}</p>
+  {{ template "video-player" . }}
+  {{ with .Summary }}<p class="vid-summary">{{ . }}</p>{{ end }}
+  {{ with .Content }}<div class="prose vid-notes">{{ . }}</div>{{ end }}
+</article>
+{{ end }}

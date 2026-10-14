@@ -1,0 +1,8 @@
+{{/* One video in a list: its poster, title, length and date. */}}
+<li class="vid-card">
+  <a href="{{ .Href }}">
+    <span class="vid-thumb">{{ with .Params.poster }}<img src="{{ . }}" alt="" loading="lazy">{{ end }}{{ with .Params.duration }}<span class="vid-len">{{ . }}</span>{{ end }}</span>
+    <span class="vid-title">{{ .Title }}</span>
+  </a>
+  {{ if not .Date.IsZero }}<p class="vid-date"><time datetime="{{ date "iso" .Date }}">{{ date "January 2, 2006" .Date }}</time></p>{{ end }}
+</li>

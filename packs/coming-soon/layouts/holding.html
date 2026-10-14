@@ -1,0 +1,16 @@
+{{/* A holding page: before launch, or while the site is closed. No menu. */}}
+{{/* No banner or menu here. A template whose body is empty doesn't replace
+     the site's, so each holds an empty string. */}}
+{{ define "banner" }}{{ "" }}{{ end }}
+{{ define "nav" }}{{ "" }}{{ end }}
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/coming-soon/coming-soon.css" }}">
+<div class="hold">
+  <p class="hold-site">{{ .Site.Config.Name }}</p>
+  <h1 class="hold-title">{{ .Title }}</h1>
+  {{ with .Params.launch }}<p class="hold-when">{{ . }}</p>{{ end }}
+  {{ with .Content }}<div class="hold-text">{{ . }}</div>{{ end }}
+  {{ with .Params.form }}<div class="hold-form">{{ form . }}</div>{{ end }}
+  {{ with .Params.links }}<ul class="hold-links">{{ range . }}<li><a href="{{ .url }}">{{ .text }}</a></li>{{ end }}</ul>{{ end }}
+</div>
+{{ end }}

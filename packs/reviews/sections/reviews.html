@@ -1,0 +1,28 @@
+{{/* section
+label: Reviews
+about: Star ratings from customers, with the average and how many.
+fields:
+  - { name: heading, type: text, default: What customers say }
+  - { name: intro, type: markdown }
+  - name: items
+    type: list
+    label: Reviews
+    fields:
+      - { name: name, type: text, required: true }
+      - { name: rating, type: number, required: true, help: 1 to 5. }
+      - { name: text, type: markdown, label: What they said }
+      - { name: date, type: text, help: "When, such as 2026-09-14." }
+      - { name: source, type: text, help: "Where it was posted, such as Google." }
+  - { name: from, type: data, label: Reviews from, help: A file in data/ that holds the reviews, to share them between pages. Leave empty to use the reviews above. }
+  - { name: no_summary, type: bool, label: Hide the average }
+*/}}
+{{ $items := .Data.items }}{{ with .Data.from }}{{ $items = data . }}{{ end }}
+<link rel="stylesheet" href="{{ asset "packs/reviews/reviews.css" }}">
+<section class="block reviews">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    {{ if not .Data.no_summary }}{{ template "review-summary" $items }}{{ end }}
+    <ul class="rv-list">{{ range $items }}{{ template "review-item" . }}{{ end }}</ul>
+  </div>
+</section>

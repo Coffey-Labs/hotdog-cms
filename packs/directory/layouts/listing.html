@@ -1,0 +1,17 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/directory/directory.css" }}">
+<article class="wrap page listing">
+  {{ with index .Site.Lists .Collection }}<p class="eyebrow"><a href="{{ .Path }}">{{ .Title }}</a>{{ with $.Params.category }} · {{ . }}{{ end }}</p>{{ end }}
+  <div class="dir-head">
+    {{ with .Params.logo }}<img class="dir-logo dir-logo-big" src="{{ . }}" alt="" >{{ end }}
+    <div><h1>{{ .Title }}</h1>{{ with .Summary }}<p class="dir-summary">{{ . }}</p>{{ end }}</div>
+  </div>
+  <dl class="dir-facts">
+    {{ with .Params.address }}<div><dt>Address</dt><dd><address>{{ . }}</address><a href="https://www.openstreetmap.org/search?query={{ urlquery . }}">Map and directions</a></dd></div>{{ end }}
+    {{ with .Params.phone }}<div><dt>Phone</dt><dd><a href="tel:{{ replace " " "" . }}">{{ . }}</a></dd></div>{{ end }}
+    {{ with .Params.email }}<div><dt>Email</dt><dd>{{ emailOff }}<a href="mailto:{{ . }}">{{ . }}</a>{{ emailOffEnd }}</dd></div>{{ end }}
+    {{ with .Params.website }}<div><dt>Website</dt><dd><a href="{{ . }}">{{ hostOf . }}</a></dd></div>{{ end }}
+  </dl>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+</article>
+{{ end }}

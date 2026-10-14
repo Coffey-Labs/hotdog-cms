@@ -156,7 +156,14 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 			}
 			return v
 		},
-		"now": func() time.Time { return s.BuildTime },
+		// now: when the site is being built, in the site's timezone (timezone:
+		// in site.yaml), so a page can say "as of 1:39 PM" in local time.
+		"now": func() time.Time {
+			if s.Location != nil {
+				return s.BuildTime.In(s.Location)
+			}
+			return s.BuildTime
+		},
 		// kindIs "string" .x: what a front matter or data value is (string, map, list, number, bool).
 		"kindIs": func(kind string, v any) bool {
 			switch v.(type) {
@@ -193,7 +200,8 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 		// region. Fixed strings, so nothing a page writes can reach them.
 		"emailOff":    func() template.HTML { return "<!--email_off-->" },
 		"emailOffEnd": func() template.HTML { return "<!--/email_off-->" },
-		// formatDate "January 2006" "2025-03-04": a date written as text.
+		// formatDate "January 2006" "2025-03-04": a date written as text, with
+		// or without a time (2025-03-04 08:30), as front matter's date: takes.
 		"formatDate": func(layout string, v any) (string, error) {
 			// YAML reads a bare date (closes: 2026-11-15) as a time already.
 			if t, ok := v.(time.Time); ok {
@@ -203,9 +211,9 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 			if str == "" || v == nil {
 				return "", nil
 			}
-			t, err := time.Parse("2006-01-02", str)
+			t, err := site.ParseDate(str)
 			if err != nil {
-				return "", fmt.Errorf("formatDate: %q is not a date like 2026-10-10", str)
+				return "", fmt.Errorf("formatDate: %q is not a date like 2026-10-10 or 2026-10-10 08:30", str)
 			}
 			return t.Format(layout), nil
 		},
@@ -270,6 +278,12 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 		"closed": func(v any) bool { return closed(s, v) },
 		// related . 3: pages in the same collection sharing the most tags.
 		"related": func(p *site.Page, n int) []*site.Page { return related(s, p, n) },
+		// sortBy "term" .items: a list of maps, or pages, in order of one key.
+		"sortBy": sortBy,
+		// ratings .reviews: .Average (one decimal) and .Count of the ratings.
+		"ratings": ratings,
+		// stars 4: the rating as five stars of text, ★★★★☆.
+		"stars": stars,
 		// trail .: the pages above this one, from the home page, then it.
 		"trail": func(p *site.Page) []*site.Page { return trail(s, p) },
 		// series .: the parts of the series this page is in, in reading order.

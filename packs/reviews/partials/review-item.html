@@ -1,0 +1,6 @@
+{{/* One review: stars, words, who and when. */}}
+<li class="rv-item">
+  {{ with .rating }}<p class="rv-stars"><span aria-hidden="true">{{ stars . }}</span><span class="rv-sr">{{ . }} out of 5 stars</span></p>{{ end }}
+  {{ with .text }}<blockquote class="rv-text">{{ markdownify . }}</blockquote>{{ end }}
+  <p class="rv-who">{{ .name }}{{ with .date }} · {{ formatDate "January 2006" . }}{{ end }}{{ with .source }} · {{ . }}{{ end }}</p>
+</li>

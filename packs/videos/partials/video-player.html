@@ -1,0 +1,9 @@
+{{/* A video page's player, from its front matter: video, webm, poster, captions. */}}
+<figure class="vid-player">
+  <video controls preload="metadata" playsinline{{ with .Params.poster }} poster="{{ . }}"{{ end }}>
+    {{ with .Params.webm }}<source src="{{ . }}" type="video/webm">{{ end }}
+    {{ with .Params.video }}<source src="{{ . }}" type="video/mp4">{{ end }}
+    {{ with .Params.captions }}<track kind="captions" src="{{ . }}" srclang="{{ $.Site.Config.Language }}" label="Captions" default>{{ end }}
+    <a href="{{ .Params.video }}">Download the video</a>
+  </video>
+</figure>

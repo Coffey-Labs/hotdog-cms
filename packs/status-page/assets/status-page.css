@@ -1,0 +1,29 @@
+/* The status page pack. Theme colors, plus a green, amber, red and blue for
+   the states, which keep their meaning in light and dark. */
+.status, .incident, .incidents { --st-ok: #1f8a4c; --st-part: #b26a00; --st-down: #c0392b; --st-maint: #2f6fd1; }
+@media (prefers-color-scheme: dark) { .status, .incident, .incidents { --st-ok: #4cc27f; --st-part: #f0a63a; --st-down: #ff6b5e; --st-maint: #6fa3ff; } }
+[data-theme="dark"] :is(.status, .incident, .incidents) { --st-ok: #4cc27f; --st-part: #f0a63a; --st-down: #ff6b5e; --st-maint: #6fa3ff; }
+[data-theme="light"] :is(.status, .incident, .incidents) { --st-ok: #1f8a4c; --st-part: #b26a00; --st-down: #c0392b; --st-maint: #2f6fd1; }
+.st-overall { --c: var(--st-ok); margin: 0 0 22px; padding: 18px 20px; border-radius: var(--radius); border: 1px solid var(--c); border-left-width: 6px; background: var(--surface); font-weight: 700; font-size: 1.15rem; }
+.st-overall small { display: block; margin-top: 4px; color: var(--muted); font-weight: 500; font-size: .85rem; }
+.st-overall.st-degraded { --c: var(--st-part); } .st-overall.st-outage { --c: var(--st-down); } .st-overall.st-maintenance { --c: var(--st-maint); }
+.st-components { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.st-components li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 13px 18px; border-bottom: 1px solid var(--line); }
+.st-components li:last-child { border-bottom: 0; }
+.st-name { font-weight: 600; display: grid; }
+.st-name small { color: var(--muted); font-weight: 400; }
+.st-badge { --c: var(--st-ok); display: inline-flex; align-items: center; gap: 6px; flex: none; font-size: .85rem; font-weight: 650; color: var(--c); }
+.st-badge::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.st-degraded, .st-identified, .st-monitoring { --c: var(--st-part); }
+.st-outage, .st-investigating { --c: var(--st-down); }
+.st-maintenance { --c: var(--st-maint); }
+.st-resolved { --c: var(--muted); }
+.st-h { margin: 28px 0 10px; font-size: 1rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.st-incidents { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 10px; }
+.st-incident { padding: 14px 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.st-inc-title { font-weight: 650; }
+.st-inc-meta { margin: 4px 0 0; color: var(--muted); font-size: .9rem; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.st-more { margin-top: 18px; font-size: .92rem; }
+.st-facts { display: flex; flex-wrap: wrap; gap: 12px 32px; margin: 0 0 24px; padding: 14px 18px; border: 1px solid var(--line); border-radius: var(--radius); }
+.st-facts dt { color: var(--muted); font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.st-facts dd { margin: 2px 0 0; font-weight: 600; }

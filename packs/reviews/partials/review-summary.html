@@ -1,0 +1,4 @@
+{{/* The average of a list of reviews and how many there are. */}}
+{{ $r := ratings . }}{{ if $r.Count }}
+<p class="rv-summary"><span class="rv-stars" aria-hidden="true">{{ stars $r.Average }}</span> <b>{{ $r.Average }}</b> out of 5 · {{ $r.Count }} review{{ if ne $r.Count 1 }}s{{ end }}</p>
+{{ end }}

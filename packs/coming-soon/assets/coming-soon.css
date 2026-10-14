@@ -1,0 +1,10 @@
+/* The coming soon pack. Colors come from the theme's variables. */
+.hold { min-height: 70vh; max-width: 640px; margin: 0 auto; padding: 64px 20px 48px; display: flex; flex-direction: column; justify-content: center; text-align: center; }
+.hold-site { margin: 0; color: var(--accent); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: .85rem; }
+.hold-title { margin: 12px 0 0; font-size: clamp(2rem, 6vw, 3.2rem); line-height: 1.1; }
+.hold-when { display: inline-block; align-self: center; margin: 18px 0 0; padding: 6px 14px; border-radius: 999px; background: var(--accent-soft); font-weight: 650; }
+.hold-text { margin-top: 18px; color: var(--muted); font-size: 1.1rem; }
+.hold-text > :last-child { margin-bottom: 0; }
+.hold-form { margin: 28px auto 0; width: 100%; max-width: 420px; text-align: left; }
+.hold-form .hotdog-form button[type="submit"] { background: var(--accent); border: 1px solid var(--accent); color: var(--accent-text, #fff); font-weight: 650; }
+.hold-links { list-style: none; margin: 28px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 20px; }

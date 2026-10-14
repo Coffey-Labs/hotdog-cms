@@ -1,0 +1,14 @@
+/* The link in bio pack. Colors come from the theme's variables. */
+.lib { max-width: 480px; margin: 0 auto; padding: 56px 20px 40px; text-align: center; }
+.lib-photo { width: 112px; height: 112px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line); background: var(--surface); }
+.lib-name { margin: 16px 0 6px; font-size: 1.6rem; }
+.lib-bio { color: var(--muted); }
+.lib-bio > :first-child { margin-top: 0; }
+.lib-links { list-style: none; margin: 26px 0 0; padding: 0; display: grid; gap: 12px; }
+.lib-link { display: grid; gap: 2px; padding: 15px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--text); font-weight: 650; text-decoration: none; transition: transform .15s, border-color .15s; }
+.lib-link small { color: var(--muted); font-weight: 500; }
+.lib-link:hover { transform: translateY(-2px); border-color: var(--accent); }
+.lib-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.lib-links li:first-child .lib-link { background: var(--accent); border-color: var(--accent); color: var(--accent-text, #fff); }
+.lib-links li:first-child .lib-link small { color: inherit; opacity: .85; }
+.lib-home { margin-top: 28px; font-size: .9rem; }
