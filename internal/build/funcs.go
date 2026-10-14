@@ -85,7 +85,7 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 		"data": func(name string) (any, error) {
 			v, ok := s.Data[name]
 			if !ok {
-				return nil, fmt.Errorf("no data/%s.yaml or data/%s.json", name, name)
+				return nil, fmt.Errorf("no data/%s.yaml, data/%s.json or data/%s.csv", name, name, name)
 			}
 			return v, nil
 		},

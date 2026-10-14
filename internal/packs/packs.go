@@ -18,6 +18,12 @@
 // layouts/…, assets/…. Assets are installed under assets/packs/<name>/, so
 // two packs never collide; a pack's templates refer to them that way:
 // {{ asset "packs/faq/faq.css" }}.
+//
+// A pack can also bring forms (forms/<name>.yaml). They're copied in once and
+// then belong to the site, since the site sets where they send: upgrading or
+// removing the pack leaves them alone. A pack's form must send to a
+// placeholder address (example.org), so a pack can never route a site's
+// submissions anywhere, and can't add Turnstile's script.
 package packs
 
 import (
@@ -34,6 +40,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forms"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/markup"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/siteyaml"
@@ -78,6 +85,9 @@ func dedupe(xs []string) []string {
 type File struct {
 	From string // in the pack
 	To   string // in the site
+	// Seed marks a form: copied only if the site has no file there, and the
+	// site's own from then on (not in the pack's files in site.yaml).
+	Seed bool
 }
 
 // Check reads a pack and says what's wrong with it, or what it would install.
@@ -149,6 +159,16 @@ func Check(dir string) (*Manifest, []File, error) {
 				return nil
 			}
 			files = append(files, File{From: rel, To: rel})
+		case top == "forms" && ext == ".yaml" && !strings.Contains(strings.TrimPrefix(rel, "forms/"), "/"):
+			src, err := os.ReadFile(p)
+			if err != nil {
+				return err
+			}
+			if problem := packForm(strings.TrimSuffix(path.Base(rel), ".yaml"), src); problem != "" {
+				problems = append(problems, rel+": "+problem)
+				return nil
+			}
+			files = append(files, File{From: rel, To: rel, Seed: true})
 		case top == "assets" && assetExt[ext]:
 			files = append(files, File{From: rel, To: path.Join("assets", "packs", m.Name, strings.TrimPrefix(rel, "assets/"))})
 		case ext == ".js" || ext == ".mjs":
@@ -156,7 +176,7 @@ func Check(dir string) (*Manifest, []File, error) {
 		case ext == ".svg":
 			problems = append(problems, rel+": SVG, which can carry scripts; use PNG or WebP")
 		default:
-			problems = append(problems, rel+": not something a pack can install (sections/, partials/, layouts/ as .html; assets/ as stylesheets, pictures or fonts)")
+			problems = append(problems, rel+": not something a pack can install (sections/, partials/, layouts/ as .html; forms/ as .yaml; assets/ as stylesheets, pictures or fonts)")
 		}
 		return nil
 	})
@@ -172,6 +192,27 @@ func Check(dir string) (*Manifest, []File, error) {
 	}
 	sort.Slice(files, func(i, j int) bool { return files[i].To < files[j].To })
 	return &m, files, nil
+}
+
+// packForm says what's wrong with a form a pack brings, if anything. It must
+// be a form the build accepts; it must send only to a placeholder address,
+// for the site to replace, never to one the pack's author chose; and it
+// can't load Turnstile, which is a script from another site.
+func packForm(name string, raw []byte) string {
+	f, err := forms.Parse(name, raw)
+	if err != nil {
+		return err.Error()
+	}
+	if !forms.Placeholder(f.To) {
+		return fmt.Sprintf("sends to %s; a pack's form sends to a placeholder such as you@example.org, which the site replaces with its own", f.To)
+	}
+	if f.Mailto != "" && !forms.Placeholder(f.Mailto) {
+		return fmt.Sprintf("mailto %s; a pack's form shows a placeholder such as you@example.org, which the site replaces with its own", f.Mailto)
+	}
+	if f.Turnstile != "" {
+		return "turnstile_sitekey; a pack can't add another site's script (the site can add Turnstile itself)"
+	}
+	return ""
 }
 
 // Bundled says whether name is a pack that comes with HotDog CMS.
@@ -284,13 +325,16 @@ func Add(siteDir, src string, force bool) (*site.PackRef, error) {
 		others = append(others, p)
 		for _, f := range p.Files {
 			for _, nf := range files {
-				if nf.To == f {
+				if nf.To == f && !nf.Seed {
 					return nil, fmt.Errorf("%s is already installed by the %s pack", f, p.Name)
 				}
 			}
 		}
 	}
 	for _, f := range files {
+		if f.Seed {
+			continue
+		}
 		if _, err := os.Stat(filepath.Join(siteDir, filepath.FromSlash(f.To))); err == nil && !mine[f.To] && !force {
 			return nil, fmt.Errorf("%s is already in the site (not from this pack); move it, or add with -force to replace it", f.To)
 		}
@@ -307,11 +351,21 @@ func Add(siteDir, src string, force bool) (*site.PackRef, error) {
 			return nil, err
 		}
 		dst := filepath.Join(siteDir, filepath.FromSlash(f.To))
+		if f.Seed {
+			if _, err := os.Lstat(dst); err == nil {
+				ref.Kept = append(ref.Kept, f.To)
+				continue
+			}
+		}
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return nil, err
 		}
 		if err := os.WriteFile(dst, data, 0o644); err != nil {
 			return nil, err
+		}
+		if f.Seed {
+			ref.Seeded = append(ref.Seeded, f.To)
+			continue
 		}
 		ref.Files = append(ref.Files, f.To)
 		delete(mine, f.To)

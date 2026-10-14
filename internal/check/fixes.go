@@ -32,4 +32,5 @@ var Fixes = map[string]string{
 	"image-weight":           "Upload the picture through the editor, which resizes it and makes WebP copies, or shrink it before committing.",
 	"analytics-ungated":      "Remove gated: false from analytics: in site.yaml, so the consent banner asks first; if you keep it, say so in the privacy notice.",
 	"look-contrast":          "Pick colors further apart in the Look panel (it shows the ratio as you go); text needs 4.5:1.",
+	"form-placeholder":       "Set the form's to: (and mailto:) to your own address, in forms/ or the editor's Forms page, and, if the endpoint lists recipients, add it there too.",
 }

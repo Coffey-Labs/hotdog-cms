@@ -442,4 +442,6 @@ type PackRef struct {
 	// From the last install, for showing; never written to site.yaml.
 	AddedCollections []string `yaml:"-" json:"-"`
 	Notes            string   `yaml:"-" json:"-"`
+	Seeded           []string `yaml:"-" json:"-"` // forms copied in, now the site's own
+	Kept             []string `yaml:"-" json:"-"` // forms the site already had, left as they were
 }

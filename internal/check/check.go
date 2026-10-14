@@ -99,6 +99,7 @@ func Run(siteDir, out string, cfg *site.Config) (*Report, error) {
 	c.sitewide(pages)
 	c.images()
 	c.look()
+	c.formAddresses()
 	c.report.CSP = policy(pages)
 	sort.SliceStable(c.report.Problems, func(i, j int) bool {
 		a, b := c.report.Problems[i], c.report.Problems[j]
@@ -161,7 +162,7 @@ func (c *checker) forbidden() error {
 
 func textFile(p string) bool {
 	switch strings.ToLower(filepath.Ext(p)) {
-	case ".md", ".html", ".htm", ".css", ".js", ".json", ".yaml", ".yml", ".txt", ".xml", ".svg", ".webmanifest":
+	case ".md", ".html", ".htm", ".css", ".js", ".json", ".csv", ".yaml", ".yml", ".txt", ".xml", ".svg", ".webmanifest":
 		return true
 	}
 	return false

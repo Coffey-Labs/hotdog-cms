@@ -72,6 +72,8 @@ func TestDefinitionErrors(t *testing.T) {
 		"to: a@b.co\nfields: [{name: _t}]\n",
 		"to: a@b.co\nreply_to: a\nfields: [{name: a}]\n",
 		"to: a@b.co\nsuccess: https://evil.example/\nfields: [{name: a}]\n",
+		"to: a@b.co\nsuccess: //evil.example/\nfields: [{name: a}]\n",
+		"to: a@b.co\nsuccess: /\\evil.example/\nfields: [{name: a}]\n",
 		"to: a@b.co\nfields: [{name: a}]\nunknown_key: 1\n",
 	}
 	for _, c := range cases {
@@ -128,5 +130,27 @@ func TestSubjectIsPlain(t *testing.T) {
 	}
 	if _, err := Parse("contact", []byte("to: a@example.org\nsubject: 'Contact: {{ .a }} ({{.a}})'\nfields:\n  - name: a\n")); err != nil {
 		t.Errorf("a plain subject was refused: %v", err)
+	}
+}
+
+func TestPlaceholder(t *testing.T) {
+	for addr, want := range map[string]bool{
+		"you@example.org":        true,
+		"You@Example.COM":        true,
+		"a@mail.example.net":     true,
+		"a@shop.example":         true,
+		"a@site.test":            true,
+		"a@nowhere.invalid":      true,
+		"Name <you@example.org>": true,
+		"hello@b.co":             false,
+		"a@example.org.evil.co":  false,
+		"a@notexample.org":       false,
+		"not an address":         false,
+		"a@examples.org":         false,
+		"a@test.co":              false,
+	} {
+		if got := Placeholder(addr); got != want {
+			t.Errorf("Placeholder(%q) = %v, want %v", addr, got, want)
+		}
 	}
 }

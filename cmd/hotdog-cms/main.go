@@ -654,6 +654,15 @@ func cmdPack(args []string) error {
 		for _, f := range ref.Files {
 			fmt.Println(" ", f)
 		}
+		if len(ref.Seeded) > 0 {
+			fmt.Printf("forms, now the site's own (upgrading or removing the pack leaves them; set each one's to: address):\n")
+			for _, f := range ref.Seeded {
+				fmt.Println(" ", f)
+			}
+		}
+		for _, f := range ref.Kept {
+			fmt.Printf("kept the site's own %s; the pack's version wasn't copied\n", f)
+		}
 		if len(ref.AddedCollections) > 0 {
 			fmt.Printf("site.yaml: added collections settings for %s\n", strings.Join(ref.AddedCollections, ", "))
 		}
@@ -696,6 +705,10 @@ func cmdPack(args []string) error {
 		}
 		fmt.Printf("%s %s: installs %d file(s)\n", m.Name, m.Version, len(files))
 		for _, f := range files {
+			if f.Seed {
+				fmt.Printf("  %s -> %s (a form: copied once, then the site's own)\n", f.From, f.To)
+				continue
+			}
 			fmt.Printf("  %s -> %s\n", f.From, f.To)
 		}
 	default:

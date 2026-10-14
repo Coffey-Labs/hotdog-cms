@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/forms"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/media"
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/site"
 )
@@ -305,6 +306,29 @@ func (c *checker) look() {
 			if m.ratio < site.MinContrast {
 				c.add(Error, "look-contrast", "site.yaml", "%s on %s is %.2f:1 in %s mode; text needs at least %.1f:1", r.Fore, r.Back, m.ratio, m.mode, site.MinContrast)
 			}
+		}
+	}
+}
+
+// Forms that still send to a placeholder address, as the starter's and a
+// pack's do until the site sets its own: the messages would go nowhere.
+func (c *checker) formAddresses() {
+	all, err := forms.Load(c.siteDir)
+	if err != nil {
+		return // a broken form fails the build first
+	}
+	names := make([]string, 0, len(all))
+	for name := range all {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		f := all[name]
+		file := "forms/" + name + ".yaml"
+		if forms.Placeholder(f.To) {
+			c.add(Warning, "form-placeholder", file, "sends to %s, a placeholder: submissions would go nowhere", f.To)
+		} else if f.Mailto != "" && forms.Placeholder(f.Mailto) {
+			c.add(Warning, "form-placeholder", file, "shows %s, a placeholder, to visitors without JavaScript", f.Mailto)
 		}
 	}
 }

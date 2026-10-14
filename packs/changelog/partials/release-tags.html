@@ -1,0 +1,2 @@
+{{/* A release's date and what kind of release it is. */}}
+<p class="rel-meta">{{ if not .Date.IsZero }}<time datetime="{{ date "iso" .Date }}">{{ date "January 2, 2006" .Date }}</time>{{ end }}{{ if .Params.security }} <span class="rel-tag rel-security">Security fix</span>{{ end }}{{ if .Params.breaking }} <span class="rel-tag rel-breaking">Breaking changes</span>{{ end }}</p>

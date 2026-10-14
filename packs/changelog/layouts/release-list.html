@@ -1,0 +1,20 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/changelog/changelog.css" }}">
+<section class="wrap page releases">
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  {{ $name := .Collection }}{{ with index .Site.Config.Collections $name }}{{ if .Feed }}{{ $feed := .FeedPath }}{{ if not $feed }}{{ $feed = printf "/%s/feed.xml" $name }}{{ end }}
+  <p class="rel-follow"><a href="{{ $feed }}">Follow new releases</a> in a feed reader.</p>
+  {{ end }}{{ end }}
+  {{ range collection $name }}
+  <article class="rel-entry" id="{{ slugify .Title }}">
+    <h2><a href="{{ .Href }}">{{ .Title }}</a></h2>
+    {{ template "release-tags" . }}
+    {{ with .Summary }}<p class="rel-summary">{{ . }}</p>{{ end }}
+    {{ with .Content }}<div class="prose rel-notes">{{ . }}</div>{{ end }}
+  </article>
+  {{ else }}
+  <p class="rel-none">No releases yet.</p>
+  {{ end }}
+</section>
+{{ end }}

@@ -226,3 +226,67 @@ func TestMarkupTricks(t *testing.T) {
 		}
 	}
 }
+
+func TestPackForms(t *testing.T) {
+	form := "title: Quote\nto: you@example.org\nfields: [{name: details, type: textarea}]\nmailto: you@example.org\n"
+	pack := write(t, t.TempDir(), map[string]string{
+		"pack.yaml":        "name: quotes\nversion: 1.0.0\n",
+		"forms/quote.yaml": form,
+		"forms/note.yaml":  form,
+		"sections/q.html":  `<div>{{ form "quote" }}</div>`,
+	})
+	if _, files, err := Check(pack); err != nil || len(files) != 3 || !files[0].Seed || files[2].Seed {
+		t.Fatalf("check: %v %+v", err, files)
+	}
+
+	// A pack's form can't send anywhere but a placeholder, or load Turnstile.
+	for name, bad := range map[string]string{
+		"its own address": "to: harvest@evil.co\nfields: [{name: a}]\n",
+		"its own mailto":  "to: you@example.org\nmailto: harvest@evil.co\nfields: [{name: a}]\n",
+		"turnstile":       "to: you@example.org\nturnstile_sitekey: 0x4AAA\nfields: [{name: a}]\n",
+		"a broken form":   "to: you@example.org\nfields: []\n",
+	} {
+		p := write(t, t.TempDir(), map[string]string{"pack.yaml": "name: bad\nversion: 1.0.0\n", "forms/x.yaml": bad})
+		if _, _, err := Check(p); err == nil || !strings.Contains(err.Error(), "forms/x.yaml") {
+			t.Errorf("%s: accepted (%v)", name, err)
+		}
+	}
+	nested := write(t, t.TempDir(), map[string]string{"pack.yaml": "name: bad\nversion: 1.0.0\n", "forms/sub/x.yaml": form})
+	if _, _, err := Check(nested); err == nil {
+		t.Error("a form in a subfolder was accepted")
+	}
+
+	// Installed once, then the site's: a site's own form of that name is
+	// kept, an upgrade doesn't reset the address, and removing leaves them.
+	dir := starterSite(t)
+	own := filepath.Join(dir, "forms", "note.yaml")
+	os.WriteFile(own, []byte("to: me@b.co\nfields: [{name: a}]\n"), 0o644)
+	ref, err := Add(dir, pack, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(ref.Seeded, ",") != "forms/quote.yaml" || strings.Join(ref.Kept, ",") != "forms/note.yaml" || strings.Join(ref.Files, ",") != "sections/q.html" {
+		t.Fatalf("add: seeded %v kept %v files %v", ref.Seeded, ref.Kept, ref.Files)
+	}
+	if raw, _ := os.ReadFile(own); !strings.Contains(string(raw), "me@b.co") {
+		t.Error("the site's own form was replaced")
+	}
+	quote := filepath.Join(dir, "forms", "quote.yaml")
+	os.WriteFile(quote, []byte(strings.ReplaceAll(form, "you@example.org", "sales@b.co")), 0o644)
+	os.WriteFile(filepath.Join(pack, "pack.yaml"), []byte("name: quotes\nversion: 1.1.0\n"), 0o644)
+	if _, err := Add(dir, pack, false); err != nil {
+		t.Fatal(err)
+	}
+	if raw, _ := os.ReadFile(quote); !strings.Contains(string(raw), "sales@b.co") {
+		t.Error("an upgrade reset the form's address")
+	}
+	if err := Remove(dir, "quotes"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(quote); err != nil {
+		t.Error("removing the pack removed the site's form")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "sections", "q.html")); err == nil {
+		t.Error("removing the pack left its section")
+	}
+}

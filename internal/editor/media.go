@@ -161,7 +161,7 @@ func mediaLibrary(siteDir string) []*MediaItem {
 			return nil
 		}
 		switch path.Ext(rel) {
-		case ".md", ".html", ".yaml", ".yml", ".json", ".toml", ".css", ".txt":
+		case ".md", ".html", ".yaml", ".yml", ".json", ".csv", ".toml", ".css", ".txt":
 		default:
 			return nil
 		}

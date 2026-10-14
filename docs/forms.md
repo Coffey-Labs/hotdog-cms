@@ -31,6 +31,10 @@ starter's page layout renders it), or `{{ form "contact" }}` in any template.
 The build fails on a form that doesn't make sense: no recipient, a select with
 no options, an unknown key.
 
+The contact-forms pack (`hotdog-cms pack add contact-forms`) brings three
+more, a quote request, a booking request and a mailing list sign-up, and a
+section that shows any form beside your contact details.
+
 ## What the endpoint checks
 
 In this order, and a submission that fails any of them is not sent:

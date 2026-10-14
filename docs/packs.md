@@ -29,6 +29,11 @@ Content-Security-Policy as the site's own.
 - `list` also names the packs that come with HotDog CMS:
   - **calendar**: events, an upcoming-events section and a feed people
     subscribe to (see [events.md](events.md));
+  - **changelog**: release notes, a page per release and all of them on
+    one page, a feed to follow and a "What's new" section;
+  - **contact-forms**: ready-made forms for a quote, a booking and a
+    mailing list, and a section that puts any form beside your email,
+    phone and address;
   - **docs**: a documentation section with a sidebar, part pages and
     previous/next links, in the order `data/docs-nav.yaml` gives;
   - **downloads**: files to download, with their type and size;
@@ -53,6 +58,8 @@ Content-Security-Policy as the site's own.
   - **shop**: a product catalog with a page per product, each Buy button
     opening your payment provider's checkout (no cart);
   - **table-of-contents**: a long page's headings, linked, at its top;
+  - **tables**: tables from a spreadsheet saved as CSV (or YAML), with a
+    caption and row headings, that scroll on phones;
   - **team**: a page per person, a list of everyone and a section;
   - **testimonials**: quotes with a name and a role.
 - `-site` picks the site folder (default: the current one).
@@ -120,6 +127,13 @@ What a pack can hold:
 - **Templates:** `.html` files directly in `sections/`, `partials/` or
   `layouts/`, installed at the same place in the site. Sections declare their
   fields the usual way (see [themes.md](themes.md)).
+- **Forms:** `.yaml` files directly in `forms/` (see [forms.md](forms.md)).
+  A form is copied in once and is the site's own from then on, since the
+  site sets where it sends: upgrading or removing the pack leaves it alone,
+  and a site's own form of the same name is kept. A pack's form must send
+  to a placeholder address such as `you@example.org`, never one the pack's
+  author chose, and can't turn on Turnstile, which loads another site's
+  script. `hotdog-cms check` warns until the site sets its own address.
 - **Assets:** stylesheets, pictures (PNG, JPEG, WebP, GIF, AVIF) and fonts
   in `assets/`. They're installed under `assets/packs/<name>/`, so two packs
   never collide. Refer to them that way:

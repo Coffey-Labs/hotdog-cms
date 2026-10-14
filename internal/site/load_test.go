@@ -88,3 +88,26 @@ func TestFediverseHandle(t *testing.T) {
 		}
 	}
 }
+
+func TestCSVData(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "prices.csv"), []byte("\xef\xbb\xbfItem,Price\n\"Rye, dark\",$5\n"), 0o644)
+	data, err := loadData(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows, ok := data["prices"].([]any)
+	if !ok || len(rows) != 2 {
+		t.Fatalf("prices: %#v", data["prices"])
+	}
+	if head := rows[0].([]any); head[0] != "Item" || head[1] != "Price" {
+		t.Errorf("header (byte order mark kept?): %#v", head)
+	}
+	if row := rows[1].([]any); row[0] != "Rye, dark" || row[1] != "$5" {
+		t.Errorf("row: %#v", row)
+	}
+	os.WriteFile(filepath.Join(dir, "prices.csv"), []byte("a,b\nonly one\n"), 0o644)
+	if _, err := loadData(dir); err == nil || !strings.Contains(err.Error(), "data/prices.csv") {
+		t.Errorf("a row short of cells: %v", err)
+	}
+}

@@ -1,0 +1,19 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/changelog/changelog.css" }}">
+<article class="wrap page release">
+  {{ $list := index .Site.Lists .Collection }}
+  {{ with $list }}<p class="eyebrow"><a href="{{ .Path }}">{{ .Title }}</a></p>{{ end }}
+  <h1>{{ .Title }}</h1>
+  {{ template "release-tags" . }}
+  {{ with .Summary }}<p class="rel-summary">{{ . }}</p>{{ end }}
+  {{ with .Content }}<h2 class="rel-hidden">What changed</h2><div class="prose rel-notes">{{ . }}</div>{{ end }}
+  {{ $newer := false }}{{ $older := false }}{{ $last := false }}{{ $found := false }}
+  {{ range collection .Collection }}{{ if $found }}{{ if not $older }}{{ $older = . }}{{ end }}{{ else if eq .Path $.Path }}{{ $found = true }}{{ $newer = $last }}{{ else }}{{ $last = . }}{{ end }}{{ end }}
+  {{ if or $newer $older }}
+  <nav class="rel-nav" aria-label="Other releases">
+    {{ with $older }}<a class="rel-older" href="{{ .Href }}"><span>Older</span>{{ .Title }}</a>{{ end }}
+    {{ with $newer }}<a class="rel-newer" href="{{ .Href }}"><span>Newer</span>{{ .Title }}</a>{{ end }}
+  </nav>
+  {{ end }}
+</article>
+{{ end }}
