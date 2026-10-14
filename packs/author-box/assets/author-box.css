@@ -1,0 +1,14 @@
+/* The author box pack. Colors come from the theme's variables. */
+.author-box { margin: 40px 0 0; display: grid; gap: 14px; }
+.ab-person { display: flex; gap: 18px; align-items: flex-start; padding: 20px 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.ab-photo { flex: none; width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line); background: var(--accent-soft); }
+.ab-initial { display: grid; place-items: center; font-size: 1.8rem; font-weight: 750; color: var(--accent); }
+.ab-text { min-width: 0; }
+.ab-label { margin: 0; color: var(--muted); font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.ab-name { margin: 2px 0 0; font-weight: 700; font-size: 1.1rem; }
+.ab-role { color: var(--muted); font-weight: 500; font-size: .95rem; }
+.ab-bio { margin-top: 6px; }
+.ab-bio > :first-child { margin-top: 0; }
+.ab-bio > :last-child { margin-bottom: 0; }
+.ab-links { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: .92rem; }
+@media (max-width: 520px) { .ab-person { flex-direction: column; } }

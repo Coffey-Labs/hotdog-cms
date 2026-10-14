@@ -1,0 +1,22 @@
+{{/* Who wrote this page, from data/authors.yaml: the ones its front matter names
+     (author: or authors:, by id or name), else the site's author. */}}
+{{ with index .Site.Data "authors" }}{{ $all := . }}
+{{ $want := list }}{{ with $.Params.authors }}{{ if kindIs "list" . }}{{ $want = . }}{{ else }}{{ $want = list . }}{{ end }}{{ else }}{{ with $.Params.author }}{{ $want = list . }}{{ else }}{{ with $.Site.Config.Author }}{{ $want = list . }}{{ end }}{{ end }}{{ end }}
+{{ $people := list }}
+{{ range $want }}{{ $w := print . }}{{ with index $all $w }}{{ $people = append $people . }}{{ else }}{{ range $id, $a := $all }}{{ if eq (print $a.name) $w }}{{ $people = append $people $a }}{{ end }}{{ end }}{{ end }}{{ end }}
+{{ with $people }}
+<link rel="stylesheet" href="{{ asset "packs/author-box/author-box.css" }}">
+<aside class="author-box" aria-label="About the author{{ if gt (len .) 1 }}s{{ end }}">
+  {{ range $a := . }}
+  <div class="ab-person">
+    {{ with .photo }}<img class="ab-photo" src="{{ . }}" alt="{{ default "" $a.photo_alt }}" loading="lazy" width="72" height="72">{{ else }}<span class="ab-photo ab-initial" aria-hidden="true">{{ upper (printf "%.1s" (print $a.name)) }}</span>{{ end }}
+    <div class="ab-text">
+      <p class="ab-label">Written by</p>
+      <p class="ab-name">{{ with .page }}<a href="{{ . }}" rel="author">{{ $a.name }}</a>{{ else }}{{ .name }}{{ end }}{{ with .role }} <span class="ab-role">· {{ . }}</span>{{ end }}</p>
+      {{ with .bio }}<div class="ab-bio">{{ markdownify . }}</div>{{ end }}
+      {{ with .links }}<ul class="ab-links">{{ range . }}<li><a href="{{ .url }}">{{ .name }}</a></li>{{ end }}</ul>{{ end }}
+    </div>
+  </div>
+  {{ end }}
+</aside>
+{{ end }}{{ end }}

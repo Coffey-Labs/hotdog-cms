@@ -1,0 +1,28 @@
+name: author-box
+version: 1.0.0
+title: Author box
+description: Who wrote an article, at its end, with a photo or initial, a short bio and their links.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Write who your authors are in data/authors.yaml, one entry per person,
+  under a short id:
+
+    sam:
+      name: Sam Rivera
+      role: Head baker
+      bio: Sam has baked here since 2019 and runs the Saturday bread class.
+      photo: /media/sam.webp         # optional; otherwise their initial
+      photo_alt: Sam at the oven
+      page: /people/sam-rivera/      # optional: their page on this site
+      links:
+        - { name: Mastodon, url: "https://example.social/@sam" }
+
+  Then add this line to layouts/article.html, after {{ .Content }}:
+
+    {{ template "author-box" . }}
+
+  An article shows the author its front matter names (author: sam, or
+  authors: [sam, ana] for more than one). Without one, it shows the author
+  whose name is the site's author: in site.yaml, so a site with one writer
+  needs no front matter at all.

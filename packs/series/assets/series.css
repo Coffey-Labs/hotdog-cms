@@ -1,0 +1,10 @@
+/* The series pack. Colors come from the theme's variables. */
+.series { margin: 24px 0; padding: 16px 20px; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+.series-head { margin: 0; font-weight: 650; }
+.series-where { color: var(--accent); }
+.series-list { margin: 10px 0 0; padding-left: 1.4em; display: grid; gap: 4px; }
+.series-list [aria-current] { font-weight: 650; }
+.series-nav { display: flex; justify-content: space-between; gap: 16px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.series-nav a { display: grid; gap: 2px; font-weight: 600; text-decoration: none; max-width: 48%; }
+.series-nav a span { color: var(--muted); font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.series-next { margin-left: auto; text-align: right; }

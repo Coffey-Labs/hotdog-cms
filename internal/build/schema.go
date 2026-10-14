@@ -38,6 +38,11 @@ func pageData(s *site.Site, p *site.Page) []map[string]any {
 			}
 		}
 	}
+	if hasPack(s, "breadcrumbs") {
+		if d := breadcrumbData(s, p); d != nil {
+			out = append(out, d)
+		}
+	}
 	layout := p.Layout
 	if layout == "" && p.Collection != "" {
 		layout = s.Config.Collections[p.Collection].Layout
@@ -515,4 +520,93 @@ func plainText(md string) string {
 	s = mdStrong.ReplaceAllString(s, "")
 	s = mdUnderline.ReplaceAllString(s, "$1$2")
 	return strings.Join(strings.Fields(s), " ")
+}
+
+func hasPack(s *site.Site, name string) bool {
+	for _, p := range s.Config.Packs {
+		if p.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+// trail is the way down to a page from the home page: every page at an
+// address above it that exists (/, /docs/, /docs/install/), then the page.
+// The home page and the 404 page have none.
+func trail(s *site.Site, p *site.Page) []*site.Page {
+	if p.Path == "/" || p.Kind == site.KindError {
+		return nil
+	}
+	var out []*site.Page
+	parts := strings.Split(strings.Trim(p.Path, "/"), "/")
+	for i := 0; i < len(parts); i++ {
+		at := "/" + strings.Join(parts[:i], "/")
+		if i > 0 {
+			at += "/"
+		}
+		if q := s.PageAt(at); q != nil && q != p && q.RedirectTo == "" {
+			out = append(out, q)
+		}
+	}
+	return append(out, p)
+}
+
+// breadcrumbData is the trail as a BreadcrumbList, for a page with a trail
+// of its own (more than the home page and itself is not needed: Home > About
+// is still a trail).
+func breadcrumbData(s *site.Site, p *site.Page) map[string]any {
+	t := trail(s, p)
+	if len(t) < 2 || p.NoIndex {
+		return nil
+	}
+	items := make([]any, len(t))
+	for i, q := range t {
+		items[i] = map[string]any{"@type": "ListItem", "position": i + 1, "name": q.Title, "item": q.Permalink}
+	}
+	d := ldBase("BreadcrumbList")
+	d["itemListElement"] = items
+	return d
+}
+
+// series is every page in p's collection with the same series: in front
+// matter as p, in reading order: by part: when every one has a number, else
+// oldest first. A page that isn't in a series, or is its only part, has none.
+func series(s *site.Site, p *site.Page) []*site.Page {
+	name := str(p.Params["series"])
+	if name == "" || p.Collection == "" {
+		return nil
+	}
+	var parts []*site.Page
+	numbered := true
+	for _, q := range s.Collection(p.Collection) {
+		if (q.Draft && q != p) || !strings.EqualFold(str(q.Params["series"]), name) {
+			continue
+		}
+		if _, ok := partNumber(q); !ok {
+			numbered = false
+		}
+		parts = append(parts, q)
+	}
+	if len(parts) < 2 {
+		return nil
+	}
+	sort.SliceStable(parts, func(i, j int) bool {
+		a, b := parts[i], parts[j]
+		if numbered {
+			x, _ := partNumber(a)
+			y, _ := partNumber(b)
+			return x < y
+		}
+		if !a.Date.Equal(b.Date) {
+			return a.Date.Before(b.Date)
+		}
+		return strings.ToLower(a.Title) < strings.ToLower(b.Title)
+	})
+	return parts
+}
+
+func partNumber(p *site.Page) (float64, bool) {
+	n, err := strconv.ParseFloat(str(p.Params["part"]), 64)
+	return n, err == nil
 }

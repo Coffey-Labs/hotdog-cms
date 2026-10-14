@@ -196,6 +196,19 @@ draws one beside each page. Search indexes carry the headings too (`h`, as
 `[anchor, text]` pairs), so a search box can send someone to the section a
 word is in rather than the top of the page.
 
+## Where a page sits
+
+`trail .` is the way down to a page: every page at an address above it that
+exists, from the home page, then the page itself (none for the home page).
+`series .` is the parts of the series a page is in (`series:` in front
+matter, the same in each part), in reading order: by `part:` when every part
+has one, otherwise oldest first; none when the page isn't in a series of two
+or more. The breadcrumbs and series packs are built on them.
+
+```
+{{ range trail . }}<a href="{{ .Href }}">{{ .Title }}</a> › {{ end }}
+```
+
 ## Navigation trees
 
 `nav "docs-nav" .` reads a navigation tree from `data/docs-nav.yaml` and

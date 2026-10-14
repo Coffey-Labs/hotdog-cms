@@ -1,0 +1,29 @@
+name: series
+version: 1.0.0
+title: Series
+description: Articles in parts, with "Part 2 of 5", every part listed, and links to the previous and next part.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Give every article in a series the same series: in its front matter:
+
+    ---
+    title: "Sourdough basics: feeding your starter"
+    date: 2027-01-12
+    series: Sourdough basics
+    part: 2            # optional; without it, parts go oldest first
+    ---
+
+  Then add this line to layouts/article.html, where the box should go
+  (above {{ .Content }}, or after it):
+
+    {{ template "series" . }}
+
+  It shows only on articles in a series of two parts or more. Parts are in
+  the order of their part: numbers when every part has one, otherwise oldest
+  first.
+
+  To give each series a page listing its parts, add series to taxonomies:
+  in site.yaml (taxonomies: [tags, series]); the box then links the series'
+  name to it. Leave commas out of series names if you do, since a comma
+  separates values there.
