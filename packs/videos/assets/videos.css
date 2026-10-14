@@ -1,0 +1,14 @@
+/* The videos pack. Colors come from the theme's variables. */
+.vid-player { margin: 18px 0; }
+.vid-player video { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: var(--radius); background: #000; }
+.vid-meta { margin: 4px 0 0; color: var(--muted); }
+.vid-summary { font-size: 1.05rem; }
+.vid-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 22px 18px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.vid-card a { display: grid; gap: 8px; text-decoration: none; color: var(--text); }
+.vid-thumb { position: relative; display: block; aspect-ratio: 16 / 9; border-radius: var(--radius); overflow: hidden; background: var(--accent-soft); border: 1px solid var(--line); }
+.vid-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .25s; }
+.vid-card a:hover .vid-thumb img { transform: scale(1.03); }
+.vid-card a:focus-visible .vid-thumb { outline: 2px solid var(--accent); outline-offset: 2px; }
+.vid-len { position: absolute; right: 8px; bottom: 8px; padding: 2px 7px; border-radius: 6px; background: rgba(0, 0, 0, .75); color: #fff; font-size: .8rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.vid-title { font-weight: 650; }
+.vid-date { margin: 2px 0 0; color: var(--muted); font-size: .88rem; }

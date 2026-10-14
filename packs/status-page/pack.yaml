@@ -1,0 +1,47 @@
+name: status-page
+version: 1.0.0
+title: Status page
+description: Whether your services are working, what's wrong when they aren't, and the history of incidents, with a feed to follow.
+license: MIT
+author: Coffey Labs LLC
+collections:
+  incidents:
+    layout: incident
+    list_layout: incident-list
+    feed: true
+notes: |
+  Say how each service is doing in data/status.yaml:
+
+    components:
+      - { name: Website, status: operational }
+      - { name: Online ordering, status: degraded, note: Checkout is slow. }
+
+  status is operational, degraded, outage or maintenance. Then add a
+  "Status" section to a page, such as content/status.md:
+
+    ---
+    title: Status
+    summary: Whether everything is working.
+    layout: landing
+    sections:
+      - status: {}
+    ---
+
+  When something goes wrong, add content/incidents/<name>.md, with the
+  newest update at the top:
+
+    ---
+    title: Online ordering is slow
+    date: 2027-01-12 08:10
+    status: monitoring       # investigating, identified, monitoring or resolved
+    resolved: 2027-01-12 09:30   # when it was fixed, once it is
+    affects: [Online ordering]
+    ---
+    **09:05** A fix is in; we're watching it.
+
+    **08:10** Checkout is taking up to a minute. We're looking into it.
+
+  The page changes when the site is published, so publish after each
+  update. People can follow /incidents/feed.xml. Keep the status page on a
+  different host from the services it reports on, so it's up when they
+  aren't.

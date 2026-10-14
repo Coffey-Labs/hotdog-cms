@@ -1,0 +1,30 @@
+name: reviews
+version: 1.0.0
+title: Reviews
+description: Star ratings from customers, with the average and how many, as a section or under a product.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Add a "Reviews" section to any page, in the editor's section library or
+  in the page's front matter:
+
+    sections:
+      - reviews:
+          heading: What customers say
+          items:
+            - name: Maria Lopez
+              rating: 5
+              date: 2026-09-14
+              text: The best sourdough in town.
+              source: Google
+
+  rating is 1 to 5. To share reviews between pages, put them in
+  data/reviews.yaml (a list like the one above) and set from: reviews.
+
+  For a product (the shop pack), list its reviews as reviews: in the
+  product's front matter and add {{ template "reviews" . }} to
+  layouts/product.html. Search engines then get the product's rating
+  (AggregateRating). Reviews of the business itself get no search-engine
+  data: search engines ignore a business's ratings on its own site.
+
+  Only publish reviews people really wrote, with their permission.

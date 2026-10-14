@@ -1,0 +1,10 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/status-page/status-page.css" }}">
+<section class="wrap page incidents">
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  <p class="st-more"><a href="/{{ .Collection }}/feed.xml">Follow in a feed reader</a></p>
+  {{ with .Paginator.Items }}<ul class="st-incidents">{{ range . }}{{ template "incident-row" . }}{{ end }}</ul>{{ else }}<p>No incidents so far.</p>{{ end }}
+  {{ template "pagination" . }}
+</section>
+{{ end }}

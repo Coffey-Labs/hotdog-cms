@@ -205,6 +205,13 @@ matter, the same in each part), in reading order: by `part:` when every part
 has one, otherwise oldest first; none when the page isn't in a series of two
 or more. The breadcrumbs and series packs are built on them.
 
+`sortBy "term" .items` orders a list of maps, or of pages, by one key: text
+without regard to case, numbers as numbers, dates by date, and anything
+without the key last (for pages, a front matter key, or `Title`, `Date` or
+`Weight`). `ratings .reviews` sums up a list with `rating:` from 1 to 5 as
+`.Average` (to one decimal) and `.Count`, and `stars 4.6` draws a rating as
+text, ★★★★★, rounded to the nearest star.
+
 ```
 {{ range trail . }}<a href="{{ .Href }}">{{ .Title }}</a> › {{ end }}
 ```

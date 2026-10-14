@@ -221,6 +221,77 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 			"articles/a/index.html": {"Part 1 of 3"},
 			"articles/x/index.html": {"Part 2 of 2", `class="series-prev" href="/articles/y/"`},
 		}},
+		{"reviews", []page{
+			{"data/reviews.yaml", "- { name: Maria Lopez, rating: 5, date: 2026-09-14, text: The best **sourdough**., source: Google }\n- { name: Tom Reed, rating: 4 }\n- { name: Ana, rating: 4 }\n"},
+			{"content/kind-words.md", "---\ntitle: Kind words\nsummary: Reviews.\nsections:\n  - reviews: { heading: What customers say, from: reviews }\n---\n"},
+			{"content/starter-kit.md", "---\ntitle: Starter kit\nsummary: A kit.\nreviews:\n  - { name: Sam, rating: 5, text: Works. }\n  - { name: Lee, rating: 3 }\n---\n"},
+		}, map[string][]string{
+			"kind-words/index.html":  {"What customers say", `<b>4.3</b> out of 5 · 3 reviews`, `<span aria-hidden="true">★★★★★</span><span class="rv-sr">5 out of 5 stars</span>`, "★★★★☆", "<strong>sourdough</strong>", "Maria Lopez · September 2026 · Google", "packs/reviews/reviews."},
+			"starter-kit/index.html": {`<h2 id="reviews-heading">Reviews</h2>`, `<b>4</b> out of 5 · 2 reviews`, "Sam", "Lee"},
+		}},
+		{"glossary", []page{
+			{"data/glossary.yaml", "- { term: Starter, definition: Flour and water with wild yeast. }\n- { term: levain, definition: A starter for **one** bake., see_also: [Starter] }\n- { term: Autolyse, definition: Resting flour and water. }\n- { term: Lame, definition: A blade. }\n"},
+			{"content/words.md", "---\ntitle: Baking words\nsummary: A glossary.\nsections:\n  - glossary: { heading: Baking words, from: glossary }\n---\n"},
+		}, map[string][]string{
+			"words/index.html": {`<a href="#g0-a">A</a></li><li><a href="#g0-l">L</a></li><li><a href="#g0-s">S</a>`, `id="autolyse"`, `<div class="gl-entry" id="lame">`, `See also: <a href="#starter">Starter</a>`, "<strong>one</strong>", `"@type":"DefinedTermSet"`, `"url":"https://example.org/words/#levain"`, "packs/glossary/glossary."},
+		}},
+		{"logo-wall", []page{
+			{"content/press.md", "---\ntitle: Press\nsummary: As seen in.\nsections:\n  - logos:\n      heading: As seen in\n      muted: true\n      size: small\n      items:\n        - { name: The Times, logo: /media/a.png, link: \"https://example.com/story\" }\n        - { name: The Post, logo: /media/b.png }\n---\n"},
+		}, map[string][]string{
+			"press/index.html": {"lw-grid lw-small lw-muted", `<a href="https://example.com/story"><img src="/media/a.png" alt="The Times"`, `<li><img src="/media/b.png" alt="The Post"`, "packs/logo-wall/logo-wall."},
+		}},
+		{"videos", []page{
+			{"static/media/v.mp4", "mp4"},
+			{"static/media/v.vtt", "WEBVTT\n"},
+			{"content/videos/_index.md", "---\ntitle: Videos\nsummary: How we bake.\n---\n"},
+			{"content/videos/shaping.md", "---\ntitle: Shaping a boule\ndate: 2026-10-01\nsummary: Two minutes.\nvideo: /media/v.mp4\nposter: /media/a.png\ncaptions: /media/v.vtt\nduration: \"2:14\"\n---\nThe transcript.\n"},
+			{"content/index.md", "---\ntitle: Home\nsummary: Bakery.\nlayout: landing\nsections:\n  - videos: { heading: Latest videos, count: 2 }\n---\n"},
+		}, map[string][]string{
+			"videos/shaping/index.html": {`<video controls preload="metadata" playsinline poster="/media/a.png">`, `<source src="/media/v.mp4" type="video/mp4">`, `<track kind="captions" src="/media/v.vtt"`, `"@type":"VideoObject"`, `"duration":"PT2M14S"`, `"contentUrl":"https://example.org/media/v.mp4"`, "The transcript."},
+			"videos/index.html":         {`href="/videos/shaping/"`, `<span class="vid-len">2:14</span>`},
+			"index.html":                {"Latest videos", `href="/videos/shaping/"`, "Every video"},
+			"videos/feed.xml":           {"Shaping a boule"},
+		}},
+		{"directory", []page{
+			{"content/directory/_index.md", "---\ntitle: Local businesses\nsummary: On Main Street.\n---\n"},
+			{"content/directory/books.md", "---\ntitle: Main Street Books\nsummary: Books.\ncategory: Shops\naddress: 40 Main Street\nphone: (217) 555-0170\nwebsite: \"https://books.example.com\"\n---\n"},
+			{"content/directory/cafe.md", "---\ntitle: Corner Cafe\nsummary: Coffee.\ncategory: Food\n---\n"},
+			{"content/directory/bikes.md", "---\ntitle: Bike Repair\nsummary: Bikes.\ncategory: Shops\n---\n"},
+			{"content/directory/odd.md", "---\ntitle: Odd Jobs\nsummary: Anything.\n---\n"},
+		}, map[string][]string{
+			"directory/index.html":       {`<a href="#food">Food</a></li><li><a href="#shops">Shops</a></li><li><a href="#other">Other</a>`, `<h2 class="dir-cat" id="shops">Shops</h2>`, "packs/directory/directory."},
+			"directory/books/index.html": {"Map and directions", `href="tel:%28217%29555-0170"`, ">books.example.com<", "· Shops"},
+		}},
+		{"link-in-bio", []page{
+			{"content/links.md", "---\ntitle: Bakery on Main\nsummary: Links.\nlayout: links\nphoto: /media/a.png\nphoto_alt: Our logo\nlinks:\n  - { text: Order for pick-up, url: /about/, note: Ready by 7am }\n  - { text: Mastodon, url: \"https://example.social/@bakery\" }\n---\nFresh bread.\n"},
+		}, map[string][]string{
+			"links/index.html": {`<img class="lib-photo" src="/media/a.png" alt="Our logo"`, `<a class="lib-link" href="/about/"><span>Order for pick-up</span><small>Ready by 7am</small>`, "Fresh bread.", "packs/link-in-bio/link-in-bio."},
+		}},
+		{"status-page", []page{
+			{"data/status.yaml", "components:\n  - { name: Website, status: operational }\n  - { name: Online ordering, status: degraded, note: Checkout is slow. }\n"},
+			{"content/incidents/slow.md", "---\ntitle: Ordering is slow\ndate: 2026-10-12 08:10\nstatus: monitoring\naffects: [Online ordering]\n---\n**09:05** A fix is in.\n"},
+			{"content/incidents/old.md", "---\ntitle: Site was down\ndate: 2026-09-01 07:00\nstatus: resolved\nresolved: 2026-09-01 07:40\naffects: Website\n---\nFixed.\n"},
+			{"content/status.md", "---\ntitle: Status\nsummary: Is it working.\nlayout: landing\nsections:\n  - status: {}\n---\n"},
+		}, map[string][]string{
+			"status/index.html":         {`st-overall st-degraded`, "Some things aren't working as they should.", `<span class="st-badge st-degraded">Partly working</span>`, "Checkout is slow.", `<h3 class="st-h">Now</h3>`, `href="/incidents/slow/">Ordering is slow`, "Fixed, watching", "Past incidents", `href="/incidents/old/">Site was down`, `href="/incidents/feed.xml"`},
+			"incidents/old/index.html":  {"Resolved", "September 1, 2026, 7:40 AM", "<dd>Website</dd>"},
+			"incidents/slow/index.html": {"<dd>Online ordering</dd>", "<strong>09:05</strong>"},
+		}},
+		{"coming-soon", []page{
+			{"content/soon.md", "---\ntitle: Fresh bread, coming soon\nsummary: Opening in March.\nlayout: holding\nlaunch: Opening March 1, 2027\nform: contact\nlinks:\n  - { text: Mastodon, url: \"https://example.social/@bakery\" }\n---\nLeave your email.\n"},
+		}, map[string][]string{
+			"soon/index.html": {`<h1 class="hold-title">Fresh bread, coming soon</h1>`, `<p class="hold-when">Opening March 1, 2027</p>`, `action="/_hotdog/forms/contact"`, `href="https://example.social/@bakery">Mastodon`, "packs/coming-soon/coming-soon."},
+		}},
+		{"timeline", []page{
+			{"content/history.md", "---\ntitle: History\nsummary: How we got here.\nsections:\n  - timeline:\n      heading: How we got here\n      items:\n        - { when: \"2019\", title: The first loaf, text: \"At the **market**.\" }\n        - { when: \"2021\", title: Main Street, image: /media/a.png, image_alt: The shop front }\n---\n"},
+		}, map[string][]string{
+			"history/index.html": {`<p class="tl-when">2019</p>`, `<h3 class="tl-title">The first loaf</h3>`, "<strong>market</strong>", `src="/media/a.png" alt="The shop front"`, "packs/timeline/timeline."},
+		}},
+	}
+	// What a pack's pages must not have: the menu, on pages meant to stand alone.
+	absent := map[string]map[string][]string{
+		"link-in-bio": {"links/index.html": {`<header class="top">`}},
+		"coming-soon": {"soon/index.html": {`<header class="top">`}},
 	}
 	for _, c := range cases {
 		t.Run(c.pack, func(t *testing.T) {
@@ -240,6 +311,11 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 					raw, _ := os.ReadFile(lp)
 					os.WriteFile(lp, []byte(strings.Replace(string(raw), "<h1", `{{ template "breadcrumbs" . }}<h1`, 1)), 0o644)
 				}
+			}
+			if c.pack == "reviews" {
+				lp := filepath.Join(dir, "layouts", "page.html")
+				raw, _ := os.ReadFile(lp)
+				os.WriteFile(lp, []byte(strings.Replace(string(raw), "{{ .Content }}", `{{ .Content }}{{ template "reviews" . }}`, 1)), 0o644)
 			}
 			if c.pack == "author-box" || c.pack == "series" {
 				lp := filepath.Join(dir, "layouts", "article.html")
@@ -280,6 +356,14 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 				for _, w := range wants {
 					if !strings.Contains(string(out), w) {
 						t.Errorf("%s lacks %q", file, w)
+					}
+				}
+			}
+			for file, nots := range absent[c.pack] {
+				out, _ := os.ReadFile(filepath.Join(res.Out, filepath.FromSlash(file)))
+				for _, n := range nots {
+					if strings.Contains(string(out), n) {
+						t.Errorf("%s has %q", file, n)
 					}
 				}
 			}

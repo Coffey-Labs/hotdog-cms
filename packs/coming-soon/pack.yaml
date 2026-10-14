@@ -1,0 +1,26 @@
+name: coming-soon
+version: 1.0.0
+title: Coming soon
+description: A holding page for before launch or during maintenance, with when you'll be back and a sign-up form.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Give a page layout: holding. For a site that isn't open yet, make it the
+  home page, content/index.md:
+
+    ---
+    title: Fresh bread, coming to Main Street
+    summary: Bakery on Main opens in March.
+    layout: holding
+    launch: Opening March 1, 2027
+    form: signup          # optional: a form from forms/, such as the
+                          # contact-forms pack's mailing list sign-up
+    links:
+      - { text: Mastodon, url: "https://example.social/@bakery" }
+    ---
+    Sourdough, rye and pastries, baked from 4am. Leave your email and we'll
+    tell you the day we open.
+
+  The page has no menu, only what's on it and the site's footer. When
+  you're ready, change the layout back (landing, for the starter's home
+  page).

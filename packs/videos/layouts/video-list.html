@@ -1,0 +1,9 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/videos/videos.css" }}">
+<section class="wrap page videos">
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  <ul class="vid-grid">{{ range .Paginator.Items }}{{ template "video-card" . }}{{ end }}</ul>
+  {{ template "pagination" . }}
+</section>
+{{ end }}

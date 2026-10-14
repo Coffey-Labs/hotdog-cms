@@ -1,0 +1,2 @@
+{{- $s := print . -}}
+{{- if eq $s "operational" }}Working{{ else if eq $s "degraded" }}Partly working{{ else if eq $s "outage" }}Down{{ else if eq $s "maintenance" }}Maintenance{{ else if eq $s "investigating" }}Investigating{{ else if eq $s "identified" }}Cause found{{ else if eq $s "monitoring" }}Fixed, watching{{ else if eq $s "resolved" }}Resolved{{ else }}{{ $s }}{{ end -}}

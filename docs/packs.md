@@ -35,18 +35,28 @@ Content-Security-Policy as the site's own.
     subscribe to (see [events.md](events.md));
   - **changelog**: release notes, a page per release and all of them on
     one page, a feed to follow and a "What's new" section;
+  - **coming-soon**: a holding page for before launch or during
+    maintenance, with when you'll open and a sign-up form;
   - **contact-forms**: ready-made forms for a quote, a booking and a
     mailing list, and a section that puts any form beside your email,
     phone and address;
+  - **directory**: a listing of businesses, members or places, grouped
+    by category, with a page each;
   - **docs**: a documentation section with a sidebar, part pages and
     previous/next links, in the order `data/docs-nav.yaml` gives;
   - **downloads**: files to download, with their type and size;
   - **faq**: questions that open to show their answers;
   - **gallery**: a grid of pictures that open full size, with no script;
+  - **glossary**: terms and what they mean, A to Z, each with its own
+    link;
   - **jobs**: openings with closing dates; closed ones leave the list by
     themselves;
+  - **link-in-bio**: one page of big buttons, for the link in a social
+    profile;
   - **location-and-hours**: address, map link, phone, email and opening
     hours, from `data/location.yaml`, as a section or a partial;
+  - **logo-wall**: a grid of logos, for customers, sponsors or "as seen
+    in";
   - **menu-and-prices**: a price list in groups, and plans side by side;
   - **payment-links**: buy, book and donate buttons that open your payment
     provider's own checkout (Stripe, PayPal, Square, Ko-fi, Liberapay…);
@@ -57,24 +67,32 @@ Content-Security-Policy as the site's own.
   - **recipes**: ingredients, steps, times and servings;
   - **related-posts**: at the end of an article, the ones sharing the most
     tags with it;
+  - **reviews**: star ratings from customers, with the average, as a
+    section or under a product;
   - **series**: articles in parts, with "Part 2 of 5", every part listed
     and links to the previous and next part;
   - **share-links**: plain share links for Mastodon, Bluesky, LinkedIn and
     email, with no tracking;
   - **shop**: a product catalog with a page per product, each Buy button
     opening your payment provider's checkout (no cart);
+  - **status-page**: whether your services are working, open and past
+    incidents, and a feed;
   - **table-of-contents**: a long page's headings, linked, at its top;
   - **tables**: tables from a spreadsheet saved as CSV (or YAML), with a
     caption and row headings, that scroll on phones;
   - **team**: a page per person, a list of everyone and a section;
-  - **testimonials**: quotes with a name and a role.
+  - **testimonials**: quotes with a name and a role;
+  - **timeline**: dates down a line, with what happened at each;
+  - **videos**: a video library from your own files, with a page per
+    video, a feed and a "Latest videos" section.
 - `-site` picks the site folder (default: the current one).
 
 **Search engines.** The faq, location-and-hours, team, recipes, jobs and shop
 packs are also written as schema.org data (FAQPage, LocalBusiness, Person,
-Recipe, JobPosting, Product), and so is the breadcrumbs pack's trail
-(BreadcrumbList, on every page once the pack is installed), which search
-engines use for richer results. A pack can't carry the
+Recipe, JobPosting, Product), and so are the breadcrumbs pack's trail
+(BreadcrumbList, on every page once the pack is installed), a glossary
+section's terms (DefinedTermSet), a video page (VideoObject) and a product's
+reviews (AggregateRating), which search engines use for richer results. A pack can't carry the
 `<script type="application/ld+json">` that holds it, so HotDog CMS
 builds it (`pageData` in templates) and the starter's `partials/schema.html`
 writes it. Sites started before HotDog CMS 0.2 can add the same two lines to

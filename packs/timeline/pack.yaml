@@ -1,0 +1,19 @@
+name: timeline
+version: 1.0.0
+title: Timeline
+description: Dates down a line, with what happened at each, for a history, a project's milestones or a wedding day.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Add a "Timeline" section to any page:
+
+    sections:
+      - timeline:
+          heading: How we got here
+          items:
+            - { when: "2019", title: The first loaf, text: "Baked in a home kitchen, sold at the Saturday market." }
+            - { when: "2021", title: Main Street, text: "Our own shop, with a real oven." }
+
+  The items show in the order they're written. text is Markdown, and an
+  item can have an image and image_alt. To share one timeline between
+  pages, put the items in data/timeline.yaml and set from: timeline.

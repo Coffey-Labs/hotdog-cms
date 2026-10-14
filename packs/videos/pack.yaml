@@ -1,0 +1,35 @@
+name: videos
+version: 1.0.0
+title: Videos
+description: A video library, with a page per video, its transcript, a list, a feed and a "Latest videos" section, all from your own files.
+license: MIT
+author: Coffey Labs LLC
+collections:
+  videos:
+    layout: video
+    list_layout: video-list
+    feed: true
+notes: |
+  Put each video's files in static/media/ and add it as
+  content/videos/<name>.md:
+
+    ---
+    title: Shaping a boule
+    date: 2027-01-12
+    summary: Two minutes, one loaf, no special tools.
+    video: /media/shaping.mp4
+    webm: /media/shaping.webm        # optional, smaller
+    poster: /media/shaping.webp      # the picture shown before it plays
+    captions: /media/shaping.vtt     # optional WebVTT captions
+    duration: "2:14"
+    ---
+    The transcript, or notes about the video.
+
+  /videos/ lists every video with its poster, and /videos/feed.xml lets
+  people follow new ones. Add a "Latest videos" section to any page to show
+  the newest few. Videos with a poster and a date are described to search
+  engines (VideoObject).
+
+  The videos are your own files, played by the visitor's browser: no
+  YouTube or other player, so nothing tracks your visitors. For one video
+  on a page, the starter's Video section is enough.

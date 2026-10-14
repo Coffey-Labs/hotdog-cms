@@ -1,0 +1,37 @@
+{{/* section
+label: Timeline
+about: Dates down a line, with what happened at each.
+fields:
+  - { name: heading, type: text }
+  - { name: intro, type: markdown }
+  - name: items
+    type: list
+    label: Moments
+    fields:
+      - { name: when, type: text, required: true, help: "As you'd write it: 2019, Spring 2021, 9:30am." }
+      - { name: title, type: text, required: true }
+      - { name: text, type: markdown }
+      - { name: image, type: image }
+      - { name: image_alt, type: text, label: What the picture shows }
+  - { name: from, type: data, label: Moments from, help: A file in data/ that holds the moments. Leave empty to use the ones above. }
+*/}}
+{{ $items := .Data.items }}{{ with .Data.from }}{{ $items = data . }}{{ end }}
+<link rel="stylesheet" href="{{ asset "packs/timeline/timeline.css" }}">
+<section class="block timeline">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    <ol class="tl-list">
+      {{ range $it := $items }}
+      <li class="tl-item">
+        <p class="tl-when">{{ .when }}</p>
+        <div class="tl-body">
+          <h3 class="tl-title">{{ .title }}</h3>
+          {{ with .text }}<div class="tl-text">{{ markdownify . }}</div>{{ end }}
+          {{ with .image }}<img class="tl-image" src="{{ . }}" alt="{{ default "" $it.image_alt }}" loading="lazy">{{ end }}
+        </div>
+      </li>
+      {{ end }}
+    </ol>
+  </div>
+</section>

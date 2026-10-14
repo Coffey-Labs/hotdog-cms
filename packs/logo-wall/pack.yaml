@@ -1,0 +1,21 @@
+name: logo-wall
+version: 1.0.0
+title: Logo wall
+description: A grid of logos, for customers, sponsors, partners or "as seen in".
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Put the logos in static/media/ and add a "Logos" section to any page:
+
+    sections:
+      - logos:
+          heading: As seen in
+          muted: true
+          items:
+            - { name: Springfield Times, logo: /media/times.png, link: "https://example.com/our-story" }
+
+  muted shows them in gray until pointed at, so logos in many colors sit
+  well together; in dark mode they become light outlines, which suits logos
+  on a see-through background (PNG or SVG). For logos that come on white,
+  set light_tiles: true to put each on a white tile. Logos can be SVG files of your own (the pack can't carry
+  any, but your site can). Ask before using someone's logo.

@@ -1,0 +1,23 @@
+name: glossary
+version: 1.0.0
+title: Glossary
+description: Terms and what they mean, A to Z, each with its own link, and the list for search engines.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Keep the terms in data/glossary.yaml, in any order:
+
+    - term: Levain
+      definition: A starter built up the night before, for one bake.
+      see_also: [Starter]
+    - term: Starter
+      definition: Flour and water, alive with wild yeast. Feed it daily.
+
+  Then add a "Glossary" section to a page:
+
+    sections:
+      - glossary: { heading: Baking words, from: glossary }
+
+  Terms are sorted A to Z, with a row of letters at the top to jump with.
+  Each term has its own link: /glossary/#levain. Search engines get the list
+  (DefinedTermSet).

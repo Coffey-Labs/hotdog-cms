@@ -1,0 +1,9 @@
+{{/* A page's own reviews (reviews: in its front matter), such as a product's. */}}
+{{ with .Params.reviews }}
+<link rel="stylesheet" href="{{ asset "packs/reviews/reviews.css" }}">
+<section class="reviews" aria-labelledby="reviews-heading">
+  <h2 id="reviews-heading">Reviews</h2>
+  {{ template "review-summary" . }}
+  <ul class="rv-list">{{ range . }}{{ template "review-item" . }}{{ end }}</ul>
+</section>
+{{ end }}

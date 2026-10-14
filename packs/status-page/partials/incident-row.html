@@ -1,0 +1,5 @@
+{{/* One incident in a list: what, when, how it stands. */}}
+<li class="st-incident">
+  <a class="st-inc-title" href="{{ .Href }}">{{ .Title }}</a>
+  <p class="st-inc-meta"><span class="st-badge st-{{ default "investigating" .Params.status }}">{{ template "status-label" (default "investigating" .Params.status) }}</span> <time datetime="{{ date "rfc3339" .Date }}">{{ date "January 2, 2006, 3:04 PM" .Date }}</time>{{ with .Params.affects }} · {{ if kindIs "list" . }}{{ joinAny ", " . }}{{ else }}{{ . }}{{ end }}{{ end }}</p>
+</li>

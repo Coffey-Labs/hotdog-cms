@@ -1,0 +1,29 @@
+{{/* section
+label: Logos
+about: A grid of logos, for customers, sponsors, partners or "as seen in".
+fields:
+  - { name: heading, type: text }
+  - { name: intro, type: markdown }
+  - name: items
+    type: list
+    label: Logos
+    fields:
+      - { name: name, type: text, required: true, help: Also the logo's alt text. }
+      - { name: logo, type: image, required: true }
+      - { name: link, type: link, help: Optional. }
+  - { name: from, type: data, label: Logos from, help: A file in data/ that holds the logos. Leave empty to use the logos above. }
+  - { name: muted, type: bool, label: Gray until pointed at, help: "In dark mode, light outlines: best with logos on a see-through background." }
+  - { name: light_tiles, type: bool, label: White behind each logo, help: For logos that come on a white background. }
+  - { name: size, type: select, options: [small, medium, large], default: medium }
+*/}}
+{{ $items := .Data.items }}{{ with .Data.from }}{{ $items = data . }}{{ end }}
+<link rel="stylesheet" href="{{ asset "packs/logo-wall/logo-wall.css" }}">
+<section class="block logo-wall">
+  <div class="wrap">
+    {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    <ul class="lw-grid lw-{{ default "medium" .Data.size }}{{ if .Data.muted }} lw-muted{{ end }}{{ if .Data.light_tiles }} lw-light{{ end }}">
+      {{ range $items }}<li>{{ if .link }}<a href="{{ .link }}"><img src="{{ .logo }}" alt="{{ .name }}" loading="lazy"></a>{{ else }}<img src="{{ .logo }}" alt="{{ .name }}" loading="lazy">{{ end }}</li>{{ end }}
+    </ul>
+  </div>
+</section>

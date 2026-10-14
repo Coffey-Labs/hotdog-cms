@@ -1,0 +1,24 @@
+name: link-in-bio
+version: 1.0.0
+title: Link in bio
+description: One page with your picture, a line about you and big buttons to everywhere else, for the link in a social profile.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Make a page with layout: links, such as content/links.md:
+
+    ---
+    title: Bakery on Main
+    summary: Fresh bread in Springfield since 2019.
+    layout: links
+    photo: /media/logo.webp
+    photo_alt: The bakery's logo
+    links:
+      - { text: Order for pick-up, url: /order/, note: Ready by 7am }
+      - { text: This week's menu, url: /menu/ }
+      - { text: Mastodon, url: "https://example.social/@bakery" }
+    ---
+    Sourdough, rye and pastries, baked from 4am.
+
+  Then put https://your.site/links/ in your social profiles. The page has
+  no menu, only your links, and the site's footer.

@@ -1,0 +1,20 @@
+/* The logo wall pack. Colors come from the theme's variables. */
+.lw-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(var(--lw-min, 160px), 1fr)); }
+.lw-small { --lw-min: 120px; --lw-h: 36px; }
+.lw-medium { --lw-min: 160px; --lw-h: 48px; }
+.lw-large { --lw-min: 220px; --lw-h: 68px; }
+.lw-grid li { display: grid; place-items: center; padding: 18px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.lw-grid a { display: grid; place-items: center; width: 100%; }
+.lw-grid img { max-height: var(--lw-h, 48px); max-width: 100%; width: auto; height: auto; object-fit: contain; }
+.lw-muted img { filter: grayscale(1); opacity: .7; transition: filter .2s, opacity .2s; }
+.lw-muted li:hover img, .lw-muted a:focus-visible img { filter: none; opacity: 1; }
+.lw-light li { background: #fff; }
+/* Dark mode: gray on a dark tile is too faint, so muted logos become light
+   outlines, and stay so when pointed at (their own colors may be dark). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .lw-muted:not(.lw-light) img { filter: grayscale(1) brightness(0) invert(1); opacity: .65; }
+  :root:not([data-theme="light"]) .lw-muted:not(.lw-light) li:hover img { filter: grayscale(1) brightness(0) invert(1); opacity: 1; }
+}
+[data-theme="dark"] .lw-muted:not(.lw-light) img { filter: grayscale(1) brightness(0) invert(1); opacity: .65; }
+[data-theme="dark"] .lw-muted:not(.lw-light) li:hover img { filter: grayscale(1) brightness(0) invert(1); opacity: 1; }
+.lw-grid a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; }

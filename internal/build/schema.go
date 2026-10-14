@@ -3,6 +3,7 @@ package build
 import (
 	"fmt"
 	"html/template"
+	"math"
 	"regexp"
 	"sort"
 	"strconv"
@@ -36,6 +37,10 @@ func pageData(s *site.Site, p *site.Page) []map[string]any {
 			if d := businessData(s, sec.Data); d != nil {
 				out = append(out, d)
 			}
+		case "glossary":
+			if d := glossaryData(s, p, sec.Data); d != nil {
+				out = append(out, d)
+			}
 		}
 	}
 	if hasPack(s, "breadcrumbs") {
@@ -54,6 +59,10 @@ func pageData(s *site.Site, p *site.Page) []map[string]any {
 		out = append(out, recipeData(s, p))
 	case "product":
 		out = append(out, productData(s, p))
+	case "video":
+		if d := videoData(s, p); d != nil {
+			out = append(out, d)
+		}
 	case "job":
 		// A closed opening isn't advertised: search engines drop listings
 		// whose validThrough has passed, and say so.
@@ -501,6 +510,30 @@ func productData(s *site.Site, p *site.Page) map[string]any {
 		out["offers"] = map[string]any{"@type": "Offer", "price": strconv.FormatFloat(f, 'f', 2, 64), "priceCurrency": cur, "availability": avail, "url": p.Permalink}
 	}
 	out["brand"] = map[string]any{"@type": "Brand", "name": s.Config.Name}
+	// Customers' reviews of the product (the reviews pack). A business's
+	// reviews of itself get none: search engines ignore those.
+	if r := ratings(p.Params["reviews"]); r.Count > 0 {
+		out["aggregateRating"] = map[string]any{"@type": "AggregateRating", "ratingValue": strconv.FormatFloat(r.Average, 'f', 1, 64), "reviewCount": r.Count, "bestRating": 5, "worstRating": 1}
+		var reviews []any
+		for _, it := range list(p.Params["reviews"]) {
+			m, _ := it.(map[string]any)
+			n, ok := amount(m["rating"])
+			if !ok || str(m["name"]) == "" {
+				continue
+			}
+			rv := map[string]any{"@type": "Review", "author": map[string]any{"@type": "Person", "name": str(m["name"])}, "reviewRating": map[string]any{"@type": "Rating", "ratingValue": strconv.FormatFloat(n, 'f', -1, 64), "bestRating": 5, "worstRating": 1}}
+			if t := plainText(str(m["text"])); t != "" {
+				rv["reviewBody"] = t
+			}
+			if d, ok := dayOf(s, m["date"]); ok {
+				rv["datePublished"] = d.Format("2006-01-02")
+			}
+			reviews = append(reviews, rv)
+		}
+		if len(reviews) > 0 {
+			out["review"] = reviews
+		}
+	}
 	return out
 }
 
@@ -609,4 +642,166 @@ func series(s *site.Site, p *site.Page) []*site.Page {
 func partNumber(p *site.Page) (float64, bool) {
 	n, err := strconv.ParseFloat(str(p.Params["part"]), 64)
 	return n, err == nil
+}
+
+// Ratings sums up a list of reviews, each with a rating: from 1 to 5.
+type Ratings struct {
+	Average float64 // to one decimal place
+	Count   int
+}
+
+func ratings(v any) Ratings {
+	var sum float64
+	var r Ratings
+	for _, it := range list(v) {
+		m, _ := it.(map[string]any)
+		if n, ok := amount(m["rating"]); ok && n >= 1 && n <= 5 {
+			sum += n
+			r.Count++
+		}
+	}
+	if r.Count > 0 {
+		r.Average = math.Round(sum/float64(r.Count)*10) / 10
+	}
+	return r
+}
+
+// stars draws a rating out of five as text, rounded to the nearest star.
+func stars(v any) string {
+	n, _ := amount(v)
+	full := int(math.Round(math.Max(0, math.Min(5, n))))
+	return strings.Repeat("\u2605", full) + strings.Repeat("\u2606", 5-full)
+}
+
+// sortBy orders a list of maps, or pages, by one key: text without regard to
+// case, numbers as numbers, things without the key last. Pages are sorted by
+// a front matter key, or by Title, Date or Weight.
+func sortBy(key string, v any) ([]any, error) {
+	var items []any
+	switch l := v.(type) {
+	case []any:
+		items = append(items, l...)
+	case []*site.Page:
+		for _, p := range l {
+			items = append(items, p)
+		}
+	case nil:
+		return nil, nil
+	default:
+		return nil, fmt.Errorf("sortBy: not a list")
+	}
+	get := func(it any) any {
+		switch x := it.(type) {
+		case map[string]any:
+			return x[key]
+		case *site.Page:
+			switch key {
+			case "Title":
+				return x.Title
+			case "Date":
+				return x.Date
+			case "Weight":
+				return x.Weight
+			}
+			return x.Params[key]
+		}
+		return nil
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		a, b := get(items[i]), get(items[j])
+		if a == nil || b == nil {
+			return a != nil
+		}
+		if x, ok := a.(time.Time); ok {
+			if y, ok := b.(time.Time); ok {
+				return x.Before(y)
+			}
+		}
+		if x, ok := amount(a); ok {
+			if y, ok := amount(b); ok {
+				return x < y
+			}
+		}
+		return strings.ToLower(str(a)) < strings.ToLower(str(b))
+	})
+	return items, nil
+}
+
+// glossaryData is a glossary section's terms as a DefinedTermSet, each term
+// at its anchor on the page.
+func glossaryData(s *site.Site, p *site.Page, d map[string]any) map[string]any {
+	var terms []any
+	for _, it := range sectionItems(s, d, "items") {
+		m, _ := it.(map[string]any)
+		name := str(m["term"])
+		if name == "" {
+			continue
+		}
+		t := map[string]any{"@type": "DefinedTerm", "name": name, "url": p.Permalink + "#" + site.Slugify(name)}
+		if def := plainText(str(m["definition"])); def != "" {
+			t["description"] = def
+		}
+		terms = append(terms, t)
+	}
+	if len(terms) == 0 {
+		return nil
+	}
+	out := ldBase("DefinedTermSet")
+	out["name"] = p.Title
+	if h := str(d["heading"]); h != "" {
+		out["name"] = h
+	}
+	out["url"] = p.Permalink
+	out["hasDefinedTerm"] = terms
+	return out
+}
+
+// videoData is a video page (the videos pack) as a VideoObject.
+func videoData(s *site.Site, p *site.Page) map[string]any {
+	src := str(p.Params["video"])
+	poster := str(p.Params["poster"])
+	if src == "" || poster == "" || p.Date.IsZero() {
+		return nil // search engines need the file, a picture and a date
+	}
+	out := ldBase("VideoObject")
+	out["name"] = p.Title
+	out["url"] = p.Permalink
+	out["description"] = p.Summary
+	if p.Summary == "" {
+		out["description"] = p.Title
+	}
+	out["thumbnailUrl"] = abs(s, poster)
+	out["contentUrl"] = abs(s, src)
+	out["uploadDate"] = p.Date.Format(time.RFC3339)
+	if d := isoDuration(str(p.Params["duration"])); d != "" {
+		out["duration"] = d
+	}
+	return out
+}
+
+// isoDuration turns 12:34 or 1:02:03 into PT12M34S or PT1H2M3S.
+func isoDuration(v string) string {
+	parts := strings.Split(strings.TrimSpace(v), ":")
+	if len(parts) < 2 || len(parts) > 3 {
+		return ""
+	}
+	n := make([]int, len(parts))
+	for i, s := range parts {
+		x, err := strconv.Atoi(s)
+		if err != nil || x < 0 {
+			return ""
+		}
+		n[i] = x
+	}
+	if len(n) == 2 {
+		n = append([]int{0}, n...)
+	}
+	out := "PT"
+	if n[0] > 0 {
+		out += strconv.Itoa(n[0]) + "H"
+	}
+	if n[1] > 0 {
+		out += strconv.Itoa(n[1]) + "M"
+	}
+	return out + strconv.Itoa(n[2]) + "S"
 }

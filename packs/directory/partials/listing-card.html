@@ -1,0 +1,9 @@
+{{/* One entry in the directory: logo, name, line about it and how to reach them. */}}
+<li class="dir-card">
+  {{ with .Params.logo }}<img class="dir-logo" src="{{ . }}" alt="" loading="lazy">{{ end }}
+  <div>
+    <a class="dir-name" href="{{ .Href }}">{{ .Title }}</a>
+    {{ with .Summary }}<p class="dir-summary">{{ . }}</p>{{ end }}
+    <p class="dir-reach">{{ with .Params.phone }}<a href="tel:{{ replace " " "" . }}">{{ . }}</a>{{ end }}{{ with .Params.website }} <a href="{{ . }}">{{ hostOf . }}</a>{{ end }}</p>
+  </div>
+</li>

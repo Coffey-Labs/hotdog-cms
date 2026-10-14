@@ -725,6 +725,10 @@ func strList(v any) []string {
 
 var dateLayouts = []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02T15:04", "2006-01-02 15:04:05", "2006-01-02 15:04", "2006-01-02"}
 
+// ParseDate reads a date as front matter's date: does: 2026-10-10, or with
+// a time, 2026-10-10 08:30.
+func ParseDate(v any) (time.Time, error) { return date(v) }
+
 func date(v any) (time.Time, error) {
 	switch t := v.(type) {
 	case nil:
