@@ -191,6 +191,36 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 			"changelog/feed.xml":         {"1.1.1", "1.0.0"},
 			"index.html":                 {`href="/changelog/1-1-1/">1.1.1`, `href="/changelog/1-1-0/">1.1.0`, "Closed a hole.", "Every release"},
 		}},
+		{"breadcrumbs", []page{
+			{"content/recipes/_index.md", "---\ntitle: Recipes\nsummary: All of them.\n---\n"},
+			{"content/recipes/bread/_index.md", "---\ntitle: Bread\nsummary: Loaves.\n---\n"},
+			{"content/recipes/bread/rye.md", "---\ntitle: Dark rye\ndate: 2026-10-01\nsummary: A dense loaf.\n---\nRye.\n"},
+		}, map[string][]string{
+			"recipes/bread/rye/index.html": {`<nav class="crumbs" aria-label="Breadcrumb">`, `<li><a href="/">Home</a></li><li><a href="/recipes/">Recipes</a></li><li><a href="/recipes/bread/">Bread</a></li><li><span aria-current="page">Dark rye</span></li>`, `"@type":"BreadcrumbList"`, `"position":4`, `"item":"https://example.org/recipes/bread/"`, "packs/breadcrumbs/breadcrumbs."},
+			"about/index.html":             {`<li><a href="/">Home</a></li><li><span aria-current="page">About</span></li>`},
+		}},
+		{"author-box", []page{
+			{"data/authors.yaml", "sam:\n  name: Sam Rivera\n  role: Head baker\n  bio: Bakes from **4am**.\n  photo: /media/a.png\n  photo_alt: Sam at the oven\n  page: /about/\n  links:\n    - { name: Mastodon, url: \"https://example.social/@sam\" }\nana:\n  name: Ana Lopez\nme:\n  name: Your Name\n  role: Owner\n"},
+			{"content/articles/one.md", "---\ntitle: One\ndate: 2026-10-01\nsummary: One.\nauthor: sam\n---\nOne.\n"},
+			{"content/articles/two.md", "---\ntitle: Two\ndate: 2026-10-02\nsummary: Two.\nauthors: [sam, Ana Lopez]\n---\nTwo.\n"},
+			{"content/articles/three.md", "---\ntitle: Three\ndate: 2026-10-03\nsummary: Three.\n---\nThree.\n"},
+		}, map[string][]string{
+			"articles/one/index.html":   {`aria-label="About the author"`, `src="/media/a.png" alt="Sam at the oven"`, `<a href="/about/" rel="author">Sam Rivera</a>`, "· Head baker", "<strong>4am</strong>", `href="https://example.social/@sam">Mastodon`, "packs/author-box/author-box."},
+			"articles/two/index.html":   {`aria-label="About the authors"`, "Sam Rivera", `<span class="ab-photo ab-initial" aria-hidden="true">A</span>`, "Ana Lopez"},
+			"articles/three/index.html": {"Your Name", "· Owner"},
+		}},
+		{"series", []page{
+			{"content/articles/a.md", "---\ntitle: Starter\ndate: 2026-09-01\nsummary: A.\nseries: Sourdough basics\n---\nA.\n"},
+			{"content/articles/b.md", "---\ntitle: Feeding\ndate: 2026-09-08\nsummary: B.\nseries: Sourdough basics\n---\nB.\n"},
+			{"content/articles/c.md", "---\ntitle: Baking\ndate: 2026-09-15\nsummary: C.\nseries: sourdough basics\n---\nC.\n"},
+			{"content/articles/x.md", "---\ntitle: Ovens two\ndate: 2026-08-01\nsummary: X.\nseries: Ovens\npart: 2\n---\nX.\n"},
+			{"content/articles/y.md", "---\ntitle: Ovens one\ndate: 2026-08-20\nsummary: Y.\nseries: Ovens\npart: 1\n---\nY.\n"},
+			{"content/articles/alone.md", "---\ntitle: Alone\ndate: 2026-07-01\nsummary: Z.\nseries: Just me\n---\nZ.\n"},
+		}, map[string][]string{
+			"articles/b/index.html": {"Part 2 of 3</span> in <span class=\"series-name\">Sourdough basics</span>", `<li><a href="/articles/a/">Starter</a></li><li><span aria-current="page">Feeding</span></li><li><a href="/articles/c/">Baking</a></li>`, `class="series-prev" href="/articles/a/"`, `class="series-next" href="/articles/c/"`, "packs/series/series."},
+			"articles/a/index.html": {"Part 1 of 3"},
+			"articles/x/index.html": {"Part 2 of 2", `class="series-prev" href="/articles/y/"`},
+		}},
 	}
 	for _, c := range cases {
 		t.Run(c.pack, func(t *testing.T) {
@@ -204,6 +234,18 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 			os.MkdirAll(filepath.Join(dir, "static", "media"), 0o755)
 			os.WriteFile(filepath.Join(dir, "static", "media", "a.png"), picture, 0o644)
 			os.WriteFile(filepath.Join(dir, "static", "media", "b.png"), picture, 0o644)
+			if c.pack == "breadcrumbs" {
+				for _, l := range []string{"page.html", "article.html", "list.html"} {
+					lp := filepath.Join(dir, "layouts", l)
+					raw, _ := os.ReadFile(lp)
+					os.WriteFile(lp, []byte(strings.Replace(string(raw), "<h1", `{{ template "breadcrumbs" . }}<h1`, 1)), 0o644)
+				}
+			}
+			if c.pack == "author-box" || c.pack == "series" {
+				lp := filepath.Join(dir, "layouts", "article.html")
+				raw, _ := os.ReadFile(lp)
+				os.WriteFile(lp, []byte(strings.Replace(string(raw), "{{ .Content }}", `{{ .Content }}{{ template "`+c.pack+`" . }}`, 1)), 0o644)
+			}
 			if c.pack == "changelog" {
 				lp := filepath.Join(dir, "partials", "footer.html")
 				raw, _ := os.ReadFile(lp)

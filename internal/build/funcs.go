@@ -270,6 +270,10 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 		"closed": func(v any) bool { return closed(s, v) },
 		// related . 3: pages in the same collection sharing the most tags.
 		"related": func(p *site.Page, n int) []*site.Page { return related(s, p, n) },
+		// trail .: the pages above this one, from the home page, then it.
+		"trail": func(p *site.Page) []*site.Page { return trail(s, p) },
+		// series .: the parts of the series this page is in, in reading order.
+		"series": func(p *site.Page) []*site.Page { return series(s, p) },
 		// headings .Content: the h2 and h3 headings, for a table of contents.
 		"headings": headings,
 		"sectionContext": func(p *site.Page, sec site.Section, i int) SectionContext {

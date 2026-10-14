@@ -27,6 +27,10 @@ Content-Security-Policy as the site's own.
   file.
 - `remove` takes the pack's files out and forgets it.
 - `list` also names the packs that come with HotDog CMS:
+  - **author-box**: who wrote an article, at its end, with a photo, bio
+    and links, from `data/authors.yaml`;
+  - **breadcrumbs**: a Home › Articles › This page trail above a page's
+    title, and the same trail for search engines;
   - **calendar**: events, an upcoming-events section and a feed people
     subscribe to (see [events.md](events.md));
   - **changelog**: release notes, a page per release and all of them on
@@ -53,6 +57,8 @@ Content-Security-Policy as the site's own.
   - **recipes**: ingredients, steps, times and servings;
   - **related-posts**: at the end of an article, the ones sharing the most
     tags with it;
+  - **series**: articles in parts, with "Part 2 of 5", every part listed
+    and links to the previous and next part;
   - **share-links**: plain share links for Mastodon, Bluesky, LinkedIn and
     email, with no tracking;
   - **shop**: a product catalog with a page per product, each Buy button
@@ -66,8 +72,10 @@ Content-Security-Policy as the site's own.
 
 **Search engines.** The faq, location-and-hours, team, recipes, jobs and shop
 packs are also written as schema.org data (FAQPage, LocalBusiness, Person,
-Recipe, JobPosting, Product), which search engines use for richer results. A pack can't carry
-the `<script type="application/ld+json">` that holds it, so HotDog CMS
+Recipe, JobPosting, Product), and so is the breadcrumbs pack's trail
+(BreadcrumbList, on every page once the pack is installed), which search
+engines use for richer results. A pack can't carry the
+`<script type="application/ld+json">` that holds it, so HotDog CMS
 builds it (`pageData` in templates) and the starter's `partials/schema.html`
 writes it. Sites started before HotDog CMS 0.2 can add the same two lines to
 theirs:

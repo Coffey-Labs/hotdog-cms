@@ -1,0 +1,19 @@
+{{/* The series this article is part of: where it falls, every part, and the parts either side. */}}
+{{ $parts := series . }}{{ if $parts }}
+{{ $here := 0 }}{{ $prev := false }}{{ $next := false }}{{ $last := false }}{{ $found := false }}
+{{ range $i, $p := $parts }}{{ if $found }}{{ if not $next }}{{ $next = $p }}{{ end }}{{ else if eq $p.Path $.Path }}{{ $found = true }}{{ $here = add $i 1 }}{{ $prev = $last }}{{ else }}{{ $last = $p }}{{ end }}{{ end }}
+{{ $name := print .Params.series }}{{ $url := termURL "series" $name }}
+<link rel="stylesheet" href="{{ asset "packs/series/series.css" }}">
+<aside class="series" aria-label="Series: {{ $name }}">
+  <p class="series-head"><span class="series-where">Part {{ $here }} of {{ len $parts }}</span> in {{ if $url }}<a href="{{ $url }}">{{ $name }}</a>{{ else }}<span class="series-name">{{ $name }}</span>{{ end }}</p>
+  <ol class="series-list">
+    {{ range $parts }}<li>{{ if eq .Path $.Path }}<span aria-current="page">{{ .Title }}</span>{{ else }}<a href="{{ .Href }}">{{ .Title }}</a>{{ end }}</li>{{ end }}
+  </ol>
+  {{ if or $prev $next }}
+  <nav class="series-nav" aria-label="Other parts">
+    {{ with $prev }}<a class="series-prev" href="{{ .Href }}"><span>Previous part</span>{{ .Title }}</a>{{ end }}
+    {{ with $next }}<a class="series-next" href="{{ .Href }}"><span>Next part</span>{{ .Title }}</a>{{ end }}
+  </nav>
+  {{ end }}
+</aside>
+{{ end }}

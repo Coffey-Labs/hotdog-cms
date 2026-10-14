@@ -1,0 +1,19 @@
+name: breadcrumbs
+version: 1.0.0
+title: Breadcrumbs
+description: A "Home › Articles › This page" trail above a page's title, and the same trail for search engines.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Add this line to the layouts that should show the trail, such as
+  layouts/page.html and layouts/article.html, above the page's title:
+
+    {{ template "breadcrumbs" . }}
+
+  The trail is the pages above this one, by address: /recipes/bread/rye/
+  shows Home › Recipes › Bread › Rye when /recipes/ and /recipes/bread/
+  exist. It isn't shown on the home page.
+
+  Search engines get the trail too (BreadcrumbList), on every page, as long
+  as the pack is installed and partials/schema.html has the pageData line
+  (see docs/packs.md).

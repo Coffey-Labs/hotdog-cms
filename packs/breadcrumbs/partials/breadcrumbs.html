@@ -1,0 +1,9 @@
+{{/* The trail from the home page down to this one: Home › Articles › This page. */}}
+{{ $t := trail . }}{{ if gt (len $t) 1 }}
+<link rel="stylesheet" href="{{ asset "packs/breadcrumbs/breadcrumbs.css" }}">
+<nav class="crumbs" aria-label="Breadcrumb">
+  <ol>
+    {{ range $i, $p := $t }}{{ if eq $p.Path $.Path }}<li><span aria-current="page">{{ $p.Title }}</span></li>{{ else }}<li><a href="{{ $p.Href }}">{{ $p.Title }}</a></li>{{ end }}{{ end }}
+  </ol>
+</nav>
+{{ end }}
