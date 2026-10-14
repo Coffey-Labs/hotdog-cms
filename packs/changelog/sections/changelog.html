@@ -1,0 +1,27 @@
+{{/* section
+label: What's new
+about: The latest releases from the changelog, with a link to all of them.
+fields:
+  - { name: heading, type: text, default: "What's new" }
+  - { name: collection, type: collection, default: changelog, label: Releases from }
+  - { name: count, type: number, default: 3, label: How many }
+  - { name: notes, type: bool, label: "Show each release's notes", help: Otherwise only its summary. }
+*/}}
+{{ $c := default "changelog" .Data.collection }}{{ $d := .Data }}
+<link rel="stylesheet" href="{{ asset "packs/changelog/changelog.css" }}">
+<section class="block changelog">
+  <div class="wrap">
+    {{ with $d.heading }}<h2>{{ . }}</h2>{{ end }}
+    <ul class="rel-list">
+      {{ range limit (default 3 $d.count) (collection $c) }}
+      <li class="rel-item">
+        <a class="rel-title" href="{{ .Href }}">{{ .Title }}</a>
+        {{ template "release-tags" . }}
+        {{ with .Summary }}<p class="rel-summary">{{ . }}</p>{{ end }}
+        {{ if $d.notes }}{{ with .Content }}<div class="prose rel-notes">{{ . }}</div>{{ end }}{{ end }}
+      </li>
+      {{ end }}
+    </ul>
+    <p><a class="more" href="/{{ $c }}/">Every release</a></p>
+  </div>
+</section>

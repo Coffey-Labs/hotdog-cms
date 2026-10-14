@@ -2,6 +2,7 @@ package site
 
 import (
 	"bytes"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -28,7 +29,7 @@ type Site struct {
 	Collections map[string][]*Page // collection -> its pages, in the collection's order
 	Lists       map[string]*Page   // collection -> its list page
 	Taxonomies  map[string]map[string][]*Page
-	Data        map[string]any // data/*.yaml and data/*.json, by file name without extension
+	Data        map[string]any // data/*.yaml, data/*.json and data/*.csv, by file name without extension
 
 	bySource  map[string]*Page // PageFrom's index, built on first use
 	BuildTime time.Time
@@ -613,6 +614,8 @@ func loadData(dir string) (map[string]any, error) {
 			err = yaml.Unmarshal(raw, &v)
 		case ".json":
 			err = json.Unmarshal(raw, &v)
+		case ".csv":
+			v, err = readCSV(raw)
 		default:
 			continue
 		}
@@ -625,6 +628,27 @@ func loadData(dir string) (map[string]any, error) {
 		out[key] = v
 	}
 	return out, nil
+}
+
+// readCSV reads a spreadsheet saved as CSV into a list of rows, each a list
+// of cells, the way a YAML list of lists reads: the tables pack takes either.
+// Every row must have as many cells as the first. A byte order mark, which
+// Excel writes, is dropped.
+func readCSV(raw []byte) (any, error) {
+	r := csv.NewReader(bytes.NewReader(bytes.TrimPrefix(raw, []byte("\xef\xbb\xbf"))))
+	records, err := r.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]any, len(records))
+	for i, rec := range records {
+		cells := make([]any, len(rec))
+		for j, c := range rec {
+			cells[j] = c
+		}
+		rows[i] = cells
+	}
+	return rows, nil
 }
 
 func sections(v any) ([]Section, error) {

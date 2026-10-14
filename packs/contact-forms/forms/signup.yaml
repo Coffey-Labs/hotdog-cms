@@ -1,0 +1,17 @@
+# A mailing list sign-up, from the contact-forms pack. Each sign-up is
+# emailed to you; set store: true (and give the endpoint a store folder) to
+# keep them in a file too. It's this site's own form now: change it as you
+# like. Before publishing, set to: and mailto: to your own address.
+title: Join the mailing list
+to: you@example.org
+subject: "Mailing list sign-up: {{ .email }}"
+reply_to: email
+fields:
+  - { name: email, type: email, label: Your email, required: true }
+  - { name: name, label: Your name, help: "So we know what to call you.", max: 120 }
+  - name: agree
+    type: checkbox
+    label: Yes, email me news. I can unsubscribe at any time.
+    required: true
+submit: Sign me up
+mailto: you@example.org

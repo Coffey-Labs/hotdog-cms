@@ -1,0 +1,31 @@
+{{/* section
+label: Contact form
+about: A form from forms/ beside your email, phone, address and a note, such as when you answer.
+fields:
+  - { name: heading, type: text, default: Get in touch }
+  - { name: intro, type: markdown }
+  - { name: form, type: text, default: contact, required: true, help: "The form's name: a file in forms/, such as contact, quote, booking or signup." }
+  - { name: email, type: text, label: Email }
+  - { name: phone, type: text, label: Phone }
+  - { name: address, type: textarea, label: Address }
+  - { name: note, type: markdown, label: Beside the form, help: "Opening hours, how soon you answer, or anything else." }
+*/}}
+{{ $d := .Data }}{{ $side := or $d.email $d.phone $d.address $d.note }}
+<link rel="stylesheet" href="{{ asset "packs/contact-forms/contact-forms.css" }}">
+<section class="block contact-form">
+  <div class="wrap">
+    {{ with $d.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with $d.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    <div class="cf-grid{{ if not $side }} cf-solo{{ end }}">
+      <div class="cf-form">{{ form (default "contact" $d.form) }}</div>
+      {{ if $side }}
+      <aside class="cf-details">
+        {{ with $d.email }}<div class="cf-line"><span class="cf-label">Email</span>{{ emailOff }}<a href="mailto:{{ . }}">{{ . }}</a>{{ emailOffEnd }}</div>{{ end }}
+        {{ with $d.phone }}<div class="cf-line"><span class="cf-label">Phone</span><a href="tel:{{ replace " " "" . }}">{{ . }}</a></div>{{ end }}
+        {{ with $d.address }}<div class="cf-line"><span class="cf-label">Address</span><address>{{ . }}</address></div>{{ end }}
+        {{ with $d.note }}<div class="cf-note">{{ markdownify . }}</div>{{ end }}
+      </aside>
+      {{ end }}
+    </div>
+  </div>
+</section>

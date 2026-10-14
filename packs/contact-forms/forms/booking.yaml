@@ -1,0 +1,22 @@
+# A booking request, from the contact-forms pack: a table, an appointment, a
+# lesson. It asks; you confirm by email. It's this site's own form now:
+# change it as you like. Before publishing, set to: and mailto: to your own
+# address.
+title: Booking request
+to: you@example.org
+subject: "Booking request from {{ .name }} for {{ .date }}"
+reply_to: email
+fields:
+  - { name: name, label: Your name, required: true, max: 120 }
+  - { name: email, type: email, label: Your email, required: true }
+  - { name: phone, type: tel, label: Phone }
+  - { name: date, type: text, label: "Which day?", required: true, placeholder: "Saturday, May 9", max: 80 }
+  - name: time
+    type: select
+    label: What time of day?
+    required: true
+    options: [Morning, Afternoon, Evening]
+  - { name: people, type: text, label: "How many people?", max: 40 }
+  - { name: notes, type: textarea, label: "Anything we should know?", max: 2000 }
+submit: Send booking request
+mailto: you@example.org

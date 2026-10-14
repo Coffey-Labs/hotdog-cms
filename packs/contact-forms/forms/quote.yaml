@@ -1,0 +1,21 @@
+# A quote request, from the contact-forms pack. It's this site's own form
+# now: change it as you like. Before publishing, set to: and mailto: to your
+# own address.
+title: Request a quote
+to: you@example.org
+subject: "Quote request from {{ .name }}: {{ .service }}"
+reply_to: email
+fields:
+  - { name: name, label: Your name, required: true, max: 120 }
+  - { name: email, type: email, label: Your email, required: true }
+  - { name: phone, type: tel, label: Phone, help: "If you'd rather we called." }
+  - name: service
+    type: select
+    label: What do you need?
+    required: true
+    options: [Something new, A change or repair, Something else]
+  - { name: when, type: text, label: "When do you need it by?", max: 120 }
+  - { name: budget, type: text, label: Your budget, help: "If you have one in mind.", max: 120 }
+  - { name: details, type: textarea, label: Tell us about it, required: true, max: 5000 }
+submit: Ask for a quote
+mailto: you@example.org

@@ -184,7 +184,7 @@ func (f *Form) check() error {
 	if f.Submit == "" {
 		f.Submit = "Send"
 	}
-	if f.Success != "" && !strings.HasPrefix(f.Success, "/") {
+	if f.Success != "" && (!strings.HasPrefix(f.Success, "/") || strings.HasPrefix(f.Success, "//") || strings.HasPrefix(f.Success, "/\\")) {
 		return fmt.Errorf("success must be a path on this site, such as /contact/thanks/")
 	}
 	if f.Mailto != "" {
@@ -193,6 +193,32 @@ func (f *Form) check() error {
 		}
 	}
 	return nil
+}
+
+// Placeholder reports whether an address is at a domain kept for examples
+// (RFC 2606: example.org, example.com, example.net, and .example, .test,
+// .invalid and .localhost names), so mail to it goes nowhere. Forms that
+// come in a pack send there until the site sets its own address.
+func Placeholder(addr string) bool {
+	a, err := mail.ParseAddress(addr)
+	if err != nil {
+		return false
+	}
+	_, domain, ok := strings.Cut(strings.ToLower(a.Address), "@")
+	if !ok {
+		return false
+	}
+	domain = strings.TrimSuffix(domain, ".")
+	switch domain {
+	case "example.org", "example.com", "example.net":
+		return true
+	}
+	for _, tld := range []string{".example", ".test", ".invalid", ".localhost"} {
+		if domain == tld[1:] || strings.HasSuffix(domain, tld) {
+			return true
+		}
+	}
+	return strings.HasSuffix(domain, ".example.org") || strings.HasSuffix(domain, ".example.com") || strings.HasSuffix(domain, ".example.net")
 }
 
 // Submission is a checked set of values, in the form's field order.

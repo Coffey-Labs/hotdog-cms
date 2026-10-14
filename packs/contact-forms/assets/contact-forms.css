@@ -1,0 +1,23 @@
+/* The contact forms pack. Colors come from the theme's variables. */
+.cf-grid { display: grid; gap: 28px 48px; grid-template-columns: minmax(0, 3fr) minmax(220px, 2fr); align-items: start; }
+.cf-grid.cf-solo { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 760px) { .cf-grid { grid-template-columns: minmax(0, 1fr); } }
+.cf-form .hotdog-form { max-width: none; }
+.cf-solo .cf-form .hotdog-form { max-width: 40rem; }
+.cf-form .hotdog-field label { font-weight: 600; }
+.cf-form .hotdog-field input:not([type="checkbox"]), .cf-form .hotdog-field textarea, .cf-form .hotdog-field select { border: 1px solid var(--line); border-radius: calc(var(--radius) * .6); background: var(--surface); }
+.cf-form .hotdog-field input:focus-visible, .cf-form .hotdog-field textarea:focus-visible, .cf-form .hotdog-field select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.cf-form .hotdog-field.cl-checkbox label { font-weight: 400; }
+.cf-form .hotdog-field.cl-checkbox input { margin: 0 8px 0 0; }
+.cf-form .hotdog-help { color: var(--muted); opacity: 1; }
+.cf-form .hotdog-req { color: var(--accent); }
+.cf-form button[type="submit"] { padding: 11px 22px; border-radius: 11px; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-text, #fff); font-weight: 650; }
+.cf-form button[type="submit"]:hover { filter: brightness(1.05); }
+.cf-form button[type="submit"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.cf-details { padding: 20px 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); display: grid; gap: 14px; }
+.cf-line { display: grid; gap: 2px; }
+.cf-label { color: var(--muted); font-size: .82rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.cf-line address { font-style: normal; white-space: pre-line; }
+.cf-note { padding-top: 14px; border-top: 1px solid var(--line); }
+.cf-note > :first-child { margin-top: 0; }
+.cf-note > :last-child { margin-bottom: 0; }

@@ -1,0 +1,31 @@
+name: contact-forms
+version: 1.0.0
+title: Contact forms
+description: Ready-made forms for a quote, a booking and a mailing list, and a section that puts any form beside your email, phone and address.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  The forms are in forms/: quote.yaml, booking.yaml and signup.yaml. They're
+  your site's own now, so change them as you like (in the files, or the
+  editor's Forms page). First, set each one's to: and mailto: to your own
+  address. They send to you@example.org until you do, and hotdog-cms check
+  warns about it.
+
+  Then add a "Contact form" section to a page, in the editor's section
+  library or in the page's front matter:
+
+    sections:
+      - contact-form:
+          heading: Ask for a quote
+          form: quote
+          email: hello@example.org
+          phone: (217) 555-0142
+          note: We answer within one working day.
+
+  form: is the name of any form in forms/, including the contact form your
+  site started with. Forms are sent by the endpoint (hotdog-cms endpoint);
+  see docs/forms.md.
+
+  The sign-up form emails you each new address. To keep a list in a file as
+  well, set store: true in forms/signup.yaml and give the endpoint a store
+  folder. Say in your privacy notice what you do with the addresses.

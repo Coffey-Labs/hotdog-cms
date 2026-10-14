@@ -1,0 +1,39 @@
+name: changelog
+version: 1.0.0
+title: Changelog
+description: Release notes, a page per release and all of them on one page, with a feed people can follow and a "What's new" section for any page.
+license: MIT
+author: Coffey Labs LLC
+collections:
+  changelog:
+    layout: release
+    list_layout: release-list
+    feed: true
+    paginate: 0
+notes: |
+  Add each release as content/changelog/<version>.md, such as
+  content/changelog/1-4-0.md:
+
+    ---
+    title: "1.4.0"
+    date: 2027-01-12
+    summary: Faster pages and a new way to share them.
+    security: true      # optional: it fixes a security problem
+    breaking: true      # optional: something works differently now
+    ---
+    ### Added
+    - Share links on every article.
+
+    ### Fixed
+    - Pages with long tables no longer scroll sideways.
+
+  /changelog/ lists every release, newest first, with its notes, and
+  /changelog/feed.xml lets people follow new ones. Give the list a title
+  and an introduction in content/changelog/_index.md.
+
+  The "What's new" section shows the latest releases on any page, and
+  {{ template "latest-release" . }} in a layout prints a link to the newest
+  one, for a hero or a footer.
+
+  Group the notes under ### Added, Changed, Deprecated, Removed, Fixed and
+  Security (keepachangelog.com), or headings of your own.

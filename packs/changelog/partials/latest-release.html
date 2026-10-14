@@ -1,0 +1,2 @@
+{{/* A link to the newest release in content/changelog/, for a hero or a footer. */}}
+{{ range limit 1 (collection "changelog") }}<a class="rel-latest" href="{{ .Href }}"><span class="rel-latest-label">Latest</span> {{ .Title }}{{ if not .Date.IsZero }} · <time datetime="{{ date "iso" .Date }}">{{ date "January 2, 2006" .Date }}</time>{{ end }}</a>{{ end }}

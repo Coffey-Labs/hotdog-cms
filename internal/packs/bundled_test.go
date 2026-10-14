@@ -164,6 +164,33 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 			"products/kit/index.html": {`href="https://buy.stripe.com/test_1" rel="noopener">Buy`, "With a basket · $39.50", `alt="The card"`, `"@type":"Product"`, `"priceCurrency":"USD"`, `"price":"24.00"`, "InStock"},
 			"products/mug/index.html": {"Sold out", "OutOfStock"},
 		}},
+		{"contact-forms", []page{
+			{"content/quote.md", "---\ntitle: Get a quote\nsummary: Tell us what you need.\nsections:\n  - contact-form:\n      heading: Ask for a quote\n      form: quote\n      email: hello@example.org\n      phone: (217) 555-0142\n      address: |\n        12 Main Street\n        Springfield\n      note: We answer within **one** working day.\n---\n"},
+			{"content/news.md", "---\ntitle: News\nsummary: Sign up.\nsections:\n  - contact-form: { heading: Hear from us, form: signup }\n  - contact-form: { form: booking }\n---\n"},
+		}, map[string][]string{
+			"quote/index.html": {"Ask for a quote", `action="/_hotdog/forms/quote"`, `name="service"`, "<option>A change or repair</option>", ">Ask for a quote</button>", `class="cf-details"`, `href="mailto:hello@example.org"`, "tel:%28217%29555-0142", "12 Main Street", "<strong>one</strong>", "packs/contact-forms/contact-forms."},
+			"news/index.html":  {"Hear from us", `action="/_hotdog/forms/signup"`, `type="checkbox" required`, "cf-grid cf-solo", `action="/_hotdog/forms/booking"`, "<option>Evening</option>"},
+		}},
+		{"tables", []page{
+			{"data/prices.csv", "\ufeffItem,Small,Large\nSourdough,$6,$8\n\"Rye, dark\",$5,$7\n[Gift card](/prices/),<b>$25</b>,\n"},
+			{"data/staff.yaml", "- { name: Sam, role: Baker, start: 2019 }\n- { name: Ana, role: Front of house }\n"},
+			{"content/prices.md", "---\ntitle: Prices\nsummary: What things cost.\nsections:\n  - table:\n      heading: Prices\n      from: prices\n      caption: Tax included.\n      numbers: true\n      row_headers: true\n      note: Prices from **January**.\n  - table:\n      from: staff\n      columns: [name, start]\n  - table:\n      no_header: true\n      compact: true\n      rows:\n        - Monday | Closed\n        - Tuesday | 7am to 6pm\n---\n"},
+		}, map[string][]string{
+			"prices/index.html": {"<caption>Tax included.</caption>", `<th scope="col">Item</th>`, `<th scope="col">Large</th>`, `<th scope="row">Sourdough</th><td>$6</td>`, `<th scope="row">Rye, dark</th>`, `<a href="/prices/">Gift card</a>`, "<td><!-- raw HTML omitted -->$25<!-- raw HTML omitted --></td>", "tbl tbl-numbers tbl-rowheads", `aria-label="Tax included."`, "<strong>January</strong>", `<th scope="col">name</th><th scope="col">start</th>`, "<td>Sam</td><td>2019</td>", "<td>Ana</td><td></td>", "tbl tbl-compact", "<td>Monday</td><td>Closed</td>", "packs/tables/tables."},
+		}},
+		{"changelog", []page{
+			{"content/changelog/_index.md", "---\ntitle: Release notes\nsummary: What changed, release by release.\n---\n"},
+			{"content/changelog/1-0-0.md", "---\ntitle: \"1.0.0\"\ndate: 2026-09-01\nsummary: The first release.\n---\n### Added\n\n- Everything.\n"},
+			{"content/changelog/1-1-0.md", "---\ntitle: \"1.1.0\"\ndate: 2026-10-01\nsummary: Faster.\nbreaking: true\n---\n### Changed\n\n- Faster builds.\n"},
+			{"content/changelog/1-1-1.md", "---\ntitle: \"1.1.1\"\ndate: 2026-10-12\nsummary: A security fix.\nsecurity: true\n---\n### Security\n\n- Closed a hole.\n"},
+			{"content/index.md", "---\ntitle: Home\nsummary: Software.\nlayout: landing\nsections:\n  - changelog: { count: 2, notes: true }\n---\n"},
+		}, map[string][]string{
+			"changelog/index.html":       {"Release notes", `id="1-1-1"`, `href="/changelog/1-0-0/">1.0.0`, "Security fix", "Breaking changes", "<h3", "Faster builds.", `href="/changelog/feed.xml">Follow new releases`, "October 12, 2026"},
+			"changelog/1-1-0/index.html": {"<h1>1.1.0</h1>", "Breaking changes", `class="rel-older" href="/changelog/1-0-0/"`, `class="rel-newer" href="/changelog/1-1-1/"`, "What changed"},
+			"changelog/1-1-1/index.html": {`class="rel-older" href="/changelog/1-1-0/"`, `class="rel-latest" href="/changelog/1-1-1/"`},
+			"changelog/feed.xml":         {"1.1.1", "1.0.0"},
+			"index.html":                 {`href="/changelog/1-1-1/">1.1.1`, `href="/changelog/1-1-0/">1.1.0`, "Closed a hole.", "Every release"},
+		}},
 	}
 	for _, c := range cases {
 		t.Run(c.pack, func(t *testing.T) {
@@ -177,6 +204,11 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 			os.MkdirAll(filepath.Join(dir, "static", "media"), 0o755)
 			os.WriteFile(filepath.Join(dir, "static", "media", "a.png"), picture, 0o644)
 			os.WriteFile(filepath.Join(dir, "static", "media", "b.png"), picture, 0o644)
+			if c.pack == "changelog" {
+				lp := filepath.Join(dir, "partials", "footer.html")
+				raw, _ := os.ReadFile(lp)
+				os.WriteFile(lp, []byte(strings.Replace(string(raw), "</footer>", `{{ template "latest-release" . }}</footer>`, 1)), 0o644)
+			}
 			if c.pack == "related-posts" || c.pack == "table-of-contents" {
 				lp := filepath.Join(dir, "layouts", "article.html")
 				raw, _ := os.ReadFile(lp)

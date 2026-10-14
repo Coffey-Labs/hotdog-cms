@@ -62,7 +62,7 @@ Each field has a `name`, and optionally a `type` (default `text`), a `label`,
 | `select` | one of `options: [a, b, c]` |
 | `list` | items with their own `fields`, or lines of text without them |
 | `group` | a set of `fields` |
-| `data` | a file in `data/` |
+| `data` | a file in `data/`: YAML, JSON, or CSV (a spreadsheet, read as a list of rows of cells) |
 | `collection` | a collection, such as `articles` |
 
 If the comment can't be read, the editor says why, in the section's card.

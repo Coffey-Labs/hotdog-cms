@@ -192,3 +192,27 @@ func TestEveryRuleHasAFix(t *testing.T) {
 		}
 	}
 }
+
+func TestFormPlaceholder(t *testing.T) {
+	dir, out, cfg := mkSite(t, map[string]string{"index.html": "<html><head>" + head + "</head></html>"}, "")
+	os.MkdirAll(filepath.Join(dir, "forms"), 0o755)
+	os.WriteFile(filepath.Join(dir, "forms", "quote.yaml"), []byte("to: you@example.org\nfields: [{name: a}]\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "forms", "signup.yaml"), []byte("to: hello@b.co\nmailto: you@example.org\nfields: [{name: a}]\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "forms", "contact.yaml"), []byte("to: hello@b.co\nfields: [{name: a}]\n"), 0o644)
+	r, err := Run(dir, out, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var found []string
+	for _, p := range r.Problems {
+		if p.Rule == "form-placeholder" {
+			if p.Level != Warning {
+				t.Errorf("%s is an %s", p.File, p.Level)
+			}
+			found = append(found, p.File)
+		}
+	}
+	if strings.Join(found, " ") != "forms/quote.yaml forms/signup.yaml" {
+		t.Errorf("form-placeholder on %v", found)
+	}
+}

@@ -1,0 +1,24 @@
+name: tables
+version: 1.0.0
+title: Tables
+description: Tables from a spreadsheet saved as CSV, or from YAML, with a caption, row headings and a layout that scrolls on phones instead of breaking.
+license: MIT
+author: Coffey Labs LLC
+notes: |
+  Save a spreadsheet as CSV into data/, such as data/prices.csv, with the
+  column headings in its first row. Then add a "Table" section to any page,
+  in the editor's section library or in the page's front matter:
+
+    sections:
+      - table:
+          heading: Prices
+          from: prices
+          caption: Prices from January 2027, tax included.
+          numbers: true
+
+  from: also takes a YAML or JSON file in data/: a list of rows, each a list
+  of cells; or a list of records with columns: naming the keys to show, in
+  order. A short table can be typed in the section itself as rows, one row
+  per line with the cells split by |.
+
+  Cells can hold Markdown links and emphasis.

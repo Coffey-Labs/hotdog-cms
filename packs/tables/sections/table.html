@@ -1,0 +1,41 @@
+{{/* section
+label: Table
+about: A table from a spreadsheet saved as CSV in data/, or rows typed here.
+fields:
+  - { name: heading, type: text }
+  - { name: intro, type: markdown }
+  - { name: from, type: data, label: Table from, help: "A file in data/: a spreadsheet saved as CSV, or YAML or JSON. Leave empty to use the rows below." }
+  - { name: rows, type: list, label: Rows, help: "One row per line, cells split by |. The first row is the headings." }
+  - { name: columns, type: list, label: Columns, help: "For a file of records: the keys to show, in order. They're the headings too." }
+  - { name: caption, type: text, help: What the table shows, for everyone and for screen readers. }
+  - { name: no_header, type: bool, label: The first row is data, not headings }
+  - { name: row_headers, type: bool, label: The first column names each row }
+  - { name: numbers, type: bool, label: Line up numbers on the right, help: Every column but the first. }
+  - { name: compact, type: bool, label: Compact rows }
+  - { name: note, type: markdown, label: Below the table, help: Where the figures come from, or a footnote. }
+*/}}
+{{ $d := .Data }}{{ $rows := $d.rows }}{{ with $d.from }}{{ $rows = data . }}{{ end }}
+{{ $grid := list }}{{ $records := false }}
+{{ range $rows }}{{ if kindIs "list" . }}{{ $grid = append $grid . }}{{ else if kindIs "map" . }}{{ $records = true }}{{ $r := . }}{{ $cells := list }}{{ range $d.columns }}{{ $cells = append $cells (index $r .) }}{{ end }}{{ $grid = append $grid $cells }}{{ else }}{{ $grid = append $grid (split "|" .) }}{{ end }}{{ end }}
+{{ $head := false }}{{ $body := $grid }}
+{{ if $records }}{{ $head = $d.columns }}{{ else if and (not $d.no_header) $grid }}{{ $head = index $grid 0 }}{{ $body = slice $grid 1 }}{{ end }}
+<link rel="stylesheet" href="{{ asset "packs/tables/tables.css" }}">
+<section class="block table-block">
+  <div class="wrap">
+    {{ with $d.heading }}<h2>{{ . }}</h2>{{ end }}
+    {{ with $d.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
+    {{ if $grid }}
+    <div class="tbl-scroll" role="region" tabindex="0" aria-label="{{ or $d.caption $d.heading "Table" }}">
+      <table class="tbl{{ if $d.numbers }} tbl-numbers{{ end }}{{ if $d.compact }} tbl-compact{{ end }}{{ if $d.row_headers }} tbl-rowheads{{ end }}">
+        {{ with $d.caption }}<caption>{{ . }}</caption>{{ end }}
+        {{ with $head }}<thead><tr>{{ range . }}<th scope="col">{{ inline (default "" .) }}</th>{{ end }}</tr></thead>{{ end }}
+        <tbody>
+          {{ range $body }}<tr>{{ range $i, $c := . }}{{ if and $d.row_headers (eq $i 0) }}<th scope="row">{{ inline (default "" $c) }}</th>{{ else }}<td>{{ inline (default "" $c) }}</td>{{ end }}{{ end }}</tr>
+          {{ end }}
+        </tbody>
+      </table>
+    </div>
+    {{ end }}
+    {{ with $d.note }}<div class="tbl-note">{{ markdownify . }}</div>{{ end }}
+  </div>
+</section>
