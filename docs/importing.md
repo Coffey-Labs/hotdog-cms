@@ -85,8 +85,10 @@ pages are written:
 What doesn't come across is listed in `IMPORT-REPORT.md`, page by page:
 snippet includes (`--8<--`), template tags (the macros plugin),
 abbreviations, icons and emoji (`:material-check:`), Mermaid diagrams (shown
-as code), code highlighting and annotations, and the theme's overrides and
-extra CSS and JavaScript: the site's own look replaces the theme.
+as code), code annotations, and the theme's overrides and extra CSS and
+JavaScript: the site's own look replaces the theme. Code blocks are colored
+as pymdownx.highlight colors them, with the same class names, and
+`hl_lines` marks lines; line numbers (`linenums`) aren't drawn.
 
 MkDocs passes any HTML in a page through as it is; HotDog sanitizes it, so
 an inline `<svg>`, a `<script>` or a `style=""` is removed, and the report

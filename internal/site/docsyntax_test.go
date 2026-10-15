@@ -52,7 +52,7 @@ func TestTabs(t *testing.T) {
 	got := render(t, MarkdownConfig{}, "=== \"Linux\"\n    ```sh\n    a\n    ```\n\n===+ \"macOS\"\n    Two.\n\n===! \"Other\"\n    New set.\n\n=== \"More\"\n    Same set.\n")
 	for _, want := range []string{
 		`<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input id="__tabbed_1_1" name="__tabbed_1" type="radio"><input checked="checked" id="__tabbed_1_2" name="__tabbed_1" type="radio"><div class="tabbed-labels"><label for="__tabbed_1_1">Linux</label><label for="__tabbed_1_2">macOS</label></div>`,
-		"<div class=\"tabbed-block\">\n<pre><code class=\"language-sh\">a\n</code></pre>\n</div>",
+		"<div class=\"tabbed-block\">\n<div class=\"highlight\"><pre><code class=\"language-sh\">a\n</code></pre></div>\n</div>",
 		`data-tabs="2:2"><input checked="checked" id="__tabbed_2_1"`,
 	} {
 		if !strings.Contains(got, want) {
@@ -101,7 +101,7 @@ func TestTrailingAttributesAndDefinitions(t *testing.T) {
 }
 
 func TestMarkdownInHTML(t *testing.T) {
-	src := "<div class=\"grid\" markdown>\n  **Bold** inside.\n\n  - one\n</div>\n\n```html\n<div markdown>\nleft alone in code\n</div>\n```\n"
+	src := "<div class=\"grid\" markdown>\n  **Bold** inside.\n\n  - one\n</div>\n\n```text\n<div markdown>\nleft alone in code\n</div>\n```\n"
 	got := render(t, MarkdownConfig{TrustHTML: true}, src)
 	for _, want := range []string{"<div class=\"grid\">\n<p><strong>Bold</strong> inside.</p>\n<ul>\n<li>one</li>\n</ul>\n</div>", "&lt;div markdown&gt;"} {
 		if !strings.Contains(got, want) {
@@ -184,8 +184,8 @@ func TestAdmonitionTitleMarkdown(t *testing.T) {
 func TestCodeTitle(t *testing.T) {
 	got := render(t, MarkdownConfig{}, "```json title=\"servers.json\"\n{\"a\": 1}\n```\n\n```sh\nls\n```\n")
 	for _, want := range []string{
-		"<div class=\"highlight\"><span class=\"filename\">servers.json</span><pre><code class=\"language-json\">{&quot;a&quot;: 1}\n</code></pre>\n</div>",
-		"<pre><code class=\"language-sh\">ls\n</code></pre>",
+		"<div class=\"highlight\"><span class=\"filename\">servers.json</span><pre><code class=\"language-json\"><span class=\"p\">{</span><span class=\"nt\">&quot;a&quot;</span><span class=\"p\">:</span> <span class=\"mi\">1</span><span class=\"p\">}</span>\n</code></pre>\n</div>",
+		"<div class=\"highlight\"><pre><code class=\"language-sh\">ls\n</code></pre></div>",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q in\n%s", want, got)

@@ -136,6 +136,7 @@ var mkdocsUnderstood = map[string]bool{
 	"tables": true, "toc": true, "pymdownx.details": true, "pymdownx.keys": true, "pymdownx.tabbed": true,
 	"pymdownx.tasklist": true, "pymdownx.superfences": true, "pymdownx.betterem": true, "fenced_code": true,
 	"pymdownx.tilde": true, "sane_lists": true, "meta": true, "pymdownx.magiclink": true,
+	"pymdownx.highlight": true, "codehilite": true,
 }
 
 // mkdocsSource maps a file under docs_dir to its source under content/:

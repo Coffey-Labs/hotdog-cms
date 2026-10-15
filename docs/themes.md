@@ -256,6 +256,25 @@ background, text, hero and closing-band colors (each with a dark-mode
 value), the font (Inter, system, serif, rounded or Recursive, which ships
 with the starter under the SIL Open Font License), corners and the logo.
 
+## Code colors
+
+A fenced code block that names its language (` ```go `, ` ```yaml `, any
+name, alias or file extension chroma knows) is colored when the site is
+built, so the page needs no script for it. The markup is
+pymdownx.highlight's: `<div class="highlight">` around the block and
+Pygments' short class names on the pieces (`.k` a keyword, `.s` a string,
+`.c1` a comment), so a stylesheet written for MkDocs or Pygments colors it
+too. `hl_lines="2 4-5"` in the fence's info marks those lines
+(`<span class="hll">`). A block with no language, `text`, or a language
+chroma doesn't know is left as it always was.
+
+The starter's stylesheet and the docs pack's have the colors: each is a hue
+from the palette (`--code-keyword`, `--code-string`, `--code-number`,
+`--code-function`, `--code-type`, `--code-tag`, `--code-mark`) mixed into the
+code block's own text color, so the same hues read on a light block and a
+dark one. A theme without these rules shows the code as before.
+`markdown.highlight: false` in `site.yaml` turns the coloring off.
+
 ## The footer
 
 `site.yaml`'s `copyright:` names who holds the copyright the footer shows

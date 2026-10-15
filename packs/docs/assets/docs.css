@@ -164,3 +164,17 @@ dd { margin: .2em 0 0 1.4em; color: var(--text); }
 /* A code block's file name (```json title="servers.json"). */
 .highlight > .filename { display: block; margin-top: 1.2em; padding: 6px 14px; font: 600 .85em var(--font-mono, monospace); color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-bottom: 0; border-radius: 10px 10px 0 0; }
 .highlight > .filename + pre { margin-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; }
+/* Code colors. Blocks that name their language (```go) are colored when the
+   site is built, with Pygments' class names. Each color is a hue mixed into
+   the code's own text color, so it reads on a light block and a dark one,
+   on any theme. A theme can set the hues (--code-keyword and the rest). */
+.highlight :is(.k, .kd, .kn, .kp, .kr, .ow, .cp, .cpf, .nd) { color: color-mix(in srgb, var(--code-keyword, #a855f7) 60%, currentColor); }
+.highlight :is(.s, .sa, .sb, .sc, .dl, .sd, .s1, .s2, .sh, .sx, .sr, .ss, .l, .ld, .gi) { color: color-mix(in srgb, var(--code-string, #16a34a) 60%, currentColor); }
+.highlight :is(.m, .mb, .mf, .mh, .mi, .il, .mo, .se, .si, .no, .kc, .na) { color: color-mix(in srgb, var(--code-number, #ea7a12) 60%, currentColor); }
+.highlight :is(.nf, .fm, .nc, .nn, .ne, .gh, .gu) { color: color-mix(in srgb, var(--code-function, #2f7ff0) 60%, currentColor); }
+.highlight :is(.kt, .nb, .bp) { color: color-mix(in srgb, var(--code-type, #0d9488) 60%, currentColor); }
+.highlight :is(.nt, .nv, .vc, .vg, .vi, .vm, .gd, .gr, .gt) { color: color-mix(in srgb, var(--code-tag, #e0457b) 60%, currentColor); }
+.highlight :is(.c, .ch, .cm, .c1, .cs, .gp, .go) { color: color-mix(in srgb, currentColor 68%, transparent); }
+.highlight :is(.c, .ch, .cm, .c1, .cs, .ge) { font-style: italic; }
+.highlight :is(.gh, .gu, .gs) { font-weight: 700; }
+.highlight .hll { display: block; background: color-mix(in srgb, var(--code-mark, #f5c542) 22%, transparent); }
