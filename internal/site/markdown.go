@@ -42,6 +42,9 @@ func NewMarkdown(c MarkdownConfig, host string) *Markdown {
 	if c.AutolinkOn() {
 		exts = append(exts, extension.Linkify)
 	}
+	if c.HighlightOn() {
+		exts = append(exts, codeHighlight{})
+	}
 	rendererOpts := []goldmark.Option{
 		goldmark.WithExtensions(exts...),
 		goldmark.WithParserOptions(parser.WithAutoHeadingID(), parser.WithAttribute()),

@@ -1,5 +1,5 @@
 name: docs
-version: 1.4.0
+version: 1.5.0
 title: Documentation
 description: A documentation section with a sidebar of parts and pages (as deep as you like), a breadcrumb, an on-this-page list, a page for each part, and previous and next links, in the order you set.
 license: MIT

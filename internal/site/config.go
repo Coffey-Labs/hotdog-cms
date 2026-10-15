@@ -106,10 +106,16 @@ type MarkdownConfig struct {
 	// the key's own capitalized: {hash: "#"} shows ++hash++ as #. MkDocs'
 	// pymdownx.keys calls it key_map.
 	Keys map[string]string `yaml:"keys"`
+	// Highlight colors code blocks that name their language (```go) when the
+	// site is built (highlight.go). On unless set to false.
+	Highlight *bool `yaml:"highlight"`
 }
 
 // AutolinkOn reports whether bare URLs become links.
 func (m MarkdownConfig) AutolinkOn() bool { return m.Autolink == nil || *m.Autolink }
+
+// HighlightOn reports whether code blocks are colored.
+func (m MarkdownConfig) HighlightOn() bool { return m.Highlight == nil || *m.Highlight }
 
 // Redirect sends one old address somewhere else.
 type Redirect struct {

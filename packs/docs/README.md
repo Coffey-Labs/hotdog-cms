@@ -16,3 +16,10 @@ host, as on a docs subdomain. The docs collection gets a search index
 (`/docs/search.json`, with each page's headings so a result can go to its
 section); a pack can't carry scripts, so adding a search box is up to the
 site. hotdogcms.org/docs is built with this pack.
+
+Code blocks that name their language (` ```yaml `) are colored when the
+site is built, and the pack's stylesheet has the colors: each one a hue
+mixed into the code's own text color, so they read on light code blocks and
+dark ones. A theme that wants other hues sets `--code-keyword`,
+`--code-string`, `--code-number`, `--code-function`, `--code-type`,
+`--code-tag` and `--code-mark` (behind lines marked with `hl_lines`).
