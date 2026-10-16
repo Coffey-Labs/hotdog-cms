@@ -80,7 +80,7 @@ func TestFourthwallSync(t *testing.T) {
 		return map[string]any{"id": id, "url": srv.URL + "/img/" + id + ".webp"}
 	}
 	products = []map[string]any{
-		{"id": "p1", "name": "Tux T-Shirt", "slug": "tux-t-shirt", "description": "<p>Tux on a <em>white</em> tee &amp; more.</p><ul><li>Cotton</li></ul>",
+		{"id": "p1", "name": "Plain T-Shirt", "slug": "plain-t-shirt", "description": "<p>A logo on a <em>white</em> tee &amp; more.</p><ul><li>Cotton</li></ul>",
 			"state": map[string]any{"type": "AVAILABLE"}, "images": []any{img("a"), img("b"), img("c")},
 			"variants":              []any{fwVariantJSON("v1", "White", "S", 24.4, nil), fwVariantJSON("v2", "White", "2XL", 26.4, nil), fwVariantJSON("v3", "White", "3XL", 28.4, 0)},
 			"additionalInformation": []any{map[string]any{"title": "More details", "bodyHtml": "<ul><li>Relaxed fit</li></ul>"}}},
@@ -97,14 +97,14 @@ func TestFourthwallSync(t *testing.T) {
 	if len(rep.Written) != 2 || rep.Pictures != 3 || rep.Checkout != "https://shop.example" {
 		t.Fatalf("report: %+v", rep)
 	}
-	tee := read(t, filepath.Join(dir, "content/products/tux-t-shirt.md"))
+	tee := read(t, filepath.Join(dir, "content/products/plain-t-shirt.md"))
 	for _, want := range []string{
-		"title: Tux T-Shirt\nsummary: Tux on a white tee & more.\nprice: 24.4\nprice_from: true\ncurrency: USD\nweight: 1\n",
-		"image: /media/shop/tux-t-shirt/1.webp", "alt: Tux T-Shirt, photo 2 of 2", "source: b",
+		"title: Plain T-Shirt\nsummary: A logo on a white tee & more.\nprice: 24.4\nprice_from: true\ncurrency: USD\nweight: 1\n",
+		"image: /media/shop/plain-t-shirt/1.webp", "alt: Plain T-Shirt, photo 2 of 2", "source: b",
 		"choose: Size", "name: 2XL", "id: v2", "sold_out: true", "item: '{id}:{qty}'",
 		"action: https://shop.example/cart/checkout",
 		"buy: https://shop.example/cart/checkout?currency=USD&products=v1%3A1",
-		"Tux on a *white* tee & more.", "## More details", "- Relaxed fit",
+		"A logo on a *white* tee & more.", "## More details", "- Relaxed fit",
 	} {
 		if !strings.Contains(tee, want) {
 			t.Errorf("tee page lacks %q:\n%s", want, tee)
@@ -117,7 +117,7 @@ func TestFourthwallSync(t *testing.T) {
 	if !strings.Contains(cap, "tags: [Hats]") || strings.Contains(cap, "choose:") == false {
 		t.Errorf("cap page:\n%s", cap)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "static/media/shop/tux-t-shirt/2-480w.webp")); err != nil {
+	if _, err := os.Stat(filepath.Join(dir, "static/media/shop/plain-t-shirt/2-480w.webp")); err != nil {
 		t.Fatal("smaller sizes missing")
 	}
 
@@ -134,7 +134,7 @@ func TestFourthwallSync(t *testing.T) {
 	if _, err = SyncFourthwall(opt); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "static/media/shop/tux-t-shirt/2.webp")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dir, "static/media/shop/plain-t-shirt/2.webp")); !os.IsNotExist(err) {
 		t.Fatal("a dropped photo stayed")
 	}
 
