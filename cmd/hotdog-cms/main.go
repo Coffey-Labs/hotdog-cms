@@ -47,6 +47,7 @@ Usage:
   hotdog-cms endpoint -config FILE the small server for form submissions and search, behind your web server
   hotdog-cms pack add|remove|list|check   extensions as files: sections, layouts, styles (docs/packs.md)
   hotdog-cms import <from> ...     move your own site in: wordpress, wxr, ghost, hugo, jekyll or mkdocs (docs/importing.md)
+  hotdog-cms import fourthwall     bring a Fourthwall shop's products in for the shop pack; run again to sync
   hotdog-cms editor -config FILE   the editor: sign in with your git platform and work on sites (never on a site's host)
 
 Platforms: GitHub, GitLab, Gitea, Forgejo/Codeberg, Gogs, Bitbucket, or any git server.
@@ -58,6 +59,7 @@ Secrets come from the environment, never flags:
   HOTDOG_SMTP_PASSWORD               the endpoint's SMTP password
   HOTDOG_TURNSTILE_SECRET            check Cloudflare Turnstile on forms that use it
   HOTDOG_EDITOR_SECRET               seal editor sessions (same on every editor serving the same people)
+  HOTDOG_FOURTHWALL_TOKEN            a Fourthwall shop's storefront token (import fourthwall)
   hotdog-cms version
 
 Run "hotdog-cms <command> -h" for a command's flags.
@@ -492,11 +494,14 @@ func report(r *build.Result) {
 
 func cmdImport(args []string) error {
 	if len(args) == 0 {
-		return errors.New("usage: hotdog-cms import <wordpress|wxr|ghost|hugo|jekyll|mkdocs> [flags] (hotdog-cms import <from> -h for each)\n" + importer.Ownership)
+		return errors.New("usage: hotdog-cms import <wordpress|wxr|ghost|hugo|jekyll|mkdocs|fourthwall> [flags] (hotdog-cms import <from> -h for each)\n" + importer.Ownership)
 	}
 	from, args := args[0], args[1:]
 	if from == "mkdocs" {
 		return importMkDocs(args)
+	}
+	if from == "fourthwall" {
+		return importFourthwall(args)
 	}
 	fl := flag.NewFlagSet("import "+from, flag.ExitOnError)
 	siteDir := fl.String("site", ".", "the HotDog CMS site to import into (made with hotdog-cms new)")
@@ -628,6 +633,41 @@ func importMkDocs(args []string) error {
 	}
 	fmt.Printf("%d page(s), %d other file(s), %d skipped, %d nav entries; %d page(s) to look at. Details: %s\nThen: hotdog-cms check\n",
 		len(rep.Pages), len(rep.Files), len(rep.Skipped), rep.NavItems, len(rep.Notes), report)
+	return nil
+}
+
+// importFourthwall brings a Fourthwall shop's products in, and is run again
+// whenever the shop changes.
+func importFourthwall(args []string) error {
+	fl := flag.NewFlagSet("import fourthwall", flag.ExitOnError)
+	siteDir := fl.String("site", ".", "the HotDog CMS site to bring the products into")
+	collection := fl.String("collection", "all", "the shop's collection to bring in; all is every public product")
+	dir := fl.String("dir", "products", "where under content/ the products go")
+	taxonomy := fl.String("taxonomy", "", "a taxonomy in site.yaml (e.g. tags) to file products under the shop's other collections")
+	checkout := fl.String("checkout", "", "the shop's checkout address, e.g. https://shop.example.com (default: the shop's own, from Fourthwall)")
+	currency := fl.String("currency", "", "prices in this currency (default: the shop's)")
+	photos := fl.Int("photos", 6, "at most this many photos a product; 0 for all")
+	prune := fl.Bool("prune", false, "delete the pages of products that are no longer in the shop")
+	_ = fl.Parse(args)
+	token := os.Getenv("HOTDOG_FOURTHWALL_TOKEN")
+	if token == "" {
+		return errors.New("set HOTDOG_FOURTHWALL_TOKEN to the shop's storefront token (Fourthwall: Settings → For Developers → Storefront API)")
+	}
+	if _, err := os.Stat(filepath.Join(*siteDir, "layouts", "product.html")); err != nil {
+		ref, err := packs.Add(*siteDir, "shop", false)
+		if err != nil {
+			return fmt.Errorf("adding the shop pack: %w", err)
+		}
+		fmt.Printf("added the shop pack (%s)\n", ref.Version)
+	}
+	rep, err := importer.SyncFourthwall(importer.FourthwallOptions{
+		SiteDir: *siteDir, Token: token, Collection: *collection, Dir: *dir, Taxonomy: *taxonomy,
+		Checkout: *checkout, Currency: *currency, Photos: *photos, Prune: *prune, Log: os.Stdout,
+	})
+	if err != nil {
+		return err
+	}
+	fmt.Print("\n" + rep.Markdown() + "Then: hotdog-cms check\n")
 	return nil
 }
 

@@ -1,0 +1,16 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ asset "packs/shop/shop.css" }}">
+{{ $c := default "products" .Params.collection }}{{ $shop := "" }}{{ with index .Site.Lists $c }}{{ $shop = .Path }}{{ end }}
+<section class="wrap page cart-page">
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  <div class="cart-view" data-cart-view{{ with $shop }} data-shop="{{ . }}"{{ end }}>
+    {{ if cartOn }}<p class="cart-empty">The cart needs JavaScript. Without it, choose Buy now on a product to check out with just that one.</p>
+    {{ else }}<p>The cart is off: turn it on with <code>cart: true</code> in site.yaml.</p>{{ end }}
+  </div>
+  <section class="cart-suggest" data-cart-suggest data-count="{{ default 4 .Params.suggest }}" hidden>
+    <h2>{{ default "You might also like" .Params.suggest_heading }}</h2>
+    <ul class="shop-grid">{{ range limit 48 (collection $c) }}{{ template "product-card" . }}{{ end }}</ul>
+  </section>
+</section>
+{{ end }}

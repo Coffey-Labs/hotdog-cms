@@ -371,7 +371,11 @@ func oldPath(u string) string {
 }
 
 func frontMatter(fm map[string]any) (string, error) {
-	order := []string{"title", "date", "updated", "summary", "tags", "author", "draft", "image", "image_alt", "format"}
+	return frontMatterIn(fm, []string{"title", "date", "updated", "summary", "tags", "author", "draft", "image", "image_alt", "format"})
+}
+
+// frontMatterIn writes the keys in order first, then the rest A to Z.
+func frontMatterIn(fm map[string]any, order []string) (string, error) {
 	m := &yaml.Node{Kind: yaml.MappingNode}
 	add := func(k string, v any) error {
 		var n yaml.Node

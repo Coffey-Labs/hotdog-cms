@@ -1,0 +1,27 @@
+/* HotDog CMS cart. Colors come from the theme's variables. */
+.cart-link[hidden], [data-cart-add][hidden], [data-cart-suggest][hidden], [data-product][hidden] { display: none; }
+.cart-link { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.cart-link [data-cart-count] { min-width: 1.4em; padding: 0 6px; border-radius: 999px; background: var(--accent); color: var(--accent-ink, #fff); font-size: .8em; font-weight: 700; text-align: center; }
+.cart-added { margin: 0; color: var(--muted); }
+.cart-items { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 14px; }
+.cart-item { display: grid; grid-template-columns: 72px minmax(0, 1fr) auto auto auto; gap: 14px; align-items: center; padding-bottom: 14px; border-bottom: 1px solid var(--line, rgba(127, 127, 127, .25)); }
+.cart-item img { width: 72px; height: 96px; object-fit: contain; border-radius: calc(var(--radius, 8px) - 2px); background: var(--accent-soft); }
+.cart-what { display: grid; gap: 2px; }
+.cart-what a { font-weight: 650; }
+.cart-variant { color: var(--muted); font-size: .9rem; }
+.cart-qty { display: inline-flex; align-items: center; gap: 8px; }
+.cart-qty button, .cart-remove { font: inherit; cursor: pointer; border: 1px solid var(--line, currentColor); background: none; color: inherit; border-radius: var(--radius, 8px); }
+.cart-qty button { width: 2rem; height: 2rem; }
+.cart-qty span { min-width: 1.5em; text-align: center; }
+.cart-remove { padding: 6px 10px; font-size: .85rem; }
+.cart-line { font-weight: 650; min-width: 5em; text-align: right; }
+.cart-total { display: grid; justify-items: end; gap: 8px; }
+.cart-total p { margin: 0; }
+.cart-note { color: var(--muted); font-size: .88rem; }
+.cart-empty { font-size: 1.1rem; }
+.cart-suggest { margin-top: 40px; }
+@media (max-width: 640px) {
+  .cart-item { grid-template-columns: 64px minmax(0, 1fr) auto; }
+  .cart-item img { width: 64px; height: 84px; }
+  .cart-qty, .cart-line, .cart-remove { grid-column: 2 / -1; justify-self: start; }
+}

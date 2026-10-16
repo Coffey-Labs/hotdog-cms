@@ -127,6 +127,9 @@ func privacyFacts(cfg *site.Config, siteForms map[string]*forms.Form) []site.Pri
 		}
 		out = append(out, site.PrivacyFact{What: "The " + title + " form: what you write in it", Who: who, Why: "To answer you.", Basis: "Your request: nothing is sent unless you send it."})
 	}
+	if cfg.Cart.On() {
+		out = append(out, site.PrivacyFact{What: "What you put in your cart", Who: "Kept in your own browser (local storage); it reaches the shop only when you check out.", Why: "To remember your cart between pages.", Basis: "Your request: you added it."})
+	}
 	for _, h := range cfg.Check.AllowThirdParty {
 		out = append(out, site.PrivacyFact{What: "Content from " + h, Who: h, Why: "Part of what some pages show.", Basis: "Legitimate interest; " + h + " sees your address when your browser fetches it."})
 	}

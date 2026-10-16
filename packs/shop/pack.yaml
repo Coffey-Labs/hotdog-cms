@@ -1,5 +1,5 @@
 name: shop
-version: 1.0.0
+version: 1.2.0
 title: Shop
 description: A product catalog with a page per product (photos, price, options), where each Buy button opens your payment provider's checkout. No cart, no card details on your site, no script.
 license: MIT
@@ -27,6 +27,39 @@ notes: |
       - { name: Kit and a proving basket, price: 39, buy: "https://buy.stripe.com/another-link" }
     ---
     What's in the box, how it ships, and anything else, in Markdown.
+
+  Sizes and colors: list them as variants, each with its own buy link and
+  price; a group (a color) gathers them under a heading, and sold_out: true
+  crosses one out. price_from: true shows "From" before the price.
+
+    variants:
+      - { group: Black, name: S, price: 24, buy: "https://buy.stripe.com/s" }
+      - { group: Black, name: XL, price: 26, buy: "https://buy.stripe.com/xl" }
+
+  A provider whose checkout takes the choice in its address (Fourthwall's
+  does) gets a proper picker instead: give the product a checkout form and
+  each variant the value it sends, and Buy goes to the checkout with the
+  size or color chosen, still without a script.
+
+    checkout: { action: "https://shop.example.com/cart/checkout", field: products, fields: { currency: USD } }
+
+  hotdog-cms import fourthwall writes all of this from a Fourthwall shop.
+
+  A cart: when the checkout takes several things at once (item: "{id}:{qty}"
+  and join: "," in the checkout form, as Fourthwall's does), turn on
+  cart: true in site.yaml, put {{ cart }} in your theme's head and
+  {{ cartLink }} in its header, and add content/cart.md:
+
+    ---
+    title: Your cart
+    layout: cart
+    suggest: 4
+    ---
+
+  Products then have Add to cart beside Buy now. The cart is kept in the
+  visitor's browser, and its page suggests other products, those sharing a
+  tag with what's in the cart first. Without JavaScript, Buy now still
+  works.
 
   sold_out: true shows Sold out instead of the buttons. weight sets the
   order (lowest first). /products/ lists them; the "Products" section shows
