@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/media/webpenc"
+
 	xwebp "golang.org/x/image/webp"
 )
 
@@ -101,7 +103,7 @@ func decodeAny(t *testing.T, f File) image.Image {
 		err error
 	)
 	switch {
-	case f.WebP:
+	case f.WebP || strings.HasSuffix(f.Path, ".webp"):
 		got, err = xwebp.Decode(bytes.NewReader(f.Data))
 	case strings.HasSuffix(f.Path, ".png"):
 		got, err = png.Decode(bytes.NewReader(f.Data))
@@ -290,5 +292,56 @@ func TestWebPSmallerAndRight(t *testing.T) {
 	}
 	if r, _, b, _ := got.At(100, 500).RGBA(); r < b {
 		t.Fatal("WebP colors are wrong")
+	}
+}
+
+// A product photographed on nothing comes as a WebP with transparency: it
+// stays WebP, smaller sizes and all, rather than becoming a PNG ten times
+// the size. An opaque WebP still becomes JPEG.
+func TestWebPWithTransparencyStaysWebP(t *testing.T) {
+	cut := image.NewRGBA(image.Rect(0, 0, 1200, 1600))
+	for y := 400; y < 1200; y++ {
+		for x := 300; x < 900; x++ {
+			cut.Set(x, y, color.RGBA{uint8(x), uint8(y), 60, 255})
+		}
+	}
+	var b bytes.Buffer
+	if err := webpenc.Encode(&b, cut, webpenc.Options{Lossless: true}); err != nil {
+		t.Fatal(err)
+	}
+	img, err := Process(b.Bytes(), "1.webp", "shop/tee", none)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if img.Type != "image/webp" || img.URL != "/media/shop/tee/1.webp" {
+		t.Fatalf("got %s %s", img.Type, img.URL)
+	}
+	var paths []string
+	for _, f := range img.Files {
+		paths = append(paths, f.Path)
+		if !strings.HasSuffix(f.Path, ".webp") {
+			t.Fatalf("%s isn't WebP", f.Path)
+		}
+		if _, _, _, a := decodeAny(t, f).At(5, 5).RGBA(); a != 0 {
+			t.Fatalf("%s: transparency lost", f.Path)
+		}
+	}
+	if want := "media/shop/tee/1.webp media/shop/tee/1-480w.webp media/shop/tee/1-960w.webp"; strings.Join(paths, " ") != want {
+		t.Fatalf("files %v", paths)
+	}
+
+	opaque := image.NewRGBA(image.Rect(0, 0, 300, 200))
+	for i := range opaque.Pix {
+		opaque.Pix[i] = 200
+		if i%4 == 3 {
+			opaque.Pix[i] = 255
+		}
+	}
+	b.Reset()
+	if err := webpenc.Encode(&b, opaque, webpenc.Options{Quality: 90}); err != nil {
+		t.Fatal(err)
+	}
+	if img, err = Process(b.Bytes(), "2.webp", "shop/tee", none); err != nil || img.Type != "image/jpeg" || img.URL != "/media/shop/tee/2.jpg" {
+		t.Fatalf("opaque WebP: %v %+v", err, img)
 	}
 }

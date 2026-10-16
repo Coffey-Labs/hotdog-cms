@@ -14,6 +14,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	_ "golang.org/x/image/webp" // and of transparent WebP pictures
 )
 
 // Pictures in static/media/ are published as the editor writes them: a main
@@ -76,6 +78,12 @@ func LoadMedia(staticDir string) map[string]*MediaPicture {
 	})
 	out := map[string]*MediaPicture{}
 	for stem, f := range byStem {
+		webpOnly := false
+		if f.main == "" && f.mainWebP {
+			// A transparent WebP is kept as WebP, with no JPEG or PNG beside
+			// it: its sizes are the plain ones.
+			f.main, f.mainWebP, webpOnly = stem+".webp", false, true
+		}
 		if f.main == "" {
 			continue
 		}
@@ -93,6 +101,9 @@ func LoadMedia(staticDir string) map[string]*MediaPicture {
 		for _, sz := range f.sizes {
 			// Only sizes of this main file's kind, or its WebP copies.
 			if sz.Width < cfg.Width && (sz.WebP || path.Ext(sz.URL) == mainExt) {
+				if webpOnly {
+					sz.WebP = false
+				}
 				pic.Sizes = append(pic.Sizes, sz)
 			}
 		}
@@ -110,13 +121,51 @@ const defaultImageSizes = "(min-width: 50rem) 50rem, 100vw"
 
 var imgTagRe = regexp.MustCompile(`<img src="(/media/[^"]+)"([^>]*?)\s*/?>`)
 
+// Picture is a picture in media/ for a template: the <img> with its width,
+// height and every size it was published at, or a plain <img> for any other
+// address. sizes says how wide it's shown ("" for the site's default); attrs
+// are more attributes, already escaped.
+func (m *Markdown) Picture(src, alt, sizes, attrs string) string {
+	tag := fmt.Sprintf(`<img src="%s" alt="%s"%s>`, html.EscapeString(src), html.EscapeString(alt), attrs)
+	if strings.HasPrefix(src, "/media/") {
+		return string(m.picture([]byte(tag), sizes))
+	}
+	return tag
+}
+
+// SizeURL is the smallest published size of a picture in media/ at least w
+// pixels wide (a WebP where there is one), or src itself.
+func (m *Markdown) SizeURL(src string, w int) string {
+	pic := m.media[src]
+	if pic == nil {
+		return src
+	}
+	best, bestW := src, 0
+	for _, sz := range pic.Sizes {
+		if sz.Width < w && sz.Width != pic.Width {
+			continue
+		}
+		if bestW == 0 || sz.Width < bestW || (sz.Width == bestW && (sz.WebP || strings.HasSuffix(sz.URL, ".webp"))) {
+			best, bestW = sz.URL, sz.Width
+		}
+	}
+	return best
+}
+
 // pictures turns <img> tags pointing at media/ into responsive pictures.
 func (m *Markdown) pictures(out []byte) []byte {
 	if len(m.media) == 0 {
 		return out
 	}
-	return imgTagRe.ReplaceAllFunc(out, func(tag []byte) []byte {
+	return imgTagRe.ReplaceAllFunc(out, func(tag []byte) []byte { return m.picture(tag, "") })
+}
+
+func (m *Markdown) picture(tag []byte, sizes string) []byte {
+	{
 		sub := imgTagRe.FindSubmatch(tag)
+		if sub == nil {
+			return tag
+		}
 		src := html.UnescapeString(string(sub[1]))
 		pic := m.media[src]
 		if pic == nil {
@@ -132,13 +181,16 @@ func (m *Markdown) pictures(out []byte) []byte {
 				plain = append(plain, entry)
 			}
 		}
-		sizes := html.EscapeString(m.imageSizes)
+		if sizes == "" {
+			sizes = m.imageSizes
+		}
+		sizes = html.EscapeString(sizes)
 		var b strings.Builder
 		img := fmt.Sprintf(`<img src="%s"%s width="%d" height="%d"`, html.EscapeString(src), rest, pic.Width, pic.Height)
 		if len(plain) > 1 {
 			img += fmt.Sprintf(` srcset="%s" sizes="%s"`, strings.Join(plain, ", "), sizes)
 		}
-		if !strings.Contains(rest, "loading=") {
+		if !strings.Contains(rest, "loading=") && !strings.Contains(rest, "fetchpriority=") {
 			img += ` loading="lazy" decoding="async"`
 		}
 		img += ">"
@@ -147,5 +199,5 @@ func (m *Markdown) pictures(out []byte) []byte {
 		}
 		fmt.Fprintf(&b, `<picture><source type="image/webp" srcset="%s" sizes="%s">%s</picture>`, strings.Join(webp, ", "), sizes, img)
 		return []byte(b.String())
-	})
+	}
 }
