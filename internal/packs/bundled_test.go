@@ -160,14 +160,20 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 			{"content/products/kit.md", "---\ntitle: Starter kit\nsummary: A jar of starter.\nprice: 24\ncurrency: USD\nweight: 1\nphotos:\n  - { image: /media/a.png, alt: A jar }\n  - { image: /media/b.png, alt: The card }\nbuy: \"https://buy.stripe.com/test_1\"\noptions:\n  - { name: With a basket, price: 39.5, buy: \"https://buy.stripe.com/test_2\" }\n---\nWhat's in the box.\n"},
 			{"content/products/mug.md", "---\ntitle: Mug\nsummary: A mug.\nprice: 12\ncurrency: EUR\nweight: 2\nsold_out: true\n---\n"},
 			{"content/products/tee.md", "---\ntitle: Tee\nsummary: A tee.\nprice: 24\nprice_from: true\ncurrency: USD\nweight: 3\ntags: [Linux, Shirts]\nphotos:\n  - { image: /media/a.png, alt: The tee }\nchoose: Size\nvariants:\n  - { name: S, price: 24, id: v1 }\n  - { name: 2XL, price: 26, id: v2 }\n  - { name: 3XL, price: 28, id: v3, sold_out: true }\ncheckout: { action: \"https://shop.example/cart/checkout\", field: products, item: \"{id}:{qty}\", join: \",\", fields: { currency: USD } }\n---\n"},
-			{"content/products/cap.md", "---\ntitle: Cap\nsummary: A cap.\nprice: 20\ncurrency: USD\nweight: 4\nvariants:\n  - { group: Black, name: One size, price: 20, value: \"c1:1\" }\ncheckout: { action: \"https://shop.example/cart/checkout\" }\n---\n"},
+			{"content/products/cap.md", "---\ntitle: Cap\nsummary: A cap.\nprice: 20\ncurrency: USD\nweight: 4\ntags: [linux]\nvariants:\n  - { group: Black, name: One size, price: 20, value: \"c1:1\" }\ncheckout: { action: \"https://shop.example/cart/checkout\" }\n---\n"},
 			{"content/cart.md", "---\ntitle: Your cart\nlayout: cart\nsuggest: 3\n---\n"},
+			{"content/tags/linux.md", "---\ntitle: Linux things\nlayout: shelf\n---\nFor the penguin people.\n"},
+			{"content/tags/kitchen.md", "---\ntitle: Kitchen\n---\nComing soon.\n"},
+			{"content/picks.md", "---\ntitle: Picks\nsummary: Picks.\nsections:\n  - products: { heading: Penguin picks, tag: Linux, more: All Linux things }\n---\n"},
 			{"content/products/print.md", "---\ntitle: Print\nsummary: A print.\nprice: 30\ncurrency: USD\nweight: 5\nvariants:\n  - { group: Matte, name: A4, price: 30, buy: \"https://buy.stripe.com/a4\" }\n  - { group: Matte, name: A3, price: 40, buy: \"https://buy.stripe.com/a3\", sold_out: true }\n---\n"},
 		}, map[string][]string{
 			"products/tee/index.html":   {`<form class="product-form" method="get" action="https://shop.example/cart/checkout" data-cart data-field="products" data-item="{id}:{qty}" data-join="," data-title="Tee" data-href="/products/tee/" data-currency="USD" data-image="/media/a.png">`, `<input type="hidden" name="currency" value="USD">`, "<legend>Size</legend>", `name="products" value="v1:1" required data-cart-variant data-id="v1" data-name="S" data-price="24">`, "2XL <small>$26.00</small>", `value="v3:1" required disabled data-cart-variant`, "<span>3XL <small>sold out</small>", `data-cart-add hidden>Add to cart</button>`, `product-buy-button" type="submit">Buy now</button>`, `<script src="/hotdog-cart.`, `data-page="/cart/"`, `<a class="cart-link" href="/cart/" data-cart-link hidden>`, `<span class="product-from">From</span> $24.00`, `"@type":"AggregateOffer"`, `"lowPrice":"24.00"`, `"highPrice":"28.00"`, `"offerCount":3`},
 			"products/cap/index.html":   {`<input type="hidden" name="products" value="c1:1" data-cart-variant data-id="c1:1" data-name="Black · One size" data-price="20">`, ">Buy now</button>"},
 			"cart/index.html":           {`<div class="cart-view" data-cart-view data-shop="/products/">`, "The cart needs JavaScript.", `data-cart-suggest data-count="3" hidden>`, `<li class="shop-card" data-product="/products/tee/" data-tags="Linux,Shirts">`},
 			"privacy/index.html":        {"What you put in your cart"},
+			"tags/linux/index.html":     {"<h1>Linux things</h1>", "For the penguin people.", `class="wrap page shop shelf"`, `data-product="/products/tee/"`, `data-product="/products/cap/"`},
+			"tags/kitchen/index.html":   {"Kitchen", "Coming soon."},
+			"picks/index.html":          {"Penguin picks", `data-product="/products/tee/"`, `data-product="/products/cap/"`, `href="/tags/linux/">All Linux things`},
 			"products/print/index.html": {`href="https://buy.stripe.com/a4" rel="noopener">Matte · A4 · $30.00`, `<span class="btn variant-sold">Matte · A3 · sold out</span>`},
 			"products/index.html":       {`href="/products/kit/"`, "$24.00", "€12.00 · <em>Sold out</em>"},
 			"products/kit/index.html":   {`href="https://buy.stripe.com/test_1" rel="noopener">Buy`, "With a basket · $39.50", `alt="The card"`, `"@type":"Product"`, `"priceCurrency":"USD"`, `"price":"24.00"`, "InStock"},
@@ -301,6 +307,11 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 	absent := map[string]map[string][]string{
 		"link-in-bio": {"links/index.html": {`<header class="top">`}},
 		"coming-soon": {"soon/index.html": {`<header class="top">`}},
+		"shop": {
+			"tags/linux/index.html": {`data-product="/products/kit/"`},
+			"picks/index.html":      {`data-product="/products/kit/"`},
+			"tags/index.html":       {"/tags/kitchen/"},
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.pack, func(t *testing.T) {

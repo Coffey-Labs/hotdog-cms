@@ -46,6 +46,7 @@ type Site struct {
 	Banners  []Banner
 	Markdown *Markdown
 	terms    map[string]*termIndex
+	termDocs map[string]map[string]*Page // taxonomy -> term ("" for the index) -> content/<taxonomy>/ page
 }
 
 // Options change what Load includes.
@@ -436,6 +437,7 @@ func unquote(s string) string {
 // neighbours, taxonomies, permalinks, and the list pages nobody wrote.
 func (s *Site) assemble() {
 	cfg := s.Config
+	s.takeTermDocs()
 	for _, p := range s.Pages {
 		p.Permalink = cfg.URL + p.Path
 		switch p.Kind {
