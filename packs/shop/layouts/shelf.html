@@ -7,7 +7,7 @@
 <section class="wrap page shop shelf">
   {{ with index .Site.Lists $c }}<p class="eyebrow"><a href="{{ .Path }}">{{ .Title }}</a></p>{{ end }}
   <h1>{{ .Title }}</h1>
-  {{ with .Content }}<div class="prose">{{ . }}</div>{{ end }}
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ else }}{{ with .Summary }}<p class="shelf-summary">{{ . }}</p>{{ end }}{{ end }}
   <ul class="shop-grid">{{ range $list }}{{ template "product-card" . }}{{ end }}</ul>
 </section>
 {{ end }}

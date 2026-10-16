@@ -164,6 +164,7 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 			{"content/cart.md", "---\ntitle: Your cart\nlayout: cart\nsuggest: 3\n---\n"},
 			{"content/tags/linux.md", "---\ntitle: Linux things\nlayout: shelf\n---\nFor the penguin people.\n"},
 			{"content/tags/kitchen.md", "---\ntitle: Kitchen\n---\nComing soon.\n"},
+			{"content/tags/shirts.md", "---\ntitle: Shirts\nsummary: Cotton, mostly.\nlayout: shelf\n---\n"},
 			{"content/picks.md", "---\ntitle: Picks\nsummary: Picks.\nsections:\n  - products: { heading: Penguin picks, tag: Linux, more: All Linux things }\n---\n"},
 			{"content/products/print.md", "---\ntitle: Print\nsummary: A print.\nprice: 30\ncurrency: USD\nweight: 5\nvariants:\n  - { group: Matte, name: A4, price: 30, buy: \"https://buy.stripe.com/a4\" }\n  - { group: Matte, name: A3, price: 40, buy: \"https://buy.stripe.com/a3\", sold_out: true }\n---\n"},
 		}, map[string][]string{
@@ -173,6 +174,7 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 			"privacy/index.html":        {"What you put in your cart"},
 			"tags/linux/index.html":     {"<h1>Linux things</h1>", "For the penguin people.", `class="wrap page shop shelf"`, `data-product="/products/tee/"`, `data-product="/products/cap/"`},
 			"tags/kitchen/index.html":   {"Kitchen", "Coming soon."},
+			"tags/shirts/index.html":    {`<p class="shelf-summary">Cotton, mostly.</p>`, `data-product="/products/tee/"`},
 			"picks/index.html":          {"Penguin picks", `data-product="/products/tee/"`, `data-product="/products/cap/"`, `href="/tags/linux/">All Linux things`},
 			"products/print/index.html": {`href="https://buy.stripe.com/a4" rel="noopener">Matte · A4 · $30.00`, `<span class="btn variant-sold">Matte · A3 · sold out</span>`},
 			"products/index.html":       {`href="/products/kit/"`, "$24.00", "€12.00 · <em>Sold out</em>"},
