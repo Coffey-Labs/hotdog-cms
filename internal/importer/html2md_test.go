@@ -68,6 +68,10 @@ func TestShortSummary(t *testing.T) {
 	if got := shortSummary(one); len([]rune(got)) > 160 || !strings.HasSuffix(got, "word…") {
 		t.Errorf("one long sentence: %q (%d)", got, len([]rune(got)))
 	}
+	dotted := "A black heavyweight tee with the kitten on it. A small mark sits on the left chest. The full mark and example.org run across the back. Sizes S to 4XL, printed to order."
+	if got := shortSummary(dotted); got != "A black heavyweight tee with the kitten on it. A small mark sits on the left chest. The full mark and example.org run across the back." {
+		t.Errorf("a full stop inside a word: %q", got)
+	}
 	if got := shortSummary("Short and sweet."); got != "Short and sweet." {
 		t.Errorf("short: %q", got)
 	}
