@@ -216,7 +216,7 @@ func SyncFourthwall(opt FourthwallOptions) (*FourthwallReport, error) {
 		if opt.Currency != "" {
 			q.Set("currency", opt.Currency)
 		}
-		res, err := opt.Client.Get(strings.TrimRight(opt.API, "/") + p + "?" + q.Encode())
+		res, err := fwFresh(opt.Client, strings.TrimRight(opt.API, "/")+p+"?"+q.Encode())
 		if err != nil {
 			return err
 		}
@@ -590,6 +590,41 @@ func fwBuy(checkout, variant, cur string) string {
 		q.Set("currency", cur)
 	}
 	return checkout + "/cart/checkout?" + q.Encode()
+}
+
+// fwStaleWait is how long to give Fourthwall's cache to fetch a fresh copy.
+var fwStaleWait = 2 * time.Second
+
+// fwFresh gets u, and gets it again when the answer is a stale copy.
+// Fourthwall's API sits behind a cache that, after a quiet spell, answers
+// with the copy it has, however old, and fetches a fresh one behind it: the
+// first sync after an edit could miss it. A copy older than its max-age is
+// asked for again, a few times, before it's taken as it is.
+func fwFresh(c *http.Client, u string) (*http.Response, error) {
+	for try := 0; ; try++ {
+		res, err := c.Get(u)
+		if err != nil || res.StatusCode != http.StatusOK || try == 3 || !staleCopy(res.Header) {
+			return res, err
+		}
+		res.Body.Close()
+		time.Sleep(fwStaleWait)
+	}
+}
+
+// staleCopy says whether a cached answer is older than its max-age.
+func staleCopy(h http.Header) bool {
+	age, err := strconv.Atoi(strings.TrimSpace(h.Get("Age")))
+	if err != nil {
+		return false
+	}
+	for _, d := range strings.Split(h.Get("Cache-Control"), ",") {
+		if v, ok := strings.CutPrefix(strings.TrimSpace(strings.ToLower(d)), "max-age="); ok {
+			if max, err := strconv.Atoi(v); err == nil {
+				return age > max
+			}
+		}
+	}
+	return false
 }
 
 func fetchWith(c *http.Client, u string) ([]byte, error) {
