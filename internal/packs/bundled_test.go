@@ -178,7 +178,7 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 			"picks/index.html":          {"Penguin picks", `data-product="/products/tee/"`, `data-product="/products/cap/"`, `href="/tags/linux/">All Linux things`},
 			"products/print/index.html": {`href="https://buy.stripe.com/a4" rel="noopener">Matte · A4 · $30.00`, `<span class="btn variant-sold">Matte · A3 · sold out</span>`},
 			"products/index.html":       {`href="/products/kit/"`, "$24.00", "€12.00 · <em>Sold out</em>"},
-			"products/kit/index.html":   {`href="https://buy.stripe.com/test_1" rel="noopener">Buy`, "With a basket · $39.50", `alt="The card"`, `"@type":"Product"`, `"priceCurrency":"USD"`, `"price":"24.00"`, "InStock"},
+			"products/kit/index.html":   {`href="https://buy.stripe.com/test_1" rel="noopener">Buy`, `<div class="photo-thumbs" role="radiogroup" aria-label="Photos">`, `<label class="photo-pick"><input type="radio" name="product-photo" checked>`, "With a basket · $39.50", `alt="The card"`, `"@type":"Product"`, `"priceCurrency":"USD"`, `"price":"24.00"`, "InStock"},
 			"products/mug/index.html":   {"Sold out", "OutOfStock"},
 		}},
 		{"contact-forms", []page{

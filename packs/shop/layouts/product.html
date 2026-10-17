@@ -4,9 +4,18 @@
 <article class="wrap page product">
   {{ with index .Site.Lists .Collection }}<p class="eyebrow"><a href="{{ .Path }}">{{ .Title }}</a></p>{{ end }}
   <div class="product-main">
-    <div class="product-photos">
-      {{ range $i, $p := .Params.photos }}{{ if eq $i 0 }}{{ picture $p.image $p.alt "(min-width: 760px) 55vw, 100vw" "class=product-photo-main fetchpriority=high" }}{{ else }}{{ picture $p.image $p.alt "(min-width: 760px) 14vw, 25vw" "class=product-photo loading=lazy" }}{{ end }}{{ end }}
-    </div>
+    {{/* The big photo, and a small one for each photo under it. Picking a
+         small one (a click, or the arrow keys) shows it big; no script. */}}
+    <div class="product-photos">{{ with .Params.photos }}
+      <div class="photo-stage">
+        {{ range $i, $p := . }}<div class="photo-slide">{{ if eq $i 0 }}{{ picture $p.image $p.alt "(min-width: 760px) 55vw, 100vw" "class=product-photo-main fetchpriority=high" }}{{ else }}{{ picture $p.image $p.alt "(min-width: 760px) 55vw, 100vw" "class=product-photo-main loading=lazy" }}{{ end }}</div>{{ end }}
+      </div>
+      {{ if gt (len .) 1 }}
+      <div class="photo-thumbs" role="radiogroup" aria-label="Photos">
+        {{ range $i, $p := . }}<label class="photo-pick"><input type="radio" name="product-photo"{{ if eq $i 0 }} checked{{ end }}>{{ picture $p.image $p.alt "(min-width: 760px) 9vw, 22vw" "class=product-photo loading=lazy" }}</label>{{ end }}
+      </div>
+      {{ end }}
+    {{ end }}</div>
     <div class="product-buy">
       <h1>{{ .Title }}</h1>
       {{ with .Params.price }}<p class="product-price">{{ if eq (printf "%v" $.Params.price_from) "true" }}<span class="product-from">From</span> {{ end }}{{ money . $cur }}</p>{{ end }}

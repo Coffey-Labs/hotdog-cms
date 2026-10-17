@@ -1,5 +1,5 @@
 name: shop
-version: 1.3.0
+version: 1.4.0
 title: Shop
 description: A product catalog with a page per product (photos, price, options), where Buy opens your payment provider's checkout, and an optional cart. No card details on your site.
 license: MIT
@@ -27,6 +27,10 @@ notes: |
       - { name: Kit and a proving basket, price: 39, buy: "https://buy.stripe.com/another-link" }
     ---
     What's in the box, how it ships, and anything else, in Markdown.
+
+  The first photo shows large. With more than one, a row of small ones sits
+  under it, and picking one (a click, or the arrow keys) shows it large, with
+  no script. Up to 24 photos; the alt text names each one to a screen reader.
 
   Sizes and colors: list them as variants, each with its own buy link and
   price; a group (a color) gathers them under a heading, and sold_out: true
