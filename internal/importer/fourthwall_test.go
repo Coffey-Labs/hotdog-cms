@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"image"
 	"image/color"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -197,5 +198,38 @@ func TestFourthwallPhotosByColor(t *testing.T) {
 	}
 	if g := got(fwPhotos(p, []string{"Red"}, 2)); g != "a= b=" {
 		t.Errorf("one color, the product's own list: %s", g)
+	}
+}
+
+func TestFourthwallStaleCopy(t *testing.T) {
+	fwStaleWait = 0
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.Header().Set("Cache-Control", "max-age=60,public")
+		if calls == 1 {
+			w.Header().Set("Age", "2037") // the cache's old copy
+			w.Write([]byte("old"))
+			return
+		}
+		w.Header().Set("Age", "0")
+		w.Write([]byte("new"))
+	}))
+	defer srv.Close()
+	res, err := fwFresh(srv.Client(), srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	if string(b) != "new" || calls != 2 {
+		t.Fatalf("got %q after %d calls", b, calls)
+	}
+	for h, want := range map[[2]string]bool{
+		{"61", "max-age=60"}: true, {"60", "public, max-age=60"}: false, {"", "max-age=60"}: false, {"999", "no-store"}: false,
+	} {
+		if got := staleCopy(http.Header{"Age": {h[0]}, "Cache-Control": {h[1]}}); got != want {
+			t.Errorf("Age %q, %q: stale %v", h[0], h[1], got)
+		}
 	}
 }
