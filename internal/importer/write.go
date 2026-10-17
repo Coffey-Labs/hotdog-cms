@@ -293,6 +293,8 @@ func Write(items []Item, opt Options) (*Report, error) {
 
 var mdImage = regexp.MustCompile(`!\[([^\]]*)\]\(\s*<?([^)\s>]+)`)
 
+var sentenceEnd = regexp.MustCompile(`[.!?]+(\s+|$)`)
+
 // shortSummary keeps a summary to what search results show (about 160
 // characters): whole sentences while they fit, else the first one cut at a
 // word. WordPress's excerpts are its first 55 words, twice that.
@@ -301,12 +303,18 @@ func shortSummary(s string) string {
 	if len([]rune(s)) <= max {
 		return s
 	}
+	// Whole sentences, one after another: a full stop inside a word
+	// (example.org, 1.5) doesn't end one.
 	out := ""
-	for _, sent := range regexp.MustCompile(`[^.!?]+[.!?]+(\s+|$)`).FindAllString(s, -1) {
-		if len([]rune(out+sent)) > max {
+	for rest := s; rest != ""; {
+		end := len(rest)
+		if loc := sentenceEnd.FindStringIndex(rest); loc != nil {
+			end = loc[1]
+		}
+		if len([]rune(out+rest[:end])) > max {
 			break
 		}
-		out += sent
+		out, rest = out+rest[:end], rest[end:]
 	}
 	if out = strings.TrimSpace(out); out != "" {
 		return out

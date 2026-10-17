@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -79,7 +80,8 @@ func (s *Server) apiQuick(w http.ResponseWriter, r *http.Request, sess *Session,
 }
 
 // collectionNames lists the site's collections: folders in content/, and
-// any configured in site.yaml.
+// any configured in site.yaml. A folder named for a taxonomy (content/tags/)
+// describes its terms and isn't one.
 func collectionNames(siteDir string, cfg *site.Config) []string {
 	seen := map[string]bool{}
 	entries, _ := os.ReadDir(filepath.Join(siteDir, "content"))
@@ -93,7 +95,7 @@ func collectionNames(siteDir string, cfg *site.Config) []string {
 	}
 	var out []string
 	for name := range seen {
-		if slug(name) == name {
+		if slug(name) == name && !slices.Contains(cfg.Taxonomies, name) {
 			out = append(out, name)
 		}
 	}

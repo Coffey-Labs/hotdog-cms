@@ -1,19 +1,24 @@
 {{/* section
 label: Products
-about: Products from the shop, with their photos and prices.
+about: Products from the shop, with their photos and prices; all of them, or those with one tag.
 fields:
   - { name: heading, type: text, default: Shop }
   - { name: intro, type: markdown }
   - { name: collection, type: collection, default: products, label: Products from }
+  - { name: tag, type: text, label: Only those tagged, help: "Leave empty for every product." }
+  - { name: taxonomy, type: text, default: tags, label: Tagged in, help: "The taxonomy the tag belongs to, as in site.yaml." }
   - { name: count, type: number, default: 4, label: How many }
+  - { name: more, type: text, default: Everything in the shop, label: Link to the rest }
 */}}
-{{ $c := default "products" .Data.collection }}
+{{ $c := default "products" .Data.collection }}{{ $tax := default "tags" .Data.taxonomy }}
+{{ $list := collection $c }}{{ $href := printf "/%s/" $c }}
+{{ with .Data.tag }}{{ $list = tagged $tax . $list }}{{ with term $tax . }}{{ $href = .Path }}{{ end }}{{ end }}
 <link rel="stylesheet" href="{{ asset "packs/shop/shop.css" }}">
 <section class="block shop">
   <div class="wrap">
     {{ with .Data.heading }}<h2>{{ . }}</h2>{{ end }}
     {{ with .Data.intro }}<div class="intro">{{ markdownify . }}</div>{{ end }}
-    <ul class="shop-grid">{{ range limit (default 4 .Data.count) (collection $c) }}{{ template "product-card" . }}{{ end }}</ul>
-    <p><a class="more" href="/{{ $c }}/">Everything in the shop</a></p>
+    <ul class="shop-grid">{{ range limit (default 4 .Data.count) $list }}{{ template "product-card" . }}{{ end }}</ul>
+    <p><a class="more" href="{{ $href }}">{{ default "Everything in the shop" .Data.more }}</a></p>
   </div>
 </section>

@@ -1,0 +1,13 @@
+{{ define "main" }}
+{{/* One tag's products, in the shop's order: for content/tags/<tag>.md
+     with layout: shelf. collection: picks the products (default products). */}}
+<link rel="stylesheet" href="{{ asset "packs/shop/shop.css" }}">
+{{ $c := default "products" .Params.collection }}
+{{ $list := .Pages }}{{ if eq .Kind "term" }}{{ $list = tagged .Taxonomy .Term (collection $c) }}{{ end }}
+<section class="wrap page shop shelf">
+  {{ with index .Site.Lists $c }}<p class="eyebrow"><a href="{{ .Path }}">{{ .Title }}</a></p>{{ end }}
+  <h1>{{ .Title }}</h1>
+  {{ with .Content }}<div class="prose">{{ . }}</div>{{ else }}{{ with .Summary }}<p class="shelf-summary">{{ . }}</p>{{ end }}{{ end }}
+  <ul class="shop-grid">{{ range $list }}{{ template "product-card" . }}{{ end }}</ul>
+</section>
+{{ end }}

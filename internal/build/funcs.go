@@ -194,6 +194,12 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 		"excerpt": func(n int, v any) string { return site.Excerpt(n, fmt.Sprint(v)) },
 		// termURL "tags" "Open Source" -> /tags/open-source/ (or "" if it has none).
 		"termURL": s.TermURL,
+		// term "tags" "Linux" -> that term's page (nil if there is none), with
+		// what content/tags/linux.md says about it.
+		"term": s.TermPage,
+		// tagged "tags" "Linux" (collection "products"): the products tagged
+		// Linux, in the collection's order.
+		"tagged": s.Tagged,
 		// isExternal: an absolute link to another site.
 		"isExternal": md.External,
 		// Cloudflare's markers that turn Email Address Obfuscation off for a

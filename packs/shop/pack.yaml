@@ -1,7 +1,7 @@
 name: shop
-version: 1.2.0
+version: 1.3.0
 title: Shop
-description: A product catalog with a page per product (photos, price, options), where each Buy button opens your payment provider's checkout. No cart, no card details on your site, no script.
+description: A product catalog with a page per product (photos, price, options), where Buy opens your payment provider's checkout, and an optional cart. No card details on your site.
 license: MIT
 author: Coffey Labs LLC
 collections:
@@ -60,6 +60,17 @@ notes: |
   visitor's browser, and its page suggests other products, those sharing a
   tag with what's in the cart first. Without JavaScript, Buy now still
   works.
+
+  Shelves: give a tag a page of its own, content/tags/<tag>.md, with
+  layout: shelf, and /tags/<tag>/ shows that tag's words and its products
+  in the shop's order. The "Products" section's tag field shows just one
+  tag's products on any page.
+
+    ---
+    title: Kitchen
+    layout: shelf
+    ---
+    Everything for baking, from starters to baskets.
 
   sold_out: true shows Sold out instead of the buttons. weight sets the
   order (lowest first). /products/ lists them; the "Products" section shows

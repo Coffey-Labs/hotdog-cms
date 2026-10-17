@@ -1,6 +1,7 @@
 package site
 
 import (
+	"slices"
 	"sort"
 	"strings"
 	"unicode"
@@ -63,6 +64,44 @@ func mostUsed(counts map[string]int, seen []string) string {
 	return best
 }
 
+// A folder in content/ named for a taxonomy describes its terms instead of
+// being a collection: content/tags/linux.md (or tags/linux/index.md) gives
+// /tags/linux/ a title, words, a picture, a layout and any other front
+// matter, and content/tags/_index.md does the same for /tags/. The term's
+// pages are still listed by the taxonomy.
+func (s *Site) takeTermDocs() {
+	s.termDocs = map[string]map[string]*Page{}
+	kept := s.Pages[:0]
+	for _, p := range s.Pages {
+		tax := p.Collection
+		if tax == "" || !slices.Contains(s.Config.Taxonomies, tax) || (p.Kind != KindPage && p.Kind != KindList) {
+			kept = append(kept, p)
+			continue
+		}
+		if s.termDocs[tax] == nil {
+			s.termDocs[tax] = map[string]*Page{}
+		}
+		term := ""
+		if p.Kind == KindPage {
+			term = strings.Trim(strings.TrimPrefix(p.Path, "/"+tax+"/"), "/")
+		}
+		s.termDocs[tax][term] = p
+	}
+	s.Pages = kept
+}
+
+// describe gives a generated term or terms page what its content/ file says.
+func (p *Page) describe(d *Page) {
+	if d == nil {
+		return
+	}
+	p.Source, p.Title, p.Summary = d.Source, d.Title, d.Summary
+	p.Content, p.Raw, p.WordCount, p.LeadImage = d.Content, d.Raw, d.WordCount, d.LeadImage
+	p.Params, p.Sections, p.Layout, p.Weight = d.Params, d.Sections, d.Layout, d.Weight
+	p.Image, p.ImageAlt = d.Image, d.ImageAlt
+	p.NoIndex = p.NoIndex || d.NoIndex
+}
+
 func (s *Site) assembleTaxonomies() {
 	cfg := s.Config
 	s.terms = map[string]*termIndex{}
@@ -98,6 +137,22 @@ func (s *Site) assembleTaxonomies() {
 		for k := range slugCounts {
 			ti.canon[k] = mostUsed(slugCounts[k], slugSeen[k])
 		}
+		// A term with a page in content/ but on no page yet still gets its page.
+		docs := map[string]*Page{}
+		for term, d := range s.termDocs[tax] {
+			if term == "" {
+				continue
+			}
+			slug := ti.Slug(term)
+			if slug == "" {
+				continue
+			}
+			docs[slug] = d
+			if _, used := ti.canon[hyphenBlind(slug)]; !used {
+				ti.canon[hyphenBlind(slug)] = slug
+				ti.infos[slug] = &TermInfo{Slug: slug, Label: d.Title, URL: "/" + tax + "/" + slug + "/"}
+			}
+		}
 		// Pass 2: counts, labels and the pages under each term.
 		labelCounts := map[string]map[string]int{}
 		labelSeen := map[string][]string{}
@@ -132,7 +187,18 @@ func (s *Site) assembleTaxonomies() {
 		sort.SliceStable(ti.order, func(i, j int) bool { return ti.infos[ti.order[i]].Count > ti.infos[ti.order[j]].Count })
 		index := &Page{Kind: KindTerms, Title: titleCase(tax), Path: "/" + tax + "/", Taxonomy: tax, Term: tax,
 			Params: map[string]any{}, Terms: map[string][]string{}, Site: s}
+		index.describe(s.termDocs[tax][""])
 		index.Permalink = cfg.URL + index.Path
+		for slug, info := range ti.infos {
+			if info.Count == 0 { // described but not used: a page, but not in the lists
+				tp := &Page{Kind: KindTerm, Title: info.Label, Path: info.URL, Taxonomy: tax, Term: slug,
+					Params: map[string]any{}, Terms: map[string][]string{}, Site: s}
+				tp.describe(docs[slug])
+				tp.Permalink = cfg.URL + tp.Path
+				info.Page = tp
+				s.Pages = append(s.Pages, tp)
+			}
+		}
 		for _, slug := range ti.order {
 			info := ti.infos[slug]
 			info.Label = mostUsed(labelCounts[slug], labelSeen[slug])
@@ -140,6 +206,7 @@ func (s *Site) assembleTaxonomies() {
 				Pages: termPages[slug], Params: map[string]any{}, Terms: map[string][]string{}, Site: s}
 			tp.Permalink = cfg.URL + tp.Path
 			tp.NoIndex = cfg.TermIndexMin > 0 && len(tp.Pages) < cfg.TermIndexMin
+			tp.describe(docs[slug])
 			info.Page = tp
 			s.Pages = append(s.Pages, tp)
 			index.Pages = append(index.Pages, tp)
@@ -175,6 +242,38 @@ func (s *Site) Terms(tax string) []TermInfo {
 		}
 	}
 	return ti.byCount
+}
+
+// TermPage is the page of the term a spelling belongs to, or nil if there is
+// none: term "tags" "Linux" has the title, words and front matter of
+// content/tags/linux.md, when there is one, and the pages tagged Linux.
+func (s *Site) TermPage(tax, v string) *Page {
+	ti := s.terms[tax]
+	if ti == nil {
+		return nil
+	}
+	if info := ti.infos[ti.Slug(v)]; info != nil {
+		return info.Page
+	}
+	return nil
+}
+
+// Tagged keeps the pages that carry a term, in the order given: tagged
+// "tags" "Linux" (collection "products") is the products tagged Linux, in
+// the shop's order. Any spelling of the term matches, as on its page.
+func (s *Site) Tagged(tax, v string, pages []*Page) []*Page {
+	ti := s.terms[tax]
+	if ti == nil {
+		return nil
+	}
+	slug := ti.Slug(v)
+	var out []*Page
+	for _, p := range pages {
+		if slices.Contains(p.Terms[tax], slug) {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // TermsByLabel lists a taxonomy's terms in label order.
