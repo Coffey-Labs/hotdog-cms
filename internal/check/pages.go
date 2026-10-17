@@ -33,6 +33,7 @@ type page struct {
 	scriptLinks  []string // javascript: (and vbscript:, data:text/html) links
 	frames       []string // iframe sources
 	objects      []string // <object data> and <embed src>
+	forms        []string // where forms send: <form action>, <button formaction>
 	styles       []string // external stylesheets
 	images       []string // img/source/video sources
 	imgNoAlt     int
@@ -208,6 +209,14 @@ func parsePage(data []byte, file, u string) *page {
 					if strings.HasPrefix(src, "http://") {
 						pg.insecure = append(pg.insecure, src)
 					}
+				}
+			case "form", "button", "input":
+				k := "formaction"
+				if t.Data == "form" {
+					k = "action"
+				}
+				if a, ok := attr(t, k); ok && a != "" {
+					pg.forms = append(pg.forms, a)
 				}
 			case "object", "embed":
 				k := "data"

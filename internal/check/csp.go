@@ -8,7 +8,8 @@ import (
 )
 
 // policy works out the Content-Security-Policy the built pages need: their
-// own origin, the hosts they load scripts, styles, images and frames from,
+// own origin, the hosts they load scripts, styles, images and frames from
+// and send forms to,
 // and 'unsafe-inline' only where a page still has inline code or styles. It
 // can't see what scripts fetch at run time (connect-src), so a site adds
 // those hosts itself.
@@ -75,6 +76,13 @@ func policy(pages []*page) string {
 				add("frame-src", "'self'")
 			}
 		}
+		// Forms that send to another site: a payment provider's checkout,
+		// say. Without its host in form-action the browser won't send them.
+		for _, s := range pg.forms {
+			if o := origin(s); o != "" {
+				add("form-action", o)
+			}
+		}
 		// A counter the consent script loads (only after consent): its own
 		// script, where it reports, and its tracking pixel.
 		for _, h := range pg.consentHosts {
@@ -115,7 +123,7 @@ func policy(pages []*page) string {
 	} else {
 		parts = append(parts, "object-src 'none'")
 	}
-	parts = append(parts, "base-uri 'self'", "form-action 'self'", "frame-ancestors 'self'")
+	parts = append(parts, "base-uri 'self'", list("form-action", "'self'"), "frame-ancestors 'self'")
 	return strings.Join(parts, "; ")
 }
 
