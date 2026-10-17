@@ -47,7 +47,11 @@ const cardsDrawing = "1"
 // look is the card style's fingerprint.
 func cardPath(s *site.Site, p *site.Page, look string) string {
 	cc := s.Config.Cards
-	if !cc.On() || p.Image != "" || p.RedirectTo != "" || p.NoIndex || (p.Kind != site.KindPage && p.Kind != site.KindList) {
+	// A tag's page gets one only when the site wrote it a page of its own
+	// (content/tags/<tag>.md): an archive with a thousand tags doesn't want
+	// a thousand cards.
+	ownTerm := (p.Kind == site.KindTerm || p.Kind == site.KindTerms) && p.Source != ""
+	if !cc.On() || p.Image != "" || p.RedirectTo != "" || p.NoIndex || (p.Kind != site.KindPage && p.Kind != site.KindList && !ownTerm) {
 		return ""
 	}
 	name := strings.Trim(strings.ReplaceAll(p.Path, "/", "-"), "-")

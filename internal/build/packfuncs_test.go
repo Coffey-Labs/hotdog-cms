@@ -90,3 +90,54 @@ func TestProductReviewsData(t *testing.T) {
 		t.Error("a product without reviews has a rating")
 	}
 }
+
+func TestProductGroupData(t *testing.T) {
+	list := &site.Page{Kind: site.KindList, Title: "Shop", Path: "/products/", Collection: "products", Params: map[string]any{"brand": "Acme"}}
+	tee := &site.Page{Kind: site.KindPage, Title: "Tee", Path: "/products/tee/", Collection: "products", Permalink: "https://example.org/products/tee/", Params: map[string]any{
+		"price": 24, "choose": "Size",
+		"variants": []any{
+			map[string]any{"group": "Red", "name": "S", "price": 24, "sku": "T-R-S"},
+			map[string]any{"group": "Red", "name": "XL", "price": 26.5, "sold_out": true},
+		},
+	}}
+	s := &site.Site{Config: &site.Config{Name: "Shop", URL: "https://example.org", Collections: map[string]site.CollectionConfig{"products": {Layout: "product"}}}, Pages: []*site.Page{list, tee}}
+	if d := pageData(s, list); len(d) != 0 {
+		t.Errorf("the shop's list page is described as %v", d)
+	}
+	d := productData(s, tee)
+	if d["@type"] != "ProductGroup" || d["brand"].(map[string]any)["name"] != "Acme" || d["productGroupID"] != "products/tee" {
+		t.Fatalf("group: %v", d)
+	}
+	if by, _ := d["variesBy"].([]any); len(by) != 2 || by[0] != "https://schema.org/size" || by[1] != "https://schema.org/color" {
+		t.Errorf("variesBy: %v", d["variesBy"])
+	}
+	vs, _ := d["hasVariant"].([]any)
+	if len(vs) != 2 {
+		t.Fatalf("hasVariant: %v", d["hasVariant"])
+	}
+	xl := vs[1].(map[string]any)
+	o := xl["offers"].(map[string]any)
+	if xl["name"] != "Tee (Red, XL)" || xl["size"] != "XL" || xl["color"] != "Red" || o["price"] != "26.50" || o["availability"] != "https://schema.org/OutOfStock" {
+		t.Errorf("variant: %v", xl)
+	}
+	if vs[0].(map[string]any)["sku"] != "T-R-S" {
+		t.Errorf("sku: %v", vs[0])
+	}
+	// One variant is just a product.
+	tee.Params["variants"] = tee.Params["variants"].([]any)[:1]
+	if d := productData(s, tee); d["@type"] != "Product" || d["offers"].(map[string]any)["price"] != "24.00" {
+		t.Errorf("one variant: %v", d)
+	}
+}
+
+func TestCardsForOwnTagPages(t *testing.T) {
+	s := &site.Site{Config: &site.Config{Name: "Shop", Cards: &site.CardsConfig{Enabled: true}}}
+	own := &site.Page{Kind: site.KindTerm, Path: "/tags/shirts/", Title: "Shirts", Source: "content/tags/shirts.md"}
+	bare := &site.Page{Kind: site.KindTerm, Path: "/tags/hats/", Title: "Hats"}
+	if cardPath(s, own, "x") == "" {
+		t.Error("a tag page with its own content file gets no card")
+	}
+	if cardPath(s, bare, "x") != "" {
+		t.Error("a generated tag page gets a card")
+	}
+}

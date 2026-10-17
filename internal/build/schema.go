@@ -49,7 +49,9 @@ func pageData(s *site.Site, p *site.Page) []map[string]any {
 		}
 	}
 	layout := p.Layout
-	if layout == "" && p.Collection != "" {
+	// A collection's layout is its pages' layout, not its list page's: the
+	// shop's list isn't a product.
+	if layout == "" && p.Collection != "" && p.Kind == site.KindPage {
 		layout = s.Config.Collections[p.Collection].Layout
 	}
 	switch layout {
@@ -478,18 +480,29 @@ func money(v any, currency string) string {
 	return n + " " + cur
 }
 
+// productData is a Product, or a ProductGroup when the product comes in
+// sizes or colors: one Product per variant with its own price, SKU and
+// availability, which is how search engines want variants described.
 func productData(s *site.Site, p *site.Page) map[string]any {
+	vs := list(p.Params["variants"])
 	out := ldBase("Product")
+	if len(vs) > 1 {
+		out = ldBase("ProductGroup")
+	}
 	out["name"] = p.Title
 	out["url"] = p.Permalink
 	if p.Summary != "" {
 		out["description"] = p.Summary
 	}
 	var images []string
+	groupImage := map[string]string{} // a color's first photo
 	for _, ph := range list(p.Params["photos"]) {
 		m, _ := ph.(map[string]any)
 		if im := str(m["image"]); im != "" {
 			images = append(images, abs(s, im))
+			if g := str(m["group"]); g != "" && groupImage[g] == "" {
+				groupImage[g] = abs(s, im)
+			}
 		}
 	}
 	if len(images) > 0 {
@@ -498,29 +511,79 @@ func productData(s *site.Site, p *site.Page) map[string]any {
 	if v := str(p.Params["sku"]); v != "" {
 		out["sku"] = v
 	}
+	brand := map[string]any{"@type": "Brand", "name": productBrand(s, p)}
+	out["brand"] = brand
 	if f, ok := amount(p.Params["price"]); ok {
 		cur := strings.ToUpper(str(p.Params["currency"]))
 		if cur == "" {
 			cur = "USD"
 		}
-		avail := "https://schema.org/InStock"
-		if str(p.Params["sold_out"]) == "true" {
-			avail = "https://schema.org/OutOfStock"
+		offer := func(price float64, soldOut bool) map[string]any {
+			avail := "https://schema.org/InStock"
+			if soldOut {
+				avail = "https://schema.org/OutOfStock"
+			}
+			return map[string]any{"@type": "Offer", "price": strconv.FormatFloat(price, 'f', 2, 64), "priceCurrency": cur, "availability": avail, "url": p.Permalink}
 		}
-		out["offers"] = map[string]any{"@type": "Offer", "price": strconv.FormatFloat(f, 'f', 2, 64), "priceCurrency": cur, "availability": avail, "url": p.Permalink}
-		// Sizes and colors at different prices: the range, and how many.
-		if vs := list(p.Params["variants"]); len(vs) > 1 {
-			lo, hi := f, f
+		soldOut := str(p.Params["sold_out"]) == "true"
+		if len(vs) <= 1 {
+			out["offers"] = offer(f, soldOut)
+		} else {
+			// What the variants differ by: the choice's own name (choose:,
+			// "Size") and, when they come in groups, the group's
+			// (choose_group:, "Color"), where schema.org has a property for it.
+			sizeKey, groupKey := variesBy(str(p.Params["choose"])), variesBy(str(p.Params["choose_group"]))
+			if groupKey == "" && str(p.Params["choose_group"]) == "" {
+				groupKey = "color"
+			}
+			var by []any
+			var variants []any
+			grouped := false
 			for _, v := range vs {
 				m, _ := v.(map[string]any)
-				if pr, ok := amount(m["price"]); ok {
-					lo, hi = min(lo, pr), max(hi, pr)
+				name, group := str(m["name"]), str(m["group"])
+				grouped = grouped || group != ""
+				vp := ldBase("Product")
+				delete(vp, "@context")
+				label := name
+				if group != "" {
+					label = group + ", " + name
 				}
+				vp["name"] = p.Title + " (" + label + ")"
+				if sku := str(m["sku"]); sku != "" {
+					vp["sku"] = sku
+				}
+				if sizeKey != "" && name != "" {
+					vp[sizeKey] = name
+				}
+				if groupKey != "" && group != "" {
+					vp[groupKey] = group
+				}
+				if im := groupImage[group]; im != "" {
+					vp["image"] = im
+				} else if len(images) > 0 {
+					vp["image"] = images[0]
+				}
+				price := f
+				if pr, ok := amount(m["price"]); ok {
+					price = pr
+				}
+				vp["offers"] = offer(price, soldOut || str(m["sold_out"]) == "true")
+				variants = append(variants, vp)
 			}
-			out["offers"] = map[string]any{"@type": "AggregateOffer", "lowPrice": strconv.FormatFloat(lo, 'f', 2, 64), "highPrice": strconv.FormatFloat(hi, 'f', 2, 64), "offerCount": len(vs), "priceCurrency": cur, "availability": avail, "url": p.Permalink}
+			if sizeKey != "" {
+				by = append(by, "https://schema.org/"+sizeKey)
+			}
+			if grouped && groupKey != "" && groupKey != sizeKey {
+				by = append(by, "https://schema.org/"+groupKey)
+			}
+			if len(by) > 0 {
+				out["variesBy"] = by
+			}
+			out["productGroupID"] = productGroupID(p)
+			out["hasVariant"] = variants
 		}
 	}
-	out["brand"] = map[string]any{"@type": "Brand", "name": s.Config.Name}
 	// Customers' reviews of the product (the reviews pack). A business's
 	// reviews of itself get none: search engines ignore those.
 	if r := ratings(p.Params["reviews"]); r.Count > 0 {
@@ -546,6 +609,47 @@ func productData(s *site.Site, p *site.Page) map[string]any {
 		}
 	}
 	return out
+}
+
+// variesBy is the schema.org property for a choice's label: "Size" is
+// size, "Colour" is color. Anything else has none.
+func variesBy(label string) string {
+	switch strings.ToLower(strings.TrimSpace(label)) {
+	case "size", "sizes":
+		return "size"
+	case "color", "colour", "colors", "colours":
+		return "color"
+	case "material":
+		return "material"
+	case "pattern":
+		return "pattern"
+	}
+	return ""
+}
+
+// productBrand is the brand: the product's brand:, else its collection
+// page's, else the site's name.
+func productBrand(s *site.Site, p *site.Page) string {
+	if b := str(p.Params["brand"]); b != "" {
+		return b
+	}
+	if p.Collection != "" {
+		if l := s.PageAt(s.CollectionPath(p.Collection)); l != nil {
+			if b := str(l.Params["brand"]); b != "" {
+				return b
+			}
+		}
+	}
+	return s.Config.Name
+}
+
+// productGroupID ties a product's variants together: its sku:, else its
+// address.
+func productGroupID(p *site.Page) string {
+	if v := str(p.Params["sku"]); v != "" {
+		return v
+	}
+	return strings.Trim(p.Path, "/")
 }
 
 var (

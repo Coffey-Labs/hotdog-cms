@@ -13,7 +13,10 @@ handful of things to sell; a cart is optional (below). Card details never
 touch your site,
 and nothing from the provider loads until someone chooses Buy. Products are
 also written as schema.org Product data, with the price and whether they're
-in stock, for search engines.
+in stock, for search engines; a product with sizes or colors is a
+ProductGroup with one entry per variant (its own price, SKU and stock). The
+brand is the product's `brand:`, else the one on `content/products/_index.md`,
+else the site's name. A product's first photo is its link preview picture.
 
 Sizes and colors are variants, each with its own price and checkout. A
 provider whose checkout reads the choice from its address, as Fourthwall's

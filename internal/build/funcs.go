@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -304,6 +305,14 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 		"pageData": func(p *site.Page) []map[string]any { return pageData(s, p) },
 		// money 24 "USD" -> "$24.00": a price as people read it.
 		"money": money,
+		// price .Params.price: the amount as a plain number with two
+		// decimals ("24.40"), for machines (link previews); "" if it isn't one.
+		"price": func(v any) string {
+			if f, ok := amount(v); ok {
+				return strconv.FormatFloat(f, 'f', 2, 64)
+			}
+			return ""
+		},
 		// closed "2026-11-01": whether that day is over, in the site's time
 		// zone, when the site is built (a job's closing date, say).
 		"closed": func(v any) bool { return closed(s, v) },

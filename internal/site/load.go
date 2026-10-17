@@ -305,6 +305,17 @@ func loadPage(raw []byte, rel string, md *Markdown) (*Page, error) {
 	p.Layout = str(fm["layout"])
 	p.Image = str(fm["image"])
 	p.ImageAlt = str(fm["image_alt"])
+	// A product's link preview is its first photo, not a drawn card.
+	if p.Image == "" {
+		if ph, _ := fm["photos"].([]any); len(ph) > 0 {
+			if m, _ := ph[0].(map[string]any); m != nil {
+				p.Image = str(m["image"])
+				if p.ImageAlt == "" {
+					p.ImageAlt = str(m["alt"])
+				}
+			}
+		}
+	}
 	p.RedirectTo = str(fm["redirect_to"])
 	p.Draft = truthy(fm["draft"])
 	p.NoIndex = truthy(fm["noindex"])
