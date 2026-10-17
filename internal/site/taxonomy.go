@@ -65,8 +65,8 @@ func mostUsed(counts map[string]int, seen []string) string {
 }
 
 // A folder in content/ named for a taxonomy describes its terms instead of
-// being a collection: content/tags/linux.md (or tags/linux/index.md) gives
-// /tags/linux/ a title, words, a picture, a layout and any other front
+// being a collection: content/tags/garden.md (or tags/garden/index.md) gives
+// /tags/garden/ a title, words, a picture, a layout and any other front
 // matter, and content/tags/_index.md does the same for /tags/. The term's
 // pages are still listed by the taxonomy.
 func (s *Site) takeTermDocs() {
@@ -245,8 +245,8 @@ func (s *Site) Terms(tax string) []TermInfo {
 }
 
 // TermPage is the page of the term a spelling belongs to, or nil if there is
-// none: term "tags" "Linux" has the title, words and front matter of
-// content/tags/linux.md, when there is one, and the pages tagged Linux.
+// none: term "tags" "Garden" has the title, words and front matter of
+// content/tags/garden.md, when there is one, and the pages tagged Garden.
 func (s *Site) TermPage(tax, v string) *Page {
 	ti := s.terms[tax]
 	if ti == nil {
@@ -259,7 +259,7 @@ func (s *Site) TermPage(tax, v string) *Page {
 }
 
 // Tagged keeps the pages that carry a term, in the order given: tagged
-// "tags" "Linux" (collection "products") is the products tagged Linux, in
+// "tags" "Garden" (collection "products") is the products tagged Garden, in
 // the shop's order. Any spelling of the term matches, as on its page.
 func (s *Site) Tagged(tax, v string, pages []*Page) []*Page {
 	ti := s.terms[tax]
