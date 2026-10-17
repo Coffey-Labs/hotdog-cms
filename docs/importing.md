@@ -6,7 +6,7 @@
 > belong to someone else, and they say so every time they run.
 
 `hotdog-cms import` brings a site in from WordPress, Hugo, Jekyll, Ghost or
-MkDocs, into a HotDog CMS site made with `hotdog-cms new`:
+MkDocs, or a shop's products from Fourthwall, into a HotDog CMS site made with `hotdog-cms new`:
 
     hotdog-cms new mysite && cd mysite
     hotdog-cms import wordpress -url https://old.example.com
@@ -20,6 +20,7 @@ MkDocs, into a HotDog CMS site made with `hotdog-cms new`:
 | Hugo | `import hugo -from ../oldsite` (`-rename posts=articles` by default) |
 | Jekyll | `import jekyll -from ../oldsite` |
 | MkDocs | `import mkdocs -from ../docs-site` (the folder holding `mkdocs.yml`); see [Documentation from MkDocs](#documentation-from-mkdocs) |
+| A Fourthwall shop | `import fourthwall` with the storefront token in `HOTDOG_FOURTHWALL_TOKEN`; run it again whenever the shop changes. See [A shop from Fourthwall](#a-shop-from-fourthwall) |
 
 Every importer takes `-site DIR` (default `.`) and `-overwrite`; the blog
 importers take `-posts COLLECTION` (default `articles`) too.
@@ -94,6 +95,47 @@ MkDocs passes any HTML in a page through as it is; HotDog sanitizes it, so
 an inline `<svg>`, a `<script>` or a `style=""` is removed, and the report
 lists each. If everyone who writes the docs can be trusted with scripts,
 `-trust-html` turns the sanitizer off for the site (`markdown.trust_html`).
+
+## A shop from Fourthwall
+
+    hotdog-cms new shop && cd shop
+    export HOTDOG_FOURTHWALL_TOKEN=ptkn_…
+    hotdog-cms import fourthwall -taxonomy tags
+    hotdog-cms check
+
+[Fourthwall](https://fourthwall.com) makes things to order and sells them:
+its shop takes the payment, the address and any tax, and sends the order. A
+HotDog site can be the shop window, with Fourthwall's checkout behind it.
+The token is the shop's **storefront token** (Settings → For Developers →
+Storefront API): it can only read the catalog, which is public anyway.
+
+- **Every public product becomes a page** for the shop pack (added if the
+  site hasn't got it), in `content/products/`: the name, a summary from the
+  description's first paragraph, the description and Fourthwall's details
+  (fit, care, returns) as Markdown, the price ("From" when sizes cost more),
+  and Fourthwall's order, as `weight`.
+- **Photos are brought into the site**, at most six a product (`-photos`),
+  so visitors load nothing from Fourthwall until they check out. Photos on a
+  transparent background stay WebP, with their transparency.
+- **Sizes and colors become variants**, each straight to Fourthwall's
+  checkout, so Buy now needs no script and no cart. With `cart: true` in
+  `site.yaml`, Add to cart sits beside it (the shop pack's notes say how).
+- **Collections become terms** of the taxonomy `-taxonomy` names (`tags`,
+  or one of your own in `site.yaml`), so a shop's Hats are under /tags/hats/.
+- **Run it again** whenever the shop changes. Products are matched by
+  Fourthwall's id, so a renamed product keeps its page; photos already
+  brought in aren't fetched again; pages that haven't changed aren't
+  written. Fourthwall stays the source: edit products there. Front matter
+  the site adds itself (`featured: true`, say) is kept. A product that has
+  left the shop is listed, and deleted with `-prune`. Pages that didn't come
+  from Fourthwall are never touched.
+- **Checkout** is the shop's own address, from Fourthwall. If the shop has
+  a domain of its own for checkout, give it with `-checkout
+  https://checkout.example.com`.
+
+Fourthwall serves only **public** products, while a shop behind its
+password page still sells through its checkout: a way to try the whole site
+before opening.
 
 ## The WordPress password
 

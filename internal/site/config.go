@@ -62,6 +62,9 @@ type Config struct {
 	// Fediverse is the author's handle (@name@instance), which Mastodon
 	// credits in link previews: <meta name="fediverse:creator">.
 	Fediverse string `yaml:"fediverse"`
+	// Cart turns on the shop's cart (cart: true, or cart: { page: /basket/ }):
+	// HotDog's cart script, kept in the visitor's browser, for the shop pack.
+	Cart *CartConfig `yaml:"cart"`
 	// Cards draws a social card for every page without its own image
 	// (`cards: true`, or a map to choose the font, colors and logo).
 	Cards *CardsConfig `yaml:"cards"`
@@ -236,6 +239,9 @@ func LoadConfig(dir string) (*Config, error) {
 		return nil, fmt.Errorf("site.yaml: url %q has a path; a site lives at the root of its host", c.URL)
 	}
 	c.URL = strings.TrimRight(c.URL, "/")
+	if c.Cart.On() && c.Cart.Page != "" && (!strings.HasPrefix(c.Cart.Page, "/") || strings.HasPrefix(c.Cart.Page, "//")) {
+		return nil, fmt.Errorf("site.yaml: cart page %q is an address on the site, starting with /", c.Cart.Page)
+	}
 	if err := c.Analytics.Validate(); err != nil {
 		return nil, fmt.Errorf("site.yaml: analytics: %w", err)
 	}
@@ -450,4 +456,31 @@ type PackRef struct {
 	Notes            string   `yaml:"-" json:"-"`
 	Seeded           []string `yaml:"-" json:"-"` // forms copied in, now the site's own
 	Kept             []string `yaml:"-" json:"-"` // forms the site already had, left as they were
+}
+
+// CartConfig turns the cart on and says where its page is.
+type CartConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Page    string `yaml:"page"` // the cart page's address; /cart/ unless set
+}
+
+// UnmarshalYAML takes `cart: true` as well as the map form.
+func (c *CartConfig) UnmarshalYAML(n *yaml.Node) error {
+	if n.Kind == yaml.ScalarNode {
+		return n.Decode(&c.Enabled)
+	}
+	type plain CartConfig
+	c.Enabled = true
+	return n.Decode((*plain)(c))
+}
+
+// On reports whether the cart is on.
+func (c *CartConfig) On() bool { return c != nil && c.Enabled }
+
+// PagePath is the cart page's address.
+func (c *CartConfig) PagePath() string {
+	if c == nil || c.Page == "" {
+		return "/cart/"
+	}
+	return c.Page
 }

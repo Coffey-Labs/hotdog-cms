@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/media"
+	"git.coffeylabs.org/coffey-labs/hotdog-cms/internal/media/webpenc"
 )
 
 // mediaSite writes a site whose static/media/ holds a picture as the editor
@@ -66,5 +67,43 @@ func TestMediaPictures(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %s\nin %s", want, got)
 		}
+	}
+}
+
+// A transparent WebP is published as WebP only; its sizes go in the <img>'s
+// own srcset. Templates get the same through Picture.
+func TestWebPOnlyPicture(t *testing.T) {
+	dir := mediaSite(t)
+	cut := image.NewRGBA(image.Rect(0, 0, 1200, 1000))
+	cut.Set(600, 500, color.RGBA{200, 10, 10, 255})
+	var b bytes.Buffer
+	if err := webpenc.Encode(&b, cut, webpenc.Options{Lossless: true}); err != nil {
+		t.Fatal(err)
+	}
+	pic, err := media.Process(b.Bytes(), "cut.webp", "shop", func(string) bool { return false })
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range pic.Files {
+		p := filepath.Join(dir, "static", filepath.FromSlash(f.Path))
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		os.WriteFile(p, f.Data, 0o644)
+	}
+	s, err := Load(dir, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := s.Markdown.Picture("/media/shop/cut.webp", `A "cut" out`, "50vw", ` class="shop-photo" loading="lazy"`)
+	want := `<img src="/media/shop/cut.webp" alt="A &#34;cut&#34; out" class="shop-photo" loading="lazy" width="1200" height="1000" srcset="/media/shop/cut-480w.webp 480w, /media/shop/cut-960w.webp 960w, /media/shop/cut.webp 1200w" sizes="50vw">`
+	if got != want {
+		t.Fatalf("got  %s\nwant %s", got, want)
+	}
+	// A JPEG offers its WebP copies in a <picture>; the site's default sizes
+	// stand in when none are given; a picture outside media/ is left plain.
+	if got := s.Markdown.Picture("/media/2026/10/dock.jpg", "Dock", "", ""); !strings.HasPrefix(got, `<picture><source type="image/webp"`) || !strings.Contains(got, `sizes="(min-width: 50rem) 50rem, 100vw"`) {
+		t.Fatalf("jpeg: %s", got)
+	}
+	if got := s.Markdown.Picture("/img/x.jpg", "X", "", ""); got != `<img src="/img/x.jpg" alt="X">` {
+		t.Fatalf("outside media: %s", got)
 	}
 }

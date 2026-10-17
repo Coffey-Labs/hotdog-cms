@@ -231,6 +231,31 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 			}
 			return humanSize(fi.Size())
 		},
+		// picture "/media/x.jpg" "alt" ["(min-width: 60rem) 25vw, 50vw"] ["class=x"]:
+		// a picture from media/ with every size it was published at, so a
+		// grid of small photos doesn't load the large ones.
+		"picture": func(src, alt any, more ...string) template.HTML {
+			sizes, attrs := "", ""
+			if len(more) > 0 {
+				sizes = more[0]
+			}
+			if len(more) > 1 && more[1] != "" {
+				for _, kv := range strings.Fields(more[1]) {
+					k, v, _ := strings.Cut(kv, "=")
+					if !attrName.MatchString(k) {
+						continue
+					}
+					attrs += " " + k
+					if v != "" {
+						attrs += `="` + template.HTMLEscapeString(v) + `"`
+					}
+				}
+			}
+			return template.HTML(md.Picture(fmt.Sprint(src), fmt.Sprint(alt), sizes, attrs))
+		},
+		// pictureAt "/media/x.jpg" 480: the address of its smallest size at
+		// least that wide, for a thumbnail a script shows.
+		"pictureAt": func(src any, w int) string { return md.SizeURL(fmt.Sprint(src), w) },
 		// imageSize "/img/x.jpg" -> {w, h}, for og:image dimensions.
 		"imageSize": func(p string) (map[string]int, error) {
 			f, err := os.Open(staticPath(s.Dir, p))
@@ -320,3 +345,6 @@ func humanSize(n int64) string {
 func staticPath(siteDir, p string) string {
 	return filepath.Join(siteDir, "static", filepath.FromSlash(path.Clean("/"+p)))
 }
+
+// attrName is an attribute picture lets a template add.
+var attrName = regexp.MustCompile(`^(class|loading|decoding|fetchpriority|id|data-[a-z-]+)$`)

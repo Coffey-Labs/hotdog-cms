@@ -12,6 +12,7 @@
         {{ range menu "main" }}<li><a href="{{ .URL }}"{{ if eq $.Path .URL }} aria-current="page"{{ else if $.InSection .URL }} class="active"{{ end }}>{{ .Name }}</a></li>{{ end }}
       </ul>
     </nav>
+    {{ cartLink }}
     <div class="theme" role="group" aria-label="Color theme">
       <button type="button" data-theme-set="light">Light</button>
       <button type="button" data-theme-set="auto">Auto</button>

@@ -146,10 +146,14 @@ func Process(data []byte, name, dir string, taken func(string) bool) (*Image, er
 
 	// The format: photographs stay JPEG; PNG and GIF stay PNG, since they're
 	// usually screenshots and drawings that JPEG would smear; WebP becomes
-	// JPEG unless it has transparency.
+	// JPEG, or stays WebP when it has transparency (a product photographed
+	// on nothing, say): as a PNG it would be ten times the size.
 	typ, ext := "image/png", ".png"
-	if kind == "image/jpeg" {
+	switch kind {
+	case "image/jpeg":
 		typ, ext = "image/jpeg", ".jpg"
+	case "image/webp":
+		typ, ext = "image/webp", ".webp"
 	}
 
 	base := slug(strings.TrimSuffix(path.Base(name), path.Ext(name)))
@@ -171,9 +175,12 @@ func Process(data []byte, name, dir string, taken func(string) bool) (*Image, er
 			img.URL = "/" + stem + ext
 		}
 		var buf bytes.Buffer
-		if typ == "image/jpeg" {
+		switch typ {
+		case "image/jpeg":
 			err = jpeg.Encode(&buf, px, &jpeg.Options{Quality: JPEGQuality})
-		} else {
+		case "image/webp":
+			err = webpenc.Encode(&buf, px, webpenc.Options{Quality: WebPQuality})
+		default:
 			err = (&png.Encoder{CompressionLevel: png.BestCompression}).Encode(&buf, px)
 		}
 		if err != nil {
@@ -184,6 +191,9 @@ func Process(data []byte, name, dir string, taken func(string) bool) (*Image, er
 			p = fmt.Sprintf("%s-%dw%s", stem, w, ext)
 		}
 		img.Files = append(img.Files, File{Path: p, Width: w, Height: h, Data: buf.Bytes()})
+		if typ == "image/webp" {
+			continue // it is the WebP
+		}
 		// A WebP beside it, for browsers that take one, when it's smaller.
 		var wb bytes.Buffer
 		if err := webpenc.Encode(&wb, px, webpenc.Options{Quality: WebPQuality, Lossless: typ == "image/png"}); err != nil {

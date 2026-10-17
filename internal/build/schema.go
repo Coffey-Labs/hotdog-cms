@@ -508,6 +508,17 @@ func productData(s *site.Site, p *site.Page) map[string]any {
 			avail = "https://schema.org/OutOfStock"
 		}
 		out["offers"] = map[string]any{"@type": "Offer", "price": strconv.FormatFloat(f, 'f', 2, 64), "priceCurrency": cur, "availability": avail, "url": p.Permalink}
+		// Sizes and colors at different prices: the range, and how many.
+		if vs := list(p.Params["variants"]); len(vs) > 1 {
+			lo, hi := f, f
+			for _, v := range vs {
+				m, _ := v.(map[string]any)
+				if pr, ok := amount(m["price"]); ok {
+					lo, hi = min(lo, pr), max(hi, pr)
+				}
+			}
+			out["offers"] = map[string]any{"@type": "AggregateOffer", "lowPrice": strconv.FormatFloat(lo, 'f', 2, 64), "highPrice": strconv.FormatFloat(hi, 'f', 2, 64), "offerCount": len(vs), "priceCurrency": cur, "availability": avail, "url": p.Permalink}
+		}
 	}
 	out["brand"] = map[string]any{"@type": "Brand", "name": s.Config.Name}
 	// Customers' reviews of the product (the reviews pack). A business's

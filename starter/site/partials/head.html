@@ -21,6 +21,7 @@
 <link rel="stylesheet" href="{{ asset "styles.css" }}">
 {{ with lookCSS }}<link rel="stylesheet" href="{{ . }}">{{ end }}
 {{ consent }}
+{{ cart }}
 <script src="{{ asset "site.js" }}"></script>
 {{ range $name, $c := .Site.Config.Collections }}{{ if $c.Feed }}{{ $path := $c.FeedPath }}{{ if not $path }}{{ $path = printf "/%s/feed.xml" $name }}{{ end }}
 <link rel="alternate" type="application/atom+xml" title="{{ $.Site.Config.Name }}: {{ $name }}" href="{{ $path }}">{{ end }}{{ end }}
