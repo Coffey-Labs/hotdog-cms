@@ -28,3 +28,14 @@ func TestPolicyFramesAndObjects(t *testing.T) {
 		t.Errorf("third-party object: %s", p)
 	}
 }
+
+func TestPolicyFormAction(t *testing.T) {
+	p := policy([]*page{{forms: []string{"/_hotdog/form/contact"}}})
+	if !strings.Contains(p, "form-action 'self';") {
+		t.Errorf("own form: %s", p)
+	}
+	p = policy([]*page{{forms: []string{"https://shop.example.com/cart/checkout", "https://pay.example.org/x"}}, {forms: []string{"https://shop.example.com/cart/checkout?x=1"}}})
+	if !strings.Contains(p, "form-action 'self' https://pay.example.org https://shop.example.com;") {
+		t.Errorf("checkout forms: %s", p)
+	}
+}
