@@ -646,7 +646,7 @@ func importFourthwall(args []string) error {
 	taxonomy := fl.String("taxonomy", "", "a taxonomy in site.yaml (e.g. tags) to file products under the shop's other collections")
 	checkout := fl.String("checkout", "", "the shop's checkout address, e.g. https://shop.example.com (default: the shop's own, from Fourthwall)")
 	currency := fl.String("currency", "", "prices in this currency (default: the shop's)")
-	photos := fl.Int("photos", 6, "at most this many photos a product; 0 for all")
+	photos := fl.Int("photos", 6, "at most this many photos a product, or a color when it has several; 0 for all")
 	prune := fl.Bool("prune", false, "delete the pages of products that are no longer in the shop")
 	_ = fl.Parse(args)
 	token := os.Getenv("HOTDOG_FOURTHWALL_TOKEN")

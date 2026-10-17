@@ -161,3 +161,41 @@ func TestFourthwallSync(t *testing.T) {
 		t.Fatalf("bad token: %v", err)
 	}
 }
+
+func TestFourthwallPhotosByColor(t *testing.T) {
+	im := func(ids ...string) []fwImage {
+		var out []fwImage
+		for _, id := range ids {
+			out = append(out, fwImage{ID: id})
+		}
+		return out
+	}
+	variant := func(color string, ids ...string) fwVariant {
+		var v fwVariant
+		v.Attributes.Color = &struct {
+			Name   string `json:"name"`
+			Swatch string `json:"swatch"`
+		}{Name: color}
+		v.Images = im(ids...)
+		return v
+	}
+	p := fwProduct{Images: im("a", "b", "c", "d", "e"), Variants: []fwVariant{
+		variant("Red", "a", "b", "e"), variant("Red", "a", "b", "e"), variant("Blue", "c", "d", "e"),
+	}}
+	got := func(ps []fwPhoto) string {
+		var s []string
+		for _, p := range ps {
+			s = append(s, p.ID+"="+p.group)
+		}
+		return strings.Join(s, " ")
+	}
+	if g := got(fwPhotos(p, []string{"Red", "Blue"}, 0)); g != "a=Red b=Red c=Blue d=Blue e=" {
+		t.Errorf("every photo, by color, a shared one last: %s", g)
+	}
+	if g := got(fwPhotos(p, []string{"Red", "Blue"}, 1)); g != "a=Red c=Blue e=" {
+		t.Errorf("one of each color: %s", g)
+	}
+	if g := got(fwPhotos(p, []string{"Red"}, 2)); g != "a= b=" {
+		t.Errorf("one color, the product's own list: %s", g)
+	}
+}

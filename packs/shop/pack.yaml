@@ -1,5 +1,5 @@
 name: shop
-version: 1.3.0
+version: 1.4.0
 title: Shop
 description: A product catalog with a page per product (photos, price, options), where Buy opens your payment provider's checkout, and an optional cart. No card details on your site.
 license: MIT
@@ -28,6 +28,10 @@ notes: |
     ---
     What's in the box, how it ships, and anything else, in Markdown.
 
+  The first photo shows large. With more than one, a row of small ones sits
+  under it, and picking one (a click, or the arrow keys) shows it large, with
+  no script. Up to 24 photos; the alt text names each one to a screen reader.
+
   Sizes and colors: list them as variants, each with its own buy link and
   price; a group (a color) gathers them under a heading, and sold_out: true
   crosses one out. price_from: true shows "From" before the price.
@@ -35,6 +39,11 @@ notes: |
     variants:
       - { group: Black, name: S, price: 24, buy: "https://buy.stripe.com/s" }
       - { group: Black, name: XL, price: 26, buy: "https://buy.stripe.com/xl" }
+
+  With groups and a checkout form (below), a drop-down picks the group
+  (choose_group: names it; Color by default) and only its sizes show. Give
+  a photo the same group: and it shows only with that color. Without
+  JavaScript every group's sizes and photos are listed instead.
 
   A provider whose checkout takes the choice in its address (Fourthwall's
   does) gets a proper picker instead: give the product a checkout form and
