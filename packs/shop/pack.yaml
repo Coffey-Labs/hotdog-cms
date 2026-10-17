@@ -40,6 +40,11 @@ notes: |
       - { group: Black, name: S, price: 24, buy: "https://buy.stripe.com/s" }
       - { group: Black, name: XL, price: 26, buy: "https://buy.stripe.com/xl" }
 
+  With groups and a checkout form (below), a drop-down picks the group
+  (choose_group: names it; Color by default) and only its sizes show. Give
+  a photo the same group: and it shows only with that color. Without
+  JavaScript every group's sizes and photos are listed instead.
+
   A provider whose checkout takes the choice in its address (Fourthwall's
   does) gets a proper picker instead: give the product a checkout form and
   each variant the value it sends, and Buy goes to the checkout with the

@@ -16,6 +16,8 @@ var (
 	cartScript []byte
 	//go:embed static/hotdog-cart.css
 	cartStyle []byte
+	//go:embed static/hotdog-variants.js
+	variantScript []byte
 )
 
 // cartTags is the cart's stylesheet and script, for a theme's head: {{ cart }}.
@@ -36,4 +38,28 @@ func cartLink(cfg *site.Config) template.HTML {
 		return ""
 	}
 	return template.HTML(`<a class="cart-link" href="` + template.HTMLEscapeString(cfg.Cart.PagePath()) + `" data-cart-link hidden>Cart <span data-cart-count>0</span></a>`)
+}
+
+// variantPicker is the script that turns a product's sizes grouped by color
+// into a color drop-down: {{ variantPicker }} in the product layout. The
+// build only carries it when some page has grouped variants.
+func variantPicker(a *Assets) template.HTML {
+	js, err := a.URL("hotdog-variants.js")
+	if err != nil {
+		return ""
+	}
+	return template.HTML(`<script src="` + template.HTMLEscapeString(js) + `" defer></script>`)
+}
+
+// hasVariantGroups says whether any page lists variants in groups (group:).
+func hasVariantGroups(s *site.Site) bool {
+	for _, p := range s.Pages {
+		vs, _ := p.Params["variants"].([]any)
+		for _, v := range vs {
+			if m, ok := v.(map[string]any); ok && m["group"] != nil && m["group"] != "" {
+				return true
+			}
+		}
+	}
+	return false
 }

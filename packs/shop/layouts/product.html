@@ -8,11 +8,11 @@
          small one (a click, or the arrow keys) shows it big; no script. */}}
     <div class="product-photos">{{ with .Params.photos }}
       <div class="photo-stage">
-        {{ range $i, $p := . }}<div class="photo-slide">{{ if eq $i 0 }}{{ picture $p.image $p.alt "(min-width: 760px) 55vw, 100vw" "class=product-photo-main fetchpriority=high" }}{{ else }}{{ picture $p.image $p.alt "(min-width: 760px) 55vw, 100vw" "class=product-photo-main loading=lazy" }}{{ end }}</div>{{ end }}
+        {{ range $i, $p := . }}<div class="photo-slide"{{ with $p.group }} data-group="{{ . }}"{{ end }}>{{ if eq $i 0 }}{{ picture $p.image $p.alt "(min-width: 760px) 55vw, 100vw" "class=product-photo-main fetchpriority=high" }}{{ else }}{{ picture $p.image $p.alt "(min-width: 760px) 55vw, 100vw" "class=product-photo-main loading=lazy" }}{{ end }}</div>{{ end }}
       </div>
       {{ if gt (len .) 1 }}
       <div class="photo-thumbs" role="radiogroup" aria-label="Photos">
-        {{ range $i, $p := . }}<label class="photo-pick"><input type="radio" name="product-photo"{{ if eq $i 0 }} checked{{ end }}>{{ picture $p.image $p.alt "(min-width: 760px) 9vw, 22vw" "class=product-photo loading=lazy" }}</label>{{ end }}
+        {{ range $i, $p := . }}<label class="photo-pick"{{ with $p.group }} data-group="{{ . }}"{{ end }}><input type="radio" name="product-photo"{{ if eq $i 0 }} checked{{ end }}>{{ picture $p.image $p.alt "(min-width: 760px) 9vw, 22vw" "class=product-photo loading=lazy" }}</label>{{ end }}
       </div>
       {{ end }}
     {{ end }}</div>
@@ -33,11 +33,16 @@
         <input type="hidden" name="{{ $field }}" value="{{ if .value }}{{ .value }}{{ else }}{{ $item | replace "{id}" (printf "%v" .id) | replace "{qty}" "1" }}{{ end }}" data-cart-variant data-id="{{ default .value .id }}" data-name="{{ with .group }}{{ . }} · {{ end }}{{ .name }}" data-price="{{ .price }}">
         {{ with .name }}{{ if ne . "One size" }}<p class="variant-only">{{ with (index $vs 0).group }}{{ . }} · {{ end }}{{ . }}</p>{{ end }}{{ end }}
         {{ end }}{{ else }}
+        {{ if (index $vs 0).group }}{{/* Colors: the picker script turns this on; then only the chosen one's sizes and photos show. */}}{{ variantPicker }}
+        <label class="variant-group" data-group-pick hidden><span>{{ default "Color" $.Params.choose_group }}</span>
+          <select data-group-select data-choose="{{ default "Choose one" $.Params.choose }}">{{ $og := "-" }}{{ range $vs }}{{ if ne (default "" .group) $og }}{{ $og = default "" .group }}<option>{{ $og }}</option>{{ end }}{{ end }}</select>
+        </label>
+        {{ end }}
         {{ $g := "-" }}
         {{ range $i, $v := $vs }}{{ $vg := default "" $v.group }}{{ if ne $vg $g }}{{ if ne $i 0 }}</div></fieldset>{{ end }}{{ $g = $vg }}
-        <fieldset class="variants"><legend>{{ if $vg }}{{ $vg }}{{ else }}{{ default "Choose one" $.Params.choose }}{{ end }}</legend><div class="variant-list">{{ end }}
+        <fieldset class="variants"{{ if $vg }} data-group="{{ $vg }}"{{ end }}><legend>{{ if $vg }}{{ $vg }}{{ else }}{{ default "Choose one" $.Params.choose }}{{ end }}</legend><div class="variant-list">{{ end }}
           {{ $sold := eq (printf "%v" $v.sold_out) "true" }}
-          <label class="variant{{ if $sold }} variant-sold{{ end }}"><input type="radio" name="{{ $field }}" value="{{ if $v.value }}{{ $v.value }}{{ else }}{{ $item | replace "{id}" (printf "%v" $v.id) | replace "{qty}" "1" }}{{ end }}" required{{ if $sold }} disabled{{ end }} data-cart-variant data-id="{{ default $v.value $v.id }}" data-name="{{ with $v.group }}{{ . }} · {{ end }}{{ $v.name }}" data-price="{{ $v.price }}"><span>{{ $v.name }}{{ if $sold }} <small>sold out</small>{{ else if and $v.price (ne (printf "%v" $v.price) (printf "%v" $base)) }} <small>{{ money $v.price $cur }}</small>{{ end }}</span></label>
+          <label class="variant{{ if $sold }} variant-sold{{ end }}"><input type="radio" name="{{ $field }}" value="{{ if $v.value }}{{ $v.value }}{{ else }}{{ $item | replace "{id}" (printf "%v" $v.id) | replace "{qty}" "1" }}{{ end }}" required{{ if $sold }} disabled{{ end }} data-option="{{ $v.name }}" data-cart-variant data-id="{{ default $v.value $v.id }}" data-name="{{ with $v.group }}{{ . }} · {{ end }}{{ $v.name }}" data-price="{{ $v.price }}"><span>{{ $v.name }}{{ if $sold }} <small>sold out</small>{{ else if and $v.price (ne (printf "%v" $v.price) (printf "%v" $base)) }} <small>{{ money $v.price $cur }}</small>{{ end }}</span></label>
         {{ end }}</div></fieldset>
         {{ end }}
         <div class="product-buttons">

@@ -41,7 +41,7 @@ type FourthwallOptions struct {
 	Taxonomy   string // front matter key for the shop's other collections, e.g. "tags"; "" leaves them out
 	Checkout   string // the checkout's address, e.g. https://shop.example.com; "" asks the shop
 	Currency   string // prices in this currency; "" is the shop's own
-	Photos     int    // at most this many photos a product; 0 is all of them
+	Photos     int    // at most this many photos a product (a color, when it has several); 0 is all of them
 	Prune      bool   // delete pages of products no longer in the shop
 	API        string // the API's address; "" is FourthwallAPI
 	Client     *http.Client
@@ -112,6 +112,63 @@ type fwVariant struct {
 		Type    string `json:"type"`
 		InStock *int   `json:"inStock"`
 	} `json:"stock"`
+	Images []fwImage `json:"images"`
+}
+
+// fwPhoto is a product photo and the color it shows, "" when it isn't one
+// color's alone.
+type fwPhoto struct {
+	fwImage
+	group string
+}
+
+// fwPhotos lists a product's photos. With more than one color, and photos
+// that say which color they show, each color's come together (at most max
+// of them, 0 for all) and carry its name; otherwise they're the product's
+// own list, cut to max.
+func fwPhotos(p fwProduct, colors []string, max int) []fwPhoto {
+	var out []fwPhoto
+	if len(colors) > 1 {
+		owner := map[string]string{}
+		for _, v := range p.Variants {
+			c := v.Attributes.Color
+			if c == nil || c.Name == "" {
+				continue
+			}
+			for _, im := range v.Images {
+				if o, ok := owner[im.ID]; ok && o != c.Name {
+					owner[im.ID] = "" // two colors share it
+				} else if !ok {
+					owner[im.ID] = c.Name
+				}
+			}
+		}
+		if len(owner) > 0 {
+			count := map[string]int{}
+			for _, c := range colors {
+				for _, im := range p.Images {
+					if owner[im.ID] == c && (max <= 0 || count[c] < max) {
+						out = append(out, fwPhoto{im, c})
+						count[c]++
+					}
+				}
+			}
+			for _, im := range p.Images {
+				if g, ok := owner[im.ID]; (!ok || g == "") && (max <= 0 || count[""] < max) {
+					out = append(out, fwPhoto{im, ""})
+					count[""]++
+				}
+			}
+			return out
+		}
+	}
+	for _, im := range p.Images {
+		if max > 0 && len(out) == max {
+			break
+		}
+		out = append(out, fwPhoto{im, ""})
+	}
+	return out
 }
 
 func (v fwVariant) soldOut() bool {
@@ -317,21 +374,45 @@ func SyncFourthwall(opt FourthwallOptions) (*FourthwallReport, error) {
 			}
 		}
 
-		// Photos.
+		// The colors, in the shop's order, and whether there are sizes.
+		var colors []string
+		sized := false
+		for _, v := range p.Variants {
+			if c := v.Attributes.Color; c != nil && c.Name != "" && !slices.Contains(colors, c.Name) {
+				colors = append(colors, c.Name)
+			}
+			if v.Attributes.Size != nil && v.Attributes.Size.Name != "" {
+				sized = true
+			}
+		}
+
+		// Photos: with several colors, each one's own (at most -photos of
+		// each), marked with the color so the page can show the chosen one's.
 		mediaDir := path.Join("shop", slug)
-		images := p.Images
-		if opt.Photos > 0 && len(images) > opt.Photos {
-			images = images[:opt.Photos]
+		images := fwPhotos(p, colors, opt.Photos)
+		of := map[string]int{}
+		for _, im := range images {
+			of[im.group]++
 		}
 		var photos []map[string]any
 		using := map[string]bool{}
+		seen := map[string]int{}
 		for n, im := range images {
+			seen[im.group]++
 			alt := p.Name
-			if len(images) > 1 {
-				alt = fmt.Sprintf("%s, photo %d of %d", p.Name, n+1, len(images))
+			if im.group != "" {
+				alt += ", " + im.group
+			}
+			if of[im.group] > 1 {
+				alt = fmt.Sprintf("%s, photo %d of %d", alt, seen[im.group], of[im.group])
+			}
+			photo := map[string]any{"alt": alt, "source": im.ID}
+			if im.group != "" {
+				photo["group"] = im.group
 			}
 			if img, ok := havePhoto[im.ID]; ok {
-				photos = append(photos, map[string]any{"image": img, "alt": alt, "source": im.ID})
+				photo["image"] = img
+				photos = append(photos, photo)
 				using[img] = true
 				continue
 			}
@@ -351,7 +432,8 @@ func SyncFourthwall(opt FourthwallOptions) (*FourthwallReport, error) {
 				}
 			}
 			rep.Pictures++
-			photos = append(photos, map[string]any{"image": img.URL, "alt": alt, "source": im.ID})
+			photo["image"] = img.URL
+			photos = append(photos, photo)
 			using[img.URL] = true
 		}
 		// Photos the product no longer has go, with their smaller sizes.
@@ -377,15 +459,6 @@ func SyncFourthwall(opt FourthwallOptions) (*FourthwallReport, error) {
 
 		// Variants: one per color and size, each with its own checkout.
 		// Colors head groups of sizes only when there's more than one.
-		colors, sized := map[string]bool{}, false
-		for _, v := range p.Variants {
-			if c := v.Attributes.Color; c != nil && c.Name != "" {
-				colors[c.Name] = true
-			}
-			if v.Attributes.Size != nil && v.Attributes.Size.Name != "" {
-				sized = true
-			}
-		}
 		cur := ""
 		lowest, highest := p.Variants[0].UnitPrice.Value, p.Variants[0].UnitPrice.Value
 		var variants []map[string]any

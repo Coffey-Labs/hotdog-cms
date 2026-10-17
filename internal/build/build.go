@@ -260,6 +260,11 @@ func prepareWith(siteDir string, s *site.Site, out string, formOverrides map[str
 			return nil, err
 		}
 	}
+	if hasVariantGroups(s) {
+		if err := assets.add(out, "hotdog-variants.js", variantScript); err != nil {
+			return nil, err
+		}
+	}
 	if s.Config.Analytics != nil {
 		if err := assets.add(out, "hotdog-consent.js", consentScript); err != nil {
 			return nil, err
@@ -297,6 +302,7 @@ func prepareWith(siteDir string, s *site.Site, out string, formOverrides map[str
 	fm["cart"] = func() template.HTML { return cartTags(s.Config, assets) }
 	fm["cartLink"] = func() template.HTML { return cartLink(s.Config) }
 	fm["cartOn"] = func() bool { return s.Config.Cart.On() }
+	fm["variantPicker"] = func() template.HTML { return variantPicker(assets) }
 	fm["verificationTags"] = func() template.HTML { return verificationTags(s.Config) }
 	fm["consentActive"] = func() bool { return s.Config.Analytics != nil }
 	fm["privacyFacts"] = func() []site.PrivacyFact { return privacyFacts(s.Config, siteForms) }
