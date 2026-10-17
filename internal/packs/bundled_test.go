@@ -313,8 +313,8 @@ func TestBundledPacksBuildAndPass(t *testing.T) {
 		"coming-soon": {"soon/index.html": {`<header class="top">`}},
 		"shop": {
 			"tags/garden/index.html": {`data-product="/products/kit/"`},
-			"picks/index.html":      {`data-product="/products/kit/"`},
-			"tags/index.html":       {"/tags/kitchen/"},
+			"picks/index.html":       {`data-product="/products/kit/"`},
+			"tags/index.html":        {"/tags/kitchen/"},
 		},
 	}
 	for _, c := range cases {
