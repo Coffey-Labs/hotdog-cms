@@ -83,12 +83,16 @@ func funcs(s *site.Site, a *Assets, md *site.Markdown, icons Icons) template.Fun
 		// nav "docs-nav" .: the navigation tree in data/docs-nav.yaml as this
 		// page sees it: .Items, .Here, .Trail, .Prev, .Next (site/nav.go).
 		"nav": s.NavFor,
+		// data "exams/one" is data/exams/one.yaml; data "exams" is a file of
+		// that name or, failing that, the files in data/exams/ by name.
 		"data": func(name string) (any, error) {
-			v, ok := s.Data[name]
-			if !ok {
-				return nil, fmt.Errorf("no data/%s.yaml, data/%s.json or data/%s.csv", name, name, name)
+			if v, ok := s.Data[name]; ok {
+				return v, nil
 			}
-			return v, nil
+			if v := s.DataFolder(name); v != nil {
+				return v, nil
+			}
+			return nil, fmt.Errorf("no data/%s.yaml, data/%s.json or data/%s.csv", name, name, name)
 		},
 		"limit": func(n int, list any) (any, error) {
 			v := reflect.ValueOf(list)

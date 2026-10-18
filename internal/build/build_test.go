@@ -465,3 +465,22 @@ func TestContentFilesFollowThePath(t *testing.T) {
 		return nil
 	})
 }
+
+// data reads files in folders under data/, one by path or a folder at once.
+func TestDataFolderFunc(t *testing.T) {
+	dir := writeStarter(t)
+	os.MkdirAll(filepath.Join(dir, "data", "exams"), 0o755)
+	os.WriteFile(filepath.Join(dir, "data", "exams", "alpha.yaml"), []byte("questions: 60\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "data", "exams", "beta.yaml"), []byte("questions: 40\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "layouts", "exams.html"),
+		[]byte(`{{ define "main" }}one={{ (data "exams/alpha").questions }};{{ range $k, $v := data "exams" }}{{ $k }}={{ $v.questions }};{{ end }}{{ end }}`), 0o644)
+	os.WriteFile(filepath.Join(dir, "content", "exams.md"), []byte("---\ntitle: Exams\nlayout: exams\n---\n"), 0o644)
+	res, err := Run(Options{SiteDir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, _ := os.ReadFile(filepath.Join(res.Out, "exams", "index.html"))
+	if !strings.Contains(string(out), "one=60;alpha=60;beta=40;") {
+		t.Errorf("data folders: %s", out)
+	}
+}

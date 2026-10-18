@@ -601,27 +601,38 @@ func sortPages(pages []*Page, by string) {
 	})
 }
 
+// loadData reads the files in data/ and in folders under it. A file in a
+// folder is named by its path without the extension: data/exams/one.yaml is
+// "exams/one". Folders whose names start with a dot are skipped.
 func loadData(dir string) (map[string]any, error) {
 	out := map[string]any{}
-	entries, err := os.ReadDir(dir)
-	if os.IsNotExist(err) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return out, nil
 	}
-	if err != nil {
-		return nil, err
-	}
-	for _, e := range entries {
-		if e.IsDir() {
-			continue
-		}
-		name := e.Name()
-		ext := filepath.Ext(name)
-		key := strings.TrimSuffix(name, ext)
-		raw, err := os.ReadFile(filepath.Join(dir, name))
+	err := filepath.WalkDir(dir, func(file string, e fs.DirEntry, err error) error {
 		if err != nil {
-			return nil, err
+			return err
 		}
+		if e.IsDir() {
+			if file != dir && strings.HasPrefix(e.Name(), ".") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		rel, _ := filepath.Rel(dir, file)
+		rel = filepath.ToSlash(rel)
+		ext := path.Ext(rel)
+		key := strings.TrimSuffix(rel, ext)
 		var v any
+		switch ext {
+		case ".yaml", ".yml", ".json", ".csv":
+		default:
+			return nil
+		}
+		raw, err := os.ReadFile(file)
+		if err != nil {
+			return err
+		}
 		switch ext {
 		case ".yaml", ".yml":
 			err = yaml.Unmarshal(raw, &v)
@@ -629,18 +640,46 @@ func loadData(dir string) (map[string]any, error) {
 			err = json.Unmarshal(raw, &v)
 		case ".csv":
 			v, err = readCSV(raw)
-		default:
-			continue
 		}
 		if err != nil {
-			return nil, fmt.Errorf("data/%s: %w", name, err)
+			return fmt.Errorf("data/%s: %w", rel, err)
 		}
 		if _, dup := out[key]; dup {
-			return nil, fmt.Errorf("data/%s: another file is already named %s", name, key)
+			return fmt.Errorf("data/%s: another file is already named %s", rel, key)
 		}
 		out[key] = v
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	// A folder and a file with the same name would make "data name" mean two
+	// things, so it's refused.
+	for key := range out {
+		for up := path.Dir(key); up != "."; up = path.Dir(up) {
+			if _, clash := out[up]; clash {
+				return nil, fmt.Errorf("data/%s: a folder data/%s/ has the same name", up, up)
+			}
+		}
 	}
 	return out, nil
+}
+
+// DataFolder is the files directly in data/<name>/, by file name without
+// the extension, or nil when there are none.
+func (s *Site) DataFolder(name string) map[string]any {
+	var out map[string]any
+	for key, v := range s.Data {
+		rest, ok := strings.CutPrefix(key, name+"/")
+		if !ok || strings.Contains(rest, "/") {
+			continue
+		}
+		if out == nil {
+			out = map[string]any{}
+		}
+		out[rest] = v
+	}
+	return out
 }
 
 // readCSV reads a spreadsheet saved as CSV into a list of rows, each a list
