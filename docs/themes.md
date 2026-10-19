@@ -216,6 +216,20 @@ text, ★★★★★, rounded to the nearest star.
 {{ range trail . }}<a href="{{ .Href }}">{{ .Title }}</a> › {{ end }}
 ```
 
+## Data files
+
+`data "team"` reads `data/team.yaml` (or `.json`, or `.csv` as a list of
+rows of cells). Files can sit in folders: `data "exams/one"` reads
+`data/exams/one.yaml`, and `data "exams"` gives every file directly in
+`data/exams/`, by file name, so a page can list them all. A file and a
+folder with the same name are refused, since `data "exams"` would mean
+either. Folders starting with a dot are skipped. Anything that takes a data
+file's name, such as `nav` or a section's `from:`, takes a path the same way.
+
+```
+{{ range $name, $exam := data "exams" }}<li>{{ $name }}: {{ $exam.questions }} questions</li>{{ end }}
+```
+
 ## Navigation trees
 
 `nav "docs-nav" .` reads a navigation tree from `data/docs-nav.yaml` and

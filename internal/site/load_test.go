@@ -111,3 +111,45 @@ func TestCSVData(t *testing.T) {
 		t.Errorf("a row short of cells: %v", err)
 	}
 }
+
+func TestDataFolders(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "exams", "old"), 0o755)
+	os.MkdirAll(filepath.Join(dir, ".cache"), 0o755)
+	os.WriteFile(filepath.Join(dir, "team.yaml"), []byte("- Ana\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "exams", "one.yaml"), []byte("questions: 60\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "exams", "two.json"), []byte(`{"questions": 40}`), 0o644)
+	os.WriteFile(filepath.Join(dir, "exams", "old", "zero.yaml"), []byte("questions: 10\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, "exams", "notes.txt"), []byte("not data"), 0o644)
+	os.WriteFile(filepath.Join(dir, ".cache", "x.yaml"), []byte(": not yaml"), 0o644)
+	data, err := loadData(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"team", "exams/one", "exams/two", "exams/old/zero"} {
+		if data[key] == nil {
+			t.Errorf("%s not read", key)
+		}
+	}
+	if len(data) != 4 {
+		t.Errorf("read %d files, want 4: %v", len(data), data)
+	}
+	s := &Site{Data: data}
+	folder := s.DataFolder("exams")
+	if len(folder) != 2 || folder["one"] == nil || folder["two"] == nil {
+		t.Errorf("exams folder: %v", folder)
+	}
+	if s.DataFolder("team") != nil || s.DataFolder("nothing") != nil {
+		t.Error("a file or a missing name read as a folder")
+	}
+	// data/exams.yaml beside data/exams/ would make "exams" mean two things.
+	os.WriteFile(filepath.Join(dir, "exams.yaml"), []byte("a: 1\n"), 0o644)
+	if _, err := loadData(dir); err == nil || !strings.Contains(err.Error(), "data/exams/") {
+		t.Errorf("a file and a folder with one name: %v", err)
+	}
+	os.Remove(filepath.Join(dir, "exams.yaml"))
+	os.WriteFile(filepath.Join(dir, "exams", "one.json"), []byte(`{}`), 0o644)
+	if _, err := loadData(dir); err == nil || !strings.Contains(err.Error(), "exams/one") {
+		t.Errorf("two files named exams/one: %v", err)
+	}
+}
