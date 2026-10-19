@@ -52,7 +52,7 @@ func TestGitLastmod(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]string{
-		"a.md":      "2026-05-07", // the second commit, in its own zone
+		"a.md":      "2026-05-08", // the second commit, 23:30 at -07:00, in the site's UTC
 		"docs/b.md": "2026-10-19", // changed, not committed
 		"new.md":    "2026-10-19", // not added yet
 		"c.md":      "2020-01-02", // updated: wins
@@ -67,6 +67,12 @@ func TestGitLastmod(t *testing.T) {
 	}
 	if len(want) > 0 {
 		t.Errorf("pages not found: %v", want)
+	}
+
+	// In a site in Arizona, the same commit is the day it was made there.
+	put("site.yaml", "name: T\nurl: https://example.org\nlastmod: git\ntimezone: America/Phoenix\n")
+	if s, err = Load(dir, Options{Now: now}); err != nil || s.PageFrom("a.md").Lastmod().Format("2006-01-02") != "2026-05-07" {
+		t.Errorf("Phoenix: %v %v", err, s.PageFrom("a.md").Lastmod())
 	}
 
 	// Without the setting, or outside git, there are no commit dates.

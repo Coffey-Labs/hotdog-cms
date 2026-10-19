@@ -188,7 +188,10 @@ func Load(dir string, opt Options) (*Site, error) {
 		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, s.Location)
 		dates := gitDates(dir, today)
 		for _, p := range s.Pages {
-			p.Committed = dates[p.Source]
+			// In the site's timezone, like today: a commit at 23:30 in
+			// Arizona is the next day in a UTC site, and an uncommitted
+			// change built then must get the same date as its commit.
+			p.Committed = dates[p.Source].In(s.Location)
 			if _, edited := opt.Overrides[p.Source]; edited {
 				p.Committed = today // unsaved in the editor: not committed yet
 			}
