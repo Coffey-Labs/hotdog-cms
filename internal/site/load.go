@@ -183,6 +183,17 @@ func Load(dir string, opt Options) (*Site, error) {
 			return nil, err
 		}
 	}
+	if cfg.Lastmod == "git" {
+		today := now.In(s.Location)
+		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, s.Location)
+		dates := gitDates(dir, today)
+		for _, p := range s.Pages {
+			p.Committed = dates[p.Source]
+			if _, edited := opt.Overrides[p.Source]; edited {
+				p.Committed = today // unsaved in the editor: not committed yet
+			}
+		}
+	}
 	s.placeCollections()
 	s.resolveSourceLinks()
 	s.assemble()

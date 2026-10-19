@@ -23,6 +23,7 @@ type Page struct {
 	Summary    string
 	Date       time.Time
 	Updated    time.Time
+	Committed  time.Time // the source file's last commit (lastmod: git)
 	Draft      bool
 	NoIndex    bool
 	Layout     string
@@ -119,10 +120,14 @@ func (p *Page) ReadingTime() int {
 	return m
 }
 
-// Lastmod is the date a sitemap should give: updated, else date.
+// Lastmod is the date a sitemap should give: updated, else the later of
+// the last commit (lastmod: git) and date.
 func (p *Page) Lastmod() time.Time {
 	if !p.Updated.IsZero() {
 		return p.Updated
+	}
+	if p.Committed.After(p.Date) {
+		return p.Committed
 	}
 	return p.Date
 }

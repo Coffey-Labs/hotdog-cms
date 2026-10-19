@@ -65,6 +65,10 @@ type Config struct {
 	// Cart turns on the shop's cart (cart: true, or cart: { page: /basket/ }):
 	// HotDog's cart script, kept in the visitor's browser, for the shop pack.
 	Cart *CartConfig `yaml:"cart"`
+	// Lastmod "git" dates each page by the last commit that changed its
+	// source file, for the sitemap, feeds and .Lastmod, unless its front
+	// matter says when it was updated. Empty: front matter dates only.
+	Lastmod string `yaml:"lastmod"`
 	// Cards draws a social card for every page without its own image
 	// (`cards: true`, or a map to choose the font, colors and logo).
 	Cards *CardsConfig `yaml:"cards"`
@@ -252,6 +256,9 @@ func LoadConfig(dir string) (*Config, error) {
 		if v != "" && !verifyCode.MatchString(v) {
 			return nil, fmt.Errorf("site.yaml: verify.%s should be the code only (the content of the meta tag), not the whole tag", name)
 		}
+	}
+	if c.Lastmod != "" && c.Lastmod != "git" {
+		return nil, fmt.Errorf("site.yaml: lastmod %q should be git, or left out", c.Lastmod)
 	}
 	if c.Fediverse != "" && !fediverseRe.MatchString(c.Fediverse) {
 		return nil, fmt.Errorf("site.yaml: fediverse %q should be a handle like @name@instance.social", c.Fediverse)
