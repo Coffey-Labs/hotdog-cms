@@ -32,6 +32,21 @@ strict Content-Security-Policy still holds.
   check -csp` includes them in the policy it prints, and so do container
   images built with `csp: true`.
 
+**Google ads:** with GA4, `ad_conversions: true` also measures the site's
+Google Ads campaigns, for visitors who accept: whether a visit from one of the
+ads went on to sign up or buy. The banner says so, the privacy notice gets a
+line for it, and the policy from `check -csp` adds Google's ad hosts.
+
+```yaml
+analytics: { provider: ga4, id: G-XXXXXXX, ad_conversions: true }
+```
+
+GA4 is always told what the visitor agreed to (Google's Consent Mode), so
+what it learns from visitors in the EEA and the UK isn't thrown away:
+statistics granted, ad personalization denied, and ad measurement granted
+only with `ad_conversions: true`. It needs consent, so it can't be combined
+with `gated: false`.
+
 **Counting without asking** needs `gated: false` in `analytics:`. That's a
 choice written into `site.yaml` where a reviewer sees it. The privacy notice
 says so, and `check` warns (`analytics-ungated`) on every build.

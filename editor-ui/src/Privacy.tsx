@@ -83,8 +83,15 @@ export function PrivacyView({ id, branch }: { id: string; branch?: string }) {
             {an?.provider === 'ga4' && field('id', 'Measurement ID', 'G-XXXXXXX')}
             {an && (
               <label className="check field">
-                <input type="checkbox" checked={gated} disabled={!info.canWrite} onChange={(e) => setAn({ ...an, gated: e.target.checked ? undefined : false })} />
+                <input type="checkbox" checked={gated} disabled={!info.canWrite} onChange={(e) => setAn({ ...an, gated: e.target.checked ? undefined : false, adConversions: e.target.checked ? an.adConversions : undefined })} />
                 Ask visitors first (recommended)
+              </label>
+            )}
+            {an?.provider === 'ga4' && gated && (
+              <label className="check field">
+                <input type="checkbox" checked={!!an.adConversions} disabled={!info.canWrite} onChange={(e) => setAn({ ...an, adConversions: e.target.checked || undefined })} />
+                Also measure the site's Google ads
+                <span className="muted small">For visitors who accept: whether a visit from one of your ads went on to sign up or buy. The banner and the privacy notice say so. Ad personalization stays off.</span>
               </label>
             )}
             {an && gated && <p className="muted small">A banner asks on the first visit, with Decline first and as prominent as Accept. Nothing is counted until someone accepts; declining later removes the counter's cookies.</p>}

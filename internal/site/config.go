@@ -379,6 +379,10 @@ type AnalyticsConfig struct {
 	SiteID   string `yaml:"site_id" json:"siteId,omitempty"` // matomo
 	ID       string `yaml:"id" json:"id,omitempty"`          // ga4: G-…
 	Gated    *bool  `yaml:"gated" json:"gated,omitempty"`    // default true
+	// ga4: also measure the site's Google ads (whether a visit from one went
+	// on to sign up or buy), for visitors who accept. Ad personalization
+	// stays off either way.
+	AdConversions bool `yaml:"ad_conversions" json:"adConversions,omitempty"`
 }
 
 // IsGated reports whether analytics waits for consent.
@@ -394,6 +398,12 @@ func (a *AnalyticsConfig) Validate() error {
 			return fmt.Errorf("%s %q should start with https://", name, v)
 		}
 		return nil
+	}
+	if a.AdConversions && a.Provider != "ga4" {
+		return fmt.Errorf("ad_conversions is for ga4: Google Ads measures through Google Analytics")
+	}
+	if a.AdConversions && !a.IsGated() {
+		return fmt.Errorf("ad_conversions needs consent: remove gated: false")
 	}
 	switch a.Provider {
 	case "plausible":

@@ -90,9 +90,35 @@ func TestConsentAndPrivacy(t *testing.T) {
 		t.Error("no analytics-ungated warning")
 	}
 
+	// Measuring Google ads: the banner and the notice say so, and the policy
+	// lets Google's ad hosts through.
+	dir = starterSite(t, "analytics: { provider: ga4, id: G-ABC123, ad_conversions: true }\n")
+	res, err = build.Run(build.Options{SiteDir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	home, _ = os.ReadFile(filepath.Join(res.Out, "index.html"))
+	if !strings.Contains(string(home), `data-ads="true"`) {
+		t.Error("home missing data-ads")
+	}
+	priv, _ = os.ReadFile(filepath.Join(res.Out, "privacy", "index.html"))
+	if !strings.Contains(string(priv), "Google Ads, through Google Analytics") {
+		t.Error("privacy page doesn't mention Google Ads")
+	}
+	rep, _ = Run(dir, res.Out, res.Site.Config)
+	if !strings.Contains(rep.CSP, "https://www.googleadservices.com") {
+		t.Errorf("CSP: %s", rep.CSP)
+	}
+
 	// A bad analytics setting stops the build, saying why.
-	dir = starterSite(t, "analytics: { provider: ga4, id: UA-1 }\n")
-	if _, err := build.Run(build.Options{SiteDir: dir}); err == nil || !strings.Contains(err.Error(), "G-ABC123") {
-		t.Errorf("bad id: %v", err)
+	for setting, want := range map[string]string{
+		"analytics: { provider: ga4, id: UA-1 }\n":                                         "G-ABC123",
+		"analytics: { provider: ga4, id: G-ABC123, gated: false, ad_conversions: true }\n": "needs consent",
+		"analytics: { provider: plausible, domain: example.org, ad_conversions: true }\n":  "is for ga4",
+	} {
+		dir = starterSite(t, setting)
+		if _, err := build.Run(build.Options{SiteDir: dir}); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: %v", setting, err)
+		}
 	}
 }

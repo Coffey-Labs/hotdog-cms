@@ -23,6 +23,11 @@ import (
 //
 // The consent script's tag carries the counter's hosts (data-hosts), so the
 // checks and the Content-Security-Policy see them in the page.
+//
+// GA4 gets Google's consent signals (Consent Mode) when it starts: without
+// them Google drops what it learns from visitors in the EEA and the UK,
+// even ones who said yes. Statistics are granted, ad personalization never
+// is, and ad measurement only with ad_conversions: true.
 
 var (
 	//go:embed static/hotdog-consent.js
@@ -52,7 +57,11 @@ func analyticsHosts(a *site.AnalyticsConfig) []string {
 	case "matomo":
 		return []string{origin(a.URL)}
 	case "ga4":
-		return []string{"https://www.googletagmanager.com", "https://www.google-analytics.com", "https://*.google-analytics.com", "https://*.analytics.google.com"}
+		h := []string{"https://www.googletagmanager.com", "https://www.google-analytics.com", "https://*.google-analytics.com", "https://*.analytics.google.com"}
+		if a.AdConversions {
+			h = append(h, "https://www.google.com", "https://www.googleadservices.com", "https://*.doubleclick.net")
+		}
+		return h
 	}
 	return nil
 }
@@ -76,6 +85,9 @@ func consentTags(cfg *site.Config, a *Assets) template.HTML {
 		{"data-provider", an.Provider}, {"data-domain", an.Domain}, {"data-src", an.Src}, {"data-url", an.URL},
 		{"data-site", an.SiteID}, {"data-id", an.ID}, {"data-privacy", privacyPage(cfg)},
 		{"data-hosts", strings.Join(analyticsHosts(an), " ")},
+	}
+	if an.AdConversions {
+		attrs = append(attrs, [2]string{"data-ads", "true"})
 	}
 	if !an.IsGated() {
 		attrs = append(attrs, [2]string{"data-gated", "false"})
@@ -106,6 +118,9 @@ func privacyFacts(cfg *site.Config, siteForms map[string]*forms.Form) []site.Pri
 			who += " (" + strings.TrimPrefix(hosts[0], "https://") + ")"
 		}
 		out = append(out, site.PrivacyFact{What: "Visit statistics", Who: who, Why: "To count visits and see which pages are read.", Basis: basis})
+		if an.AdConversions {
+			out = append(out, site.PrivacyFact{What: "Whether a visit from one of the site's Google ads went on to sign up or buy", Who: "Google Ads, through Google Analytics", Why: "To see which of the site's ads work. Ad personalization is off: nothing is used to show you ads elsewhere.", Basis: basis})
+		}
 	}
 	names := make([]string, 0, len(siteForms))
 	for n := range siteForms {
