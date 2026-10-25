@@ -86,6 +86,9 @@ func (s *Server) privacySave(w http.ResponseWriter, r *http.Request, sess *Sessi
 		if !a.IsGated() {
 			an["gated"] = false // counting without asking: a choice, written down
 		}
+		if a.AdConversions {
+			an["ad_conversions"] = true
+		}
 	}
 	pv := map[string]any{}
 	for _, k := range []string{"controller", "contact", "updated"} {

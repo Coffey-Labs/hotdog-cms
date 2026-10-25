@@ -4,6 +4,8 @@
 // Declining (now or later) removes the counter's cookies. A browser that
 // sends Global Privacy Control has already said no. Any element with
 // data-hotdog-consent-open reopens the choice ("Cookie settings").
+// Google Analytics is told what was agreed (Consent Mode): statistics yes,
+// ad personalization no, ad measurement only when the site asks about it.
 (() => {
   const me = document.currentScript
   if (!me) return
@@ -34,6 +36,8 @@
     if (c.provider === 'ga4') {
       window.dataLayer = window.dataLayer || []
       window.gtag = function () { window.dataLayer.push(arguments) }
+      const ads = c.ads === 'true' ? 'granted' : 'denied'
+      window.gtag('consent', 'default', { analytics_storage: 'granted', ad_storage: ads, ad_user_data: ads, ad_personalization: 'denied' })
       window.gtag('js', new Date())
       window.gtag('config', c.id)
       script('https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(c.id), {})
@@ -69,7 +73,8 @@
     box.setAttribute('role', 'region')
     box.setAttribute('aria-label', 'Visit statistics')
     const p = document.createElement('p')
-    p.textContent = 'May this site count your visit with ' + (names[c.provider] || 'its statistics') + '? Nothing is counted unless you agree. '
+    const what = names[c.provider] || 'its statistics'
+    p.textContent = 'May this site count your visit with ' + what + (c.ads === 'true' ? ', including whether you came from one of its Google ads' : '') + '? Nothing is counted unless you agree. '
     if (c.privacy) {
       const a = document.createElement('a')
       a.href = c.privacy
