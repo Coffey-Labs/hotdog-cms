@@ -13,6 +13,13 @@ import (
 // and 'unsafe-inline' only where a page still has inline code or styles. It
 // can't see what scripts fetch at run time (connect-src), so a site adds
 // those hosts itself.
+// framingScripts are scripts that draw their widget in a frame from their
+// own host, so a page that loads one needs that host in frame-src as well.
+// Turnstile is what a form's turnstile_sitekey adds.
+var framingScripts = map[string]bool{
+	"https://challenges.cloudflare.com": true,
+}
+
 func policy(pages []*page) string {
 	sets := map[string]map[string]bool{}
 	add := func(dir, src string) {
@@ -44,6 +51,9 @@ func policy(pages []*page) string {
 		for _, s := range pg.scripts {
 			if o := origin(s); o != "" {
 				add("script-src", o)
+				if framingScripts[o] {
+					add("frame-src", o)
+				}
 			}
 		}
 		for _, s := range pg.styles {
