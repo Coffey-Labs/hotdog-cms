@@ -29,6 +29,19 @@ func TestPolicyFramesAndObjects(t *testing.T) {
 	}
 }
 
+func TestPolicyTurnstileFrame(t *testing.T) {
+	// Turnstile's script draws the check in a frame from its own host.
+	p := policy([]*page{{scripts: []string{"https://challenges.cloudflare.com/turnstile/v0/api.js"}}})
+	if !strings.Contains(p, "script-src 'self' https://challenges.cloudflare.com;") || !strings.Contains(p, "frame-src https://challenges.cloudflare.com;") {
+		t.Errorf("turnstile: %s", p)
+	}
+	// Any other third-party script leaves frames shut.
+	p = policy([]*page{{scripts: []string{"https://cdn.example.net/x.js"}}})
+	if !strings.Contains(p, "frame-src 'none'") {
+		t.Errorf("plain script: %s", p)
+	}
+}
+
 func TestPolicyFormAction(t *testing.T) {
 	p := policy([]*page{{forms: []string{"/_hotdog/form/contact"}}})
 	if !strings.Contains(p, "form-action 'self';") {
