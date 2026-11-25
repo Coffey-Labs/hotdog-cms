@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-62 -56 140 68"><g stroke="#140C02" stroke-width="6" stroke-linejoin="round" stroke-linecap="round"><defs><clipPath id="season-bd"><path d="M-26 0 L4 -46 L26 0 Z"/></clipPath></defs>
+    <path d="M-26 0 L4 -46 L26 0 Z" fill="#3BA3F0"/>
+    <g clip-path="url(#season-bd)" stroke="none"><path d="M-40 -6 L40 -26 L40 -18 L-40 2 Z M-40 -24 L40 -44 L40 -36 L-40 -16 Z" fill="#FFD23F"/></g>
+    <path d="M-26 0 L4 -46 L26 0 Z" fill="none"/>
+    <circle cx="4" cy="-48" r="8" fill="#FF5FA2"/>
+    <polygon points="-38.0,-36.0 -36.4,-31.6 -32.0,-30.0 -36.4,-28.4 -38.0,-24.0 -39.6,-28.4 -44.0,-30.0 -39.6,-31.6" fill="#FFD23F" stroke="none"/><polygon points="36.0,-41.0 37.3,-37.3 41.0,-36.0 37.3,-34.7 36.0,-31.0 34.7,-34.7 31.0,-36.0 34.7,-37.3" fill="#FF5FA2" stroke="none"/></g></svg>

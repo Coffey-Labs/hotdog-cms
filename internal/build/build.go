@@ -275,6 +275,9 @@ func prepareWith(siteDir string, s *site.Site, out string, formOverrides map[str
 			return nil, err
 		}
 	}
+	if err := addSeasons(siteDir, s.Config, assets, out); err != nil {
+		return nil, err
+	}
 	if s.Config.Analytics != nil {
 		if err := assets.add(out, "hotdog-consent.js", consentScript); err != nil {
 			return nil, err
@@ -310,6 +313,7 @@ func prepareWith(siteDir string, s *site.Site, out string, formOverrides map[str
 	}
 	fm["consent"] = func() template.HTML { return consentTags(s.Config, assets) }
 	fm["cart"] = func() template.HTML { return cartTags(s.Config, assets) }
+	fm["seasons"] = func() (template.HTML, error) { return seasonsTags(s.Config, assets) }
 	fm["cartLink"] = func() template.HTML { return cartLink(s.Config) }
 	fm["cartOn"] = func() bool { return s.Config.Cart.On() }
 	fm["variantPicker"] = func() template.HTML { return variantPicker(assets) }

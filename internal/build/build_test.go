@@ -522,3 +522,48 @@ func TestMarkdownOutputs(t *testing.T) {
 		t.Error("a generated tag page got a Markdown copy")
 	}
 }
+
+func TestSeasons(t *testing.T) {
+	dir := writeStarter(t)
+	res, err := Run(Options{SiteDir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	home, _ := os.ReadFile(filepath.Join(res.Out, "index.html"))
+	if strings.Contains(string(home), "hotdog-seasons") {
+		t.Error("seasons are on without seasons: in site.yaml")
+	}
+
+	cfg, _ := os.ReadFile(filepath.Join(dir, "site.yaml"))
+	os.WriteFile(filepath.Join(dir, "site.yaml"), append(cfg, []byte("seasons:\n  logo: .brand-logo\n  except: [halloween]\n")...), 0o644)
+	if res, err = Run(Options{SiteDir: dir}); err != nil {
+		t.Fatal(err)
+	}
+	home, _ = os.ReadFile(filepath.Join(res.Out, "index.html"))
+	m := regexp.MustCompile(`<script src="(/hotdog-seasons\.[0-9a-f]{10}\.js)" defer data-seasons="([^"]*)"></script>`).FindStringSubmatch(string(home))
+	if m == nil || !regexp.MustCompile(`<link rel="stylesheet" href="/hotdog-seasons\.[0-9a-f]{10}\.css">`).MatchString(string(home)) {
+		t.Fatalf("home page has no seasons tags:\n%s", home)
+	}
+	if _, err := os.Stat(filepath.Join(res.Out, m[1])); err != nil {
+		t.Error("script not written")
+	}
+	props, _ := filepath.Glob(filepath.Join(res.Out, "hotdog-seasons", "santa.*.svg"))
+	if len(props) != 1 || !strings.Contains(m[2], "/hotdog-seasons/santa.") {
+		t.Errorf("santa prop: %v, %s", props, m[2])
+	}
+
+	// A holiday that doesn't exist, and art with drawings missing, stop the
+	// build and say why.
+	os.WriteFile(filepath.Join(dir, "site.yaml"), append(cfg, []byte("seasons:\n  only: [arbor]\n")...), 0o644)
+	if _, err := Run(Options{SiteDir: dir}); err == nil || !strings.Contains(err.Error(), `no holiday called "arbor"`) {
+		t.Errorf("unknown holiday: %v", err)
+	}
+	os.WriteFile(filepath.Join(dir, "site.yaml"), append(cfg, []byte("seasons:\n  art:\n    - image: logo.svg\n      art: /img/logo-{prop}.svg\n")...), 0o644)
+	if _, err := Run(Options{SiteDir: dir}); err == nil || !strings.Contains(err.Error(), "missing 17 of 17 drawings") {
+		t.Errorf("missing art: %v", err)
+	}
+	os.WriteFile(filepath.Join(dir, "site.yaml"), append(cfg, []byte("seasons:\n  art:\n    - image: logo.svg\n      art: img/logo.svg\n")...), 0o644)
+	if _, err := Run(Options{SiteDir: dir}); err == nil || !strings.Contains(err.Error(), "with {prop}") {
+		t.Errorf("bad art address: %v", err)
+	}
+}
