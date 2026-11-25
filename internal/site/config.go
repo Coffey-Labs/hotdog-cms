@@ -186,6 +186,13 @@ type OutputsConfig struct {
 	Sitemap *bool `yaml:"sitemap"` // default on
 	Robots  *bool `yaml:"robots"`  // default on, unless static/robots.txt exists
 	LLMs    bool  `yaml:"llms"`    // llms.txt, default off
+	// LLMsFull writes llms-full.txt: every page's own Markdown in one file,
+	// for tools that read a whole site at once. Default off.
+	LLMsFull bool `yaml:"llms_full"`
+	// Markdown writes each page's Markdown beside its HTML, as index.md
+	// (/guide/ is also /guide/index.md), for tools that would rather read
+	// the source than the rendered page. Default off.
+	Markdown bool `yaml:"markdown"`
 }
 
 // CheckConfig tunes `hotdog-cms check`.

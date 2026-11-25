@@ -198,6 +198,16 @@ func Run(opt Options) (*Result, error) {
 			return nil, err
 		}
 	}
+	if cfg.Outputs.LLMsFull {
+		if err := writeLLMsFull(s, work); err != nil {
+			return nil, err
+		}
+	}
+	if cfg.Outputs.Markdown {
+		if err := writeMarkdown(s, work); err != nil {
+			return nil, err
+		}
+	}
 	if err := writeSearchFiles(work, s.Config); err != nil {
 		return nil, err
 	}

@@ -173,6 +173,78 @@ func writeLLMs(s *site.Site, out string) error {
 	return os.WriteFile(filepath.Join(out, "llms.txt"), []byte(b.String()), 0o644)
 }
 
+// mdPages is what llms-full.txt and the per-page Markdown carry: pages that
+// are in the sitemap and were written in Markdown, not generated lists.
+func mdPages(s *site.Site) []*site.Page {
+	var out []*site.Page
+	for _, p := range s.Pages {
+		if !inSitemap(p) || p.Kind == site.KindTerm || p.Kind == site.KindTerms {
+			continue
+		}
+		if strings.TrimSpace(p.Raw) == "" {
+			continue
+		}
+		out = append(out, p)
+	}
+	return out
+}
+
+// pageMarkdown is one page as Markdown: its title, its address and summary,
+// then its body as written, with its links made absolute (body).
+func pageMarkdown(p *site.Page, body func(*site.Page) string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "# %s\n\n", p.Title)
+	fmt.Fprintf(&b, "Source: %s\n", p.Permalink)
+	if lm := p.Lastmod(); !lm.IsZero() {
+		fmt.Fprintf(&b, "Updated: %s\n", lm.Format("2006-01-02"))
+	}
+	if p.Summary != "" {
+		fmt.Fprintf(&b, "\n> %s\n", p.Summary)
+	}
+	b.WriteString("\n")
+	b.WriteString(strings.TrimSpace(body(p)))
+	b.WriteString("\n")
+	return b.String()
+}
+
+// writeLLMsFull writes llms-full.txt: the whole site's text in one file,
+// every page's Markdown in sitemap order, for tools that read a site at once
+// rather than page by page.
+func writeLLMsFull(s *site.Site, out string) error {
+	var b strings.Builder
+	fmt.Fprintf(&b, "# %s\n\n", s.Config.Name)
+	if s.Config.Description != "" {
+		fmt.Fprintf(&b, "> %s\n\n", s.Config.Description)
+	}
+	body := s.AbsoluteMarkdown()
+	for _, p := range mdPages(s) {
+		b.WriteString("---\n\n")
+		b.WriteString(pageMarkdown(p, body))
+		b.WriteString("\n")
+	}
+	return os.WriteFile(filepath.Join(out, "llms-full.txt"), []byte(b.String()), 0o644)
+}
+
+// writeMarkdown writes each page's Markdown beside its HTML: /guide/ gets
+// /guide/index.md. A page whose address isn't a folder (/404.html) has no
+// Markdown copy, and a file static/ already put there is left alone.
+func writeMarkdown(s *site.Site, out string) error {
+	body := s.AbsoluteMarkdown()
+	for _, p := range mdPages(s) {
+		if !strings.HasSuffix(p.Path, "/") {
+			continue
+		}
+		dst := filepath.Join(filepath.Dir(pageFile(out, p.Path)), "index.md")
+		if _, err := os.Stat(dst); err == nil {
+			continue
+		}
+		if err := os.WriteFile(dst, []byte(pageMarkdown(p, body)), 0o644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func writeXML(path string, v any) error {
 	var buf bytes.Buffer
 	buf.WriteString(xml.Header)

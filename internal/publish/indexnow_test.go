@@ -96,3 +96,46 @@ func TestIndexNow(t *testing.T) {
 		t.Error("a target without indexnow: true pinged")
 	}
 }
+
+// hotdog-cms indexnow: a site deployed some other way pings after the deploy.
+// A dry run lists the pages and sends and remembers nothing; the real run
+// sends them; a second run with nothing changed sends nothing.
+func TestIndexNowStandalone(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	t.Setenv("HOME", t.TempDir())
+	var pings []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		json.NewDecoder(r.Body).Decode(&body)
+		pings = append(pings, body)
+	}))
+	defer srv.Close()
+	old := indexNowEndpoint
+	indexNowEndpoint = srv.URL
+	defer func() { indexNowEndpoint = old }()
+
+	site := t.TempDir()
+	starterSite(t, site)
+	cfg, _ := os.ReadFile(filepath.Join(site, "site.yaml"))
+	os.WriteFile(filepath.Join(site, "site.yaml"), append(cfg, []byte("indexnow: { key: abcdef0123456789 }\n")...), 0o644)
+	res, err := build.Run(build.Options{SiteDir: site})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var dry bytes.Buffer
+	IndexNow("https://example.org", res.Out, true, &dry)
+	if len(pings) != 0 || !strings.Contains(dry.String(), "https://example.org/about/") || !strings.Contains(dry.String(), "nothing sent") {
+		t.Fatalf("dry run: %d pings, %s", len(pings), dry.String())
+	}
+	var log bytes.Buffer
+	IndexNow("https://example.org", res.Out, false, &log)
+	if len(pings) != 1 || !strings.Contains(log.String(), "told search engines about") {
+		t.Fatalf("first run: %d pings, %s", len(pings), log.String())
+	}
+	log.Reset()
+	IndexNow("https://example.org", res.Out, false, &log)
+	if len(pings) != 1 || !strings.Contains(log.String(), "no pages changed") {
+		t.Errorf("unchanged: %d pings, %s", len(pings), log.String())
+	}
+}

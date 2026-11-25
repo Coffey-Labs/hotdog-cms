@@ -66,6 +66,18 @@ func changedPages(before, after map[string]string) []string {
 
 // indexNow pings for what changed since this target's last publish.
 func indexNow(name string, t Target, out string, log io.Writer) {
+	indexNowRun(name, t, out, false, log)
+}
+
+// IndexNow pings for what changed in the build at out since the last ping
+// remembered under name, for a site that something other than publish or
+// pull puts online (hotdog-cms indexnow, run after a deploy). With dryRun it
+// lists those pages and sends and remembers nothing.
+func IndexNow(name, out string, dryRun bool, log io.Writer) {
+	indexNowRun(name, Target{Type: "indexnow"}, out, dryRun, log)
+}
+
+func indexNowRun(name string, t Target, out string, dryRun bool, log io.Writer) {
 	note, err := os.ReadFile(filepath.Join(out, build.IndexNowFile))
 	if err != nil {
 		fmt.Fprintln(log, "indexnow: the site has no indexnow.key in site.yaml; nothing sent")
@@ -91,6 +103,13 @@ func indexNow(name string, t Target, out string, log io.Writer) {
 	}
 	u, err := url.Parse(info.URL)
 	if err != nil {
+		return
+	}
+	if dryRun {
+		for _, p := range pages {
+			fmt.Fprintln(log, strings.TrimRight(info.URL, "/")+p)
+		}
+		fmt.Fprintf(log, "indexnow: would tell search engines about %d changed page(s); nothing sent\n", len(pages))
 		return
 	}
 	for start := 0; start < len(pages); start += 10000 {

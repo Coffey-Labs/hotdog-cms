@@ -2,6 +2,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -41,6 +42,7 @@ Usage:
   hotdog-cms build [flags]         build the site into public/
   hotdog-cms check [flags]         build, then look for broken links and forbidden strings
   hotdog-cms publish [target...]   build, then publish to targets in publish.yaml
+  hotdog-cms indexnow [flags]      after deploying public/ some other way: tell search engines which pages changed
   hotdog-cms pull -repo URL -out DIR   on a web server: publish from git when the branch moves
   hotdog-cms preview -repo URL     build every branch as it would be published, each at its own address
   hotdog-cms ci <platform>         write the CI file for github, gitea, forgejo, gitlab, bitbucket, woodpecker, or a git hook
@@ -85,6 +87,8 @@ func main() {
 		err = cmdCheck(args)
 	case "publish":
 		err = cmdPublish(args)
+	case "indexnow":
+		err = cmdIndexNow(args)
 	case "pull":
 		isolate.Enabled = true
 		err = cmdPull(args)
@@ -294,6 +298,39 @@ func cmdPublish(args []string) error {
 			return fmt.Errorf("target %s: %w", n, err)
 		}
 	}
+	return nil
+}
+
+// cmdIndexNow tells search engines which pages changed, for a site that is
+// built here but put online by something other than publish or pull: run it
+// after the deploy, against the build that went out.
+func cmdIndexNow(args []string) error {
+	fl := flag.NewFlagSet("indexnow", flag.ExitOnError)
+	dir := fl.String("site", ".", "the site's folder")
+	outDir := fl.String("out", "", "the build that was deployed (default <site>/public)")
+	name := fl.String("name", "", "what to remember this deploy's last ping under (default the site's address); use one name per place the site is deployed")
+	dry := fl.Bool("dry-run", false, "list the pages that would be sent, and send nothing")
+	_ = fl.Parse(args)
+	out := *outDir
+	if out == "" {
+		out = filepath.Join(*dir, "public")
+	}
+	if _, err := os.Stat(filepath.Join(out, build.Marker)); err != nil {
+		return fmt.Errorf("%s is not a hotdog-cms build; run hotdog-cms build first", out)
+	}
+	n := *name
+	if n == "" {
+		note, err := os.ReadFile(filepath.Join(out, build.IndexNowFile))
+		if err != nil {
+			return fmt.Errorf("the build has no IndexNow key: set indexnow.key in site.yaml and build again")
+		}
+		var info build.IndexNowInfo
+		if err := json.Unmarshal(note, &info); err != nil || info.URL == "" {
+			return fmt.Errorf("%s: unreadable", build.IndexNowFile)
+		}
+		n = info.URL
+	}
+	publish.IndexNow(n, out, *dry, os.Stdout)
 	return nil
 }
 
