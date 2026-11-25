@@ -315,8 +315,11 @@ func cmdIndexNow(args []string) error {
 	if out == "" {
 		out = filepath.Join(*dir, "public")
 	}
-	if _, err := os.Stat(filepath.Join(out, build.Marker)); err != nil {
-		return fmt.Errorf("%s is not a hotdog-cms build; run hotdog-cms build first", out)
+	// The page manifest, not the build marker: a site that commits public/
+	// keeps the manifest in git but usually ignores the marker (it holds the
+	// build time), and a deploy from a fresh checkout has only what git has.
+	if _, err := os.Stat(filepath.Join(out, build.PagesManifest)); err != nil {
+		return fmt.Errorf("%s has no %s; run hotdog-cms build first", out, build.PagesManifest)
 	}
 	n := *name
 	if n == "" {
