@@ -484,3 +484,41 @@ func TestDataFolderFunc(t *testing.T) {
 		t.Errorf("data folders: %s", out)
 	}
 }
+
+// outputs: llms_full and markdown: the whole site's Markdown in one file, and
+// each page's Markdown beside its HTML; a file static/ put there is kept.
+func TestMarkdownOutputs(t *testing.T) {
+	dir := writeStarter(t)
+	cfg, _ := os.ReadFile(filepath.Join(dir, "site.yaml"))
+	cfg = []byte(strings.Replace(string(cfg), "outputs:", "outputs:\n  llms_full: true\n  markdown: true", 1))
+	if !strings.Contains(string(cfg), "llms_full") {
+		cfg = append(cfg, []byte("\noutputs:\n  llms: true\n  llms_full: true\n  markdown: true\n")...)
+	}
+	os.WriteFile(filepath.Join(dir, "site.yaml"), cfg, 0o644)
+	os.MkdirAll(filepath.Join(dir, "static", "articles", "hello-world"), 0o755)
+	os.WriteFile(filepath.Join(dir, "static", "articles", "hello-world", "index.md"), []byte("mine"), 0o644)
+	res, err := Run(Options{SiteDir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	full, err := os.ReadFile(filepath.Join(res.Out, "llms-full.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(full), "Source: https://") || !strings.Contains(string(full), "\n---\n") {
+		t.Errorf("llms-full.txt: %.400s", full)
+	}
+	about, err := os.ReadFile(filepath.Join(res.Out, "about", "index.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(string(about), "# ") || !strings.Contains(string(about), "/about/") {
+		t.Errorf("about/index.md: %.300s", about)
+	}
+	if b, _ := os.ReadFile(filepath.Join(res.Out, "articles", "hello-world", "index.md")); string(b) != "mine" {
+		t.Errorf("static file replaced: %q", b)
+	}
+	if _, err := os.Stat(filepath.Join(res.Out, "tags", "hotdog-cms", "index.md")); err == nil {
+		t.Error("a generated tag page got a Markdown copy")
+	}
+}

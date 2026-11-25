@@ -42,6 +42,7 @@ The editor, previews and the pull agent also need `git`.
     hotdog-cms build             write the finished site to public/
     hotdog-cms check [-csp] [-fix] build, then check it: tracking, privacy, links, SEO, security (docs/checks.md)
     hotdog-cms publish <target>  build, then publish: a folder, a server over SSH, a container image, or your own command
+    hotdog-cms indexnow          after deploying public/ some other way: tell search engines what changed
     hotdog-cms pull -repo URL -out DIR   on the web server: publish from git when the branch moves
     hotdog-cms preview -repo URL     every branch built as it would be published, at <branch>.localhost:8160
     hotdog-cms endpoint -config FILE forms and search, behind your web server (docs/forms.md)
