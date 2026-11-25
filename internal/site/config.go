@@ -65,6 +65,9 @@ type Config struct {
 	// Cart turns on the shop's cart (cart: true, or cart: { page: /basket/ }):
 	// HotDog's cart script, kept in the visitor's browser, for the shop pack.
 	Cart *CartConfig `yaml:"cart"`
+	// Seasons dresses the site for holidays through the year (seasons.go
+	// in internal/seasons): `seasons: true`, or a map to say where.
+	Seasons *SeasonsConfig `yaml:"seasons"`
 	// Lastmod "git" dates each page by the last commit that changed its
 	// source file, for the sitemap, feeds and .Lastmod, unless its front
 	// matter says when it was updated. Empty: front matter dates only.
@@ -252,6 +255,9 @@ func LoadConfig(dir string) (*Config, error) {
 	c.URL = strings.TrimRight(c.URL, "/")
 	if c.Cart.On() && c.Cart.Page != "" && (!strings.HasPrefix(c.Cart.Page, "/") || strings.HasPrefix(c.Cart.Page, "//")) {
 		return nil, fmt.Errorf("site.yaml: cart page %q is an address on the site, starting with /", c.Cart.Page)
+	}
+	if err := c.Seasons.Validate(); err != nil {
+		return nil, fmt.Errorf("site.yaml: seasons: %w", err)
 	}
 	if err := c.Analytics.Validate(); err != nil {
 		return nil, fmt.Errorf("site.yaml: analytics: %w", err)
@@ -507,4 +513,64 @@ func (c *CartConfig) PagePath() string {
 		return "/cart/"
 	}
 	return c.Page
+}
+
+// SeasonsConfig dresses the site for holidays through the year (`seasons:
+// true`, or a map): {{ seasons }} in the head adds the script.
+type SeasonsConfig struct {
+	Enabled bool `yaml:"enabled"`
+	// Anchor is where the strip hangs: CSS selectors separated by " | ",
+	// the first found wins. Empty: along the top of the window.
+	Anchor string `yaml:"anchor"`
+	// Logo is the element the day's prop is laid over: the one wrapping the
+	// logo picture (not the <img> itself).
+	Logo string `yaml:"logo"`
+	// Art swaps a picture for the site's own drawing of it wearing the prop:
+	// every picture whose address contains Image shows Art, with {prop} for
+	// the prop's name.
+	Art []SeasonArt `yaml:"art"`
+	// Skip is a selector: pictures inside it keep their usual look.
+	Skip string `yaml:"skip"`
+	// Only lists the holidays to show (all of them when empty); Except, the
+	// ones to leave out.
+	Only   []string `yaml:"only"`
+	Except []string `yaml:"except"`
+	// Greetings shows the day's greeting on the strip. On unless false.
+	Greetings *bool `yaml:"greetings"`
+}
+
+// SeasonArt is one of a site's own drawings for seasons.
+type SeasonArt struct {
+	Image string `yaml:"image"`
+	Art   string `yaml:"art"`
+}
+
+// UnmarshalYAML takes `seasons: true` as well as the map form.
+func (c *SeasonsConfig) UnmarshalYAML(n *yaml.Node) error {
+	if n.Kind == yaml.ScalarNode {
+		return n.Decode(&c.Enabled)
+	}
+	type plain SeasonsConfig
+	c.Enabled = true
+	return n.Decode((*plain)(c))
+}
+
+// On reports whether seasons are on.
+func (c *SeasonsConfig) On() bool { return c != nil && c.Enabled }
+
+// Validate checks the addresses; the holiday names are checked by the build,
+// which knows them.
+func (c *SeasonsConfig) Validate() error {
+	if !c.On() {
+		return nil
+	}
+	for _, a := range c.Art {
+		if a.Image == "" {
+			return fmt.Errorf("each art entry needs image: (part of the picture's address)")
+		}
+		if !strings.HasPrefix(a.Art, "/") || strings.HasPrefix(a.Art, "//") || !strings.Contains(a.Art, "{prop}") {
+			return fmt.Errorf("art %q should be an address on the site, starting with /, with {prop} where the prop's name goes", a.Art)
+		}
+	}
+	return nil
 }
